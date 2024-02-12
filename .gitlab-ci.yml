@@ -1,0 +1,45 @@
+image: python:3.7
+
+cache:
+  paths:
+    - .venv/
+
+before_script:
+  - python3 --version ; python3 -m pip --version  # For debugging
+  - python3 -m pip install virtualenv
+  - if [ ! -d ".venv" ]; then python3 -m venv .venv; fi # only create a new venv if there is none
+  - source .venv/bin/activate
+  - pip install -r requirements.txt
+
+stages:
+  - build
+  - test
+  - deploy
+
+build-job:
+  stage: build
+  script:
+    - python setup.py sdist bdist_wheel
+  artifacts:
+    paths:
+      - dist/*
+  tags:
+    - docker-tag1
+
+test-job:
+  stage: test
+  script:
+    - pip install . 
+    - pytest
+  tags:
+    - docker-tag1
+
+deploy-job:
+  stage: deploy
+  script:
+    - devpi use http://10.10.21.222:3141/
+    - devpi login testuser --password=Bacon2Bambi
+    - devpi use testuser/dev
+    - devpi upload
+  tags:
+    - docker-tag1
