@@ -110,7 +110,7 @@ class UdpInterface:
     def close(self):
         self.udpSocket.close()
 
-    def receiveFrame(self) -> tuple[bytearray, int]:
+    def receiveFrame(self):
         packets = []
         
         while True:

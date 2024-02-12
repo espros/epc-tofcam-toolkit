@@ -3,8 +3,8 @@ import select
 import serial
 import serial.tools.list_ports
 import struct
-from lib.response import Response
-from lib.crc import Crc
+from epc.tofCam660.response import Response
+from epc.tofCam660.crc import Crc
 from sys import platform
 
 

@@ -9,13 +9,13 @@ from PyQt5 import QtWidgets
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QPushButton, QComboBox
-from .roi_widget import ROIWidget
-from .settings_widget import SettingsWidget
+from epc.tofCam_gui.roi_widget import ROIWidget
+from epc.tofCam_gui.settings_widget import SettingsWidget
 
 from epc.tofCam660.productfactory import ProductFactory
 from epc.tofCam660.server import Server
 
-from .transformations import *
+from epc.tofCam_gui import transformations
 
 
 #ESTABLISH CONNECTION
