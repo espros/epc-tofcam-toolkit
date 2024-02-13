@@ -1,5 +1,6 @@
 .venv
 .venv37
+doc/build
 tmp
 **/__pycache__
 .pytest_cache
