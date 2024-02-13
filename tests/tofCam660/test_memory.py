@@ -1,5 +1,5 @@
-from epc.tofCam660.memory import Memory
 import pytest
+from epc.tofCam660 import Memory
 
 @pytest.fixture(scope='function')
 def memory():

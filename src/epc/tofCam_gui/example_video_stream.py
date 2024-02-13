@@ -2,6 +2,7 @@ import sys
 
 sys.path.append('.')
 
+import qdarktheme
 import numpy as np
 import cv2
 
@@ -41,6 +42,7 @@ amp = server.getTofAmplitude()[0]
 def main():
     #OPEN THE QTGUI DEFINED BELOW
     app = QtWidgets.QApplication(sys.argv)
+    qdarktheme.setup_theme()
     stream = Stream()
     stream.show()
     sys.exit(app.exec_())
@@ -56,7 +58,7 @@ class Stream(QtWidgets.QWidget):
         self.mode='default'
         #GENERAL
         self.sg1_image=pg.ImageView()
-        self.sg1_image.setImage(gray)
+        #self.sg1_image.setImage(gray)
         #GENERAL COLORMAPS
         colors = [  (  0,   0,   0),
                      (255,   0,   0),
@@ -77,8 +79,13 @@ class Stream(QtWidgets.QWidget):
 
         self.defaultmap=pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=default)
         self.cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=colors)
+
+        self.startbtn=QPushButton('Start')
+        self.startbtn.clicked.connect(self.imageTypeChanged)
         self.endbtn=QPushButton('Stop')
-        self.endbtn.clicked.connect(self.endTimer)
+        self.endbtn.clicked.connect(self.stopBtnClicked)
+        self.startbtn.setEnabled(True)
+        self.endbtn.setEnabled(False)
 
         #GREYSCALE
         self.timerGrsc=QTimer()
@@ -129,11 +136,24 @@ class Stream(QtWidgets.QWidget):
         filterLayout.addLayout(positionLayout)
         self.guiFilterGroupBox.setLayout(filterLayout)   
 
+         # group box for start/stop
+        self.btnGroupBox = QtWidgets.QGroupBox()
+        self.btnGroupBox.setStyleSheet("QGroupBox { border: 0; }")
+        btnLayout = QtWidgets.QVBoxLayout()
+        btnLayout.setContentsMargins(0, 2, 0, 2)
+        btnPositionLayout = QtWidgets.QGridLayout()
+        self.startbtn.setFixedSize(125, 30) 
+        btnPositionLayout.addWidget(self.startbtn,1,0)
+        self.endbtn.setFixedSize(125, 30) 
+        btnPositionLayout.addWidget(self.endbtn,1,1)   
+        btnLayout.addLayout(btnPositionLayout)
+        self.btnGroupBox.setLayout(btnLayout)   
+
         #GENERAL
         gridStarts=QtWidgets.QGridLayout()
         gridStarts.addWidget(self.imageTypeGroupBox,1,0)
-        gridStarts.addWidget(self.guiFilterGroupBox,2,0)
-        gridStarts.addWidget(self.endbtn,3,0)
+        gridStarts.addWidget(self.btnGroupBox,2,0)
+        gridStarts.addWidget(self.guiFilterGroupBox,3,0)
         gridStarts.addWidget(self.settingsWidget,4,0)
         gridStarts.addWidget(self.roiWidget,5,0)
 
@@ -165,25 +185,27 @@ class Stream(QtWidgets.QWidget):
         self.endTimer()
         self.sg1_image.setColorMap(self.defaultmap)
         self.timerGrsc.start(20)            #MIN TIME BETWEEN FRAMES
-        self.endbtn.setEnabled(True)
 
     def startTimerDistance(self):
         self.endTimer()
         self.sg1_image.setColorMap(self.cmap)
         self.timerdistance.start(50)         #MIN TIME BETWEEN FRAMES
-        self.endbtn.setEnabled(True)
 
     def startTimerAmplitude(self):
         self.endTimer()
         self.sg1_image.setColorMap(self.cmap)
         self.timeramp.start(50)                #MIN TIME BETWEEN FRAMES
-        self.endbtn.setEnabled(True)
 
     def endTimer(self):
         self.timerdistance.stop()
         self.timerGrsc.stop()
         self.timeramp.stop()
         self.endbtn.setEnabled(True)
+
+    def stopBtnClicked(self):
+        self.endTimer()
+        self.startbtn.setEnabled(True)
+        self.endbtn.setEnabled(False)
 
      #UPDATE DISPLAYED IMAGE DEPENDING ON THE CHOSEN MODE
     def updateGrsc(self):
@@ -253,5 +275,8 @@ class Stream(QtWidgets.QWidget):
             self.startTimerAmplitude()
         elif index == 2:
             self.startTimerGrsc()
+        
+        self.startbtn.setEnabled(False)
+        self.endbtn.setEnabled(True)
         
 main()

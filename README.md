@@ -10,6 +10,17 @@ The server.py file contains most of the functionality, including all implemented
 
 Examples on how to establish a connection, and use these commands are provided in the examples folder.  
 
+## Installation for usage
+install the package using pip
+```bash
+pip install epc-tofcam
+```
+
+Connect and startup the camera. Them simply run the gui with: 
+```bash 
+epc-tofcam660 --ip 10.10.31.180
+```
+If the camera has ip 10.10.31.180 you can evan skip the --ip flag
 
 ## Installation for development
 
