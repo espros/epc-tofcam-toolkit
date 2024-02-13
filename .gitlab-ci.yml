@@ -15,6 +15,7 @@ before_script:
 stages:
   - build
   - test
+  - deploy
 
 build-job:
   stage: build
@@ -36,12 +37,12 @@ test-job:
 
 deploy-job:
   stage: deploy
-  only:
-    - master
   script:
     - devpi use http://10.10.21.222:3141/
     - devpi login testuser --password=Bacon2Bambi
     - devpi use testuser/dev
     - devpi upload
+  rules:
+    - when: never
   tags:
     - docker-tag1
