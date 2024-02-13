@@ -31,7 +31,12 @@ test-job:
   stage: test
   script:
     - pip install . 
-    - pytest
+    - pytest --cov=src --cov-report=xml tests/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
   tags:
     - docker-tag1
 
