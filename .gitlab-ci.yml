@@ -31,20 +31,23 @@ test-job:
   stage: test
   script:
     - pip install . 
-    - pytest
+    - pytest --cov=src --cov-report=xml tests/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
   tags:
     - docker-tag1
 
 deploy-job:
   stage: deploy
-  rules:
-    - when: never
-  only:
-    - master
   script:
     - devpi use http://10.10.21.222:3141/
     - devpi login testuser --password=Bacon2Bambi
     - devpi use testuser/dev
     - devpi upload
+  rules:
+    - when: never
   tags:
     - docker-tag1
