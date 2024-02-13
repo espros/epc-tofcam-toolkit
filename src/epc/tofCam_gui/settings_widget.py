@@ -215,7 +215,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.interferenceDetectLimitLabel.setVisible(False)
     
         # group box for filters
-        self.filterGroupBox = QtWidgets.QGroupBox('Camera Filters')
+        self.filterGroupBox = QtWidgets.QGroupBox('Camera Built-In Filters')
         filterLayout = QtWidgets.QVBoxLayout()
         positionLayout = QtWidgets.QGridLayout()
         positionLayout.addWidget(self.medianFilter, 0, 0)
