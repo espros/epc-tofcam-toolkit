@@ -15,7 +15,6 @@ before_script:
 stages:
   - build
   - test
-  - deploy
 
 build-job:
   stage: build
@@ -37,8 +36,6 @@ test-job:
 
 deploy-job:
   stage: deploy
-  rules:
-    - when: never
   only:
     - master
   script:
