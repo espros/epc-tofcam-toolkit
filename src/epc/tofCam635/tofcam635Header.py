@@ -9,8 +9,8 @@ Created on Wed Jan 30 08:21:41 2019
 
 @author: mwi
 """
-from SW_TofCam635_Communication_lib.communication.communicationConstants import tofcam635HeaderConstants as header
-from SW_TofCam635_Communication_lib import util
+from epc.tofCam635.communication.communicationConstants import tofcam635HeaderConstants as header
+from epc.tofCam635 import util
 
 
 class TofCam635Header():

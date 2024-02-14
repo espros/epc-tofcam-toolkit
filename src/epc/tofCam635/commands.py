@@ -3,16 +3,16 @@
 *
 """
 
-from .crc import Crc
 import numpy as np
 import struct
-from .communication import communicationConstants as communication
-from .constants import __constants  as Constants
 import sys
 import time
 import datetime
 from time import strftime
-from SW_TofCam635_Communication_lib import tofcam635Header
+from epc.tofCam635.communication import communicationConstants as communication
+from epc.tofCam635.constants import __constants  as Constants
+from epc.tofCam635 import tofcam635Header
+from epc.tofCam_lib import Crc
 
 
 class Commands():
@@ -20,7 +20,8 @@ class Commands():
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
-    self.crc = Crc()
+    self.crc = Crc(revout=False)
+
     self.printWrite=False
     self.printRead=False
     self.header = tofcam635Header.TofCam635Header()
@@ -397,7 +398,8 @@ class Commands():
     a=[0xf5]*14
     a[1:10]=values
 
-    crc=np.array(self.crc.calcCrc32(bytearray(a[:10]),10))
+    crc = np.array(self.crc.calcCrc32Uint8(bytearray(a[:10])))
+    
     a[10] = crc & 0xff
     a[11] = (crc>>8) & 0xff
     a[12] = (crc>>16) & 0xff
@@ -426,8 +428,7 @@ class Commands():
         j+=1
       print(' - len:',j)
 
-
-  def getAnswer(self,typeId,length):
+  def getAnswer(self, typeId, length):
     """
     return answer of serial command
     @param typeId expected typeId
@@ -436,9 +437,10 @@ class Commands():
 
     @returns data of serial port with verified checksum
     """
+
     tmp=self.com.read(length)
-    #print(list(map(hex, tmp)))
-    if not self.crc.isCrcValid(tmp):
+    
+    if not self.crc.verify(tmp):
       raise Exception("CRC not valid!!")
     if len(tmp) != length:
       raise Exception("Not enough bytes!!, expected {:02d}, got {:02d}".format(length, len(tmp)))
@@ -467,7 +469,8 @@ class Commands():
     length = struct.unpack('<'+'H',tmp[communication.Data.INDEX_LENGTH:communication.Data.INDEX_LENGTH + communication.Data.SIZE_LENGTH])[0]
     tmp = self.com.read(length+4)
     total+=bytes(tmp)
-    self.crc.isCrcValid(total)
+    if not self.crc.verify(total):
+      raise Exception("CRC not valid!!")
     if typeId != total[1]:
       raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
 
@@ -502,7 +505,8 @@ class Commands():
 
         #Check the CRC as usual
         total+=bytes(tmp)
-        self.crc.isCrcValid(total)
+        if self.crc.verify(total):
+          raise Exception("CRC not valid!!")
         if typeId != total[1]:
             raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
 
@@ -532,7 +536,7 @@ class Commands():
       tmp=self.comDll.read(LEN_BYTES)
     else:
       tmp=self.com.read(LEN_BYTES)
-    if not self.crc.isCrcValid(tmp):
+    if not self.crc.verify(tmp):
       raise Exception("CRC not valid!!")
       return False
     if tmp[1] != communication.Type.DATA_ACK:
