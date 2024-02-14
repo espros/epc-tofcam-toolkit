@@ -1,5 +1,144 @@
 from PyQt5 import QtWidgets  
-from PyQt5.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox
+from PyQt5.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout
+from PyQt5.QtCore import pyqtSignal
+from typing import List
+import logging
+
+class GroupBoxSelection(QGroupBox):
+    signal_selection_changed = pyqtSignal(str)
+    def __init__(self, label: str,  image_types: List[str]):
+        super(GroupBoxSelection, self).__init__(label)
+        self.comboBox = QComboBox(self)
+        for type in image_types:
+            self.comboBox.addItem(type)
+        self.comboBox.setCurrentIndex(0)
+        self.comboBox.currentIndexChanged.connect(self.selection_changed)
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.comboBox)
+        self.setLayout(self.layout)
+
+    def selection_changed(self):
+        self.signal_selection_changed.emit(self.comboBox.currentText())
+
+class DropDownSetting(QGroupBox):
+    signal_selection_changed = pyqtSignal(str)
+    def __init__(self, label: str, setting: List[str]):
+        super(DropDownSetting, self).__init__()
+        self.comboBox = QComboBox(self)
+        for type in setting:
+            self.comboBox.addItem(type)
+        self.comboBox.setCurrentIndex(0)
+        self.comboBox.currentIndexChanged.connect(self.selection_changed)
+
+        self.label = QLabel(label, self)
+
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.label, 0, 0)
+        self.layout.addWidget(self.comboBox, 0, 1)
+        self.setLayout(self.layout)
+    
+    def selection_changed(self):
+        self.signal_selection_changed.emit(self.comboBox.currentText())
+
+class SpinBoxSetting(QGroupBox):
+    signal_value_changed = pyqtSignal(int)
+    def __init__(self, label: str, min: int, max: int):
+        super(SpinBoxSetting, self).__init__()
+        self.spinBox = QSpinBox(self)
+
+        self.label = QLabel(label, self)
+
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.label, 0, 0)
+        self.layout.addWidget(self.spinBox, 0, 1)
+        self.setLayout(self.layout)
+    
+    def value_changed(self):
+        self.signal_value_changed.emit(self.spinBox.value())
+
+class SettingsGroup(QGroupBox):
+    def __init__(self, label='', settings = []):
+        super(SettingsGroup, self).__init__(label)
+        self.layout = QGridLayout()
+        self.settings = settings
+        for row, setting in enumerate(self.settings):
+            for i in range(setting.layout.count()):
+                widget = setting.layout.takeAt(0).widget()
+                self.layout.addWidget(widget, row, i)
+
+        self.setLayout(self.layout)
+
+class CheckBoxSettings(QGroupBox):
+    signal_checkbox_changed = pyqtSignal(str, bool)
+    def __init__(self, label: str, settings: List[str]):
+        super(CheckBoxSettings, self).__init__(label)
+        self.layout = QVBoxLayout()
+        self.settings = settings
+        for setting in self.settings:
+            widget = QCheckBox(setting, self)
+            widget.stateChanged.connect(lambda: self.checkbox_changed(setting, widget.isChecked()))
+            self.layout.addWidget(widget)
+        self.setLayout(self.layout)
+
+    def checkbox_changed(self, text: str, state: bool):
+        self.signal_checkbox_changed.emit(text, state)
+
+class IntegrationTimes(QGroupBox):
+    signal_value_changed = pyqtSignal(str, int)
+    def __init__(self, labels=[], defaults=[], limits=[], min_value=0):
+        super(IntegrationTimes, self).__init__('Integration Times')
+        self.layout = QGridLayout()
+        self.layout.addWidget(QLabel(str(labels) + ' us'), 0, 0)
+        for i in range(len(labels)):
+            widget = QSpinBox()
+            widget.setRange(min_value, limits[i])
+            widget.setValue(defaults[i])
+            self.layout.addWidget(widget, 0, i+1)
+        self.setLayout(self.layout)
+
+class RoiSettings(QGroupBox):
+    signal_roi_changed = pyqtSignal(int, int, int, int)
+    def __init__(self, width: int, height: int, label='ROI'):
+        super(RoiSettings, self).__init__(label)
+        self.layout = QGridLayout()
+        self.x = QSpinBox(self)
+        self.y = QSpinBox(self)
+        self.width = QSpinBox(self)
+        self.height = QSpinBox(self)
+
+        self.x.setMinimum(0)
+        self.x.setMaximum(width)
+        self.y.setMinimum(0)
+        self.y.setMaximum(height)
+        self.width.setMinimum(0)
+        self.width.setMaximum(width)
+        self.height.setMinimum(0)
+        self.height.setMaximum(height)
+
+        self.x.setValue(0)
+        self.y.setValue(0)
+        self.width.setValue(width)
+        self.height.setValue(height)
+
+        self.xLabel = QLabel('X', self)
+        self.yLabel = QLabel('Y', self)
+        self.widthLabel = QLabel('With', self)
+        self.heightLabel = QLabel('Height', self)
+
+        self.layout.addWidget(self.xLabel, 0, 0)
+        self.layout.addWidget(self.x, 0, 1)
+        self.layout.addWidget(self.yLabel, 1, 0)
+        self.layout.addWidget(self.y, 1, 1)
+        self.layout.addWidget(self.widthLabel, 0, 2)
+        self.layout.addWidget(self.width, 0, 3)
+        self.layout.addWidget(self.heightLabel, 1, 2)
+        self.layout.addWidget(self.height, 1, 3)
+
+        self.setLayout(self.layout)
+
+    def roiChanged(self):
+        self.signal_roi_changed.emit(self.x.value(), self.y.value(), self.width.value(), self.height.value())
 
 class SettingsWidget(QtWidgets.QWidget):
     def __init__(self, server):
