@@ -47,7 +47,7 @@ class Stream(QtWidgets.QWidget):
     def initUI(self):
 
         # ESTABLISH CONNECTION
-        com = SerialInterface('COM3')
+        com = SerialInterface('COM3') # setup camera COM port 
         self.camera = Camera(com)
 
         # CAMERA DEFAULT SETTINGS
@@ -247,6 +247,7 @@ class Stream(QtWidgets.QWidget):
             self.temporalFilterThreshold.setVisible(True)
             self.temporalFilterFactorLabel.setVisible(True)
             self.temporalFilterThresholdLabel.setVisible(True)
+            self.filterValueChanged()
         else:
             self.temporalFilterFactor.setVisible(False)
             self.temporalFilterThreshold.setVisible(False)
