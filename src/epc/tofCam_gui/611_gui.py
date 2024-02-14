@@ -1,7 +1,4 @@
 import sys
-
-sys.path.append('.')
-
 import qdarktheme
 import numpy as np
 
@@ -9,28 +6,39 @@ from PyQt5 import QtWidgets
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QPushButton, QComboBox, QSpinBox, QLabel, QCheckBox, QDoubleSpinBox
-
 from epc.tofCam611.serialInterface import SerialInterface
 from epc.tofCam611.camera import Camera
 
-#ESTABLISH CONNECTION
-com = SerialInterface('COM3')
-camera = Camera(com)
+sys.path.append('.')
 
-#CAMERA DEFAULT SETTINGS
-camera.powerOn()
-camera.setModFrequency(1) # 20MHz
-camera.setIntTime_us(1000)
+# COLORMAPS
+colors = [(0,   0,   0),
+          (255,   0,   0),
+          (255, 255,   0),
+          (0, 255,   0),
+          (0, 240, 240),
+          (0,   0, 255),
+          (255,   0, 255)]
+default = [
+    (0, 0, 0),
+    (51, 51, 51),
+    (102, 102, 102),
+    (153, 153, 153),
+    (204, 204, 204),
+    (255, 255, 255)
+]
 
-def main():
+def startGUI():
 
     app = QtWidgets.QApplication(sys.argv)
-    qdarktheme.setup_theme()
     stream = Stream()
     stream.show()
+    qdarktheme.setup_theme()
     sys.exit(app.exec_())
 
+
 class Stream(QtWidgets.QWidget):
+
     def __init__(self):
 
         super(Stream, self).__init__()
@@ -38,27 +46,20 @@ class Stream(QtWidgets.QWidget):
 
     def initUI(self):
 
-        self.sg1_image=pg.ImageView()
+        # ESTABLISH CONNECTION
+        com = SerialInterface('COM3')
+        self.camera = Camera(com)
 
-        #GENERAL COLORMAPS
-        colors = [  (  0,   0,   0),
-                     (255,   0,   0),
-                     (255, 255,   0),
-                     (  0, 255,   0),
-                     (  0, 240, 240),
-                     (  0,   0, 255),
-                     (255,   0, 255) ]
+        # CAMERA DEFAULT SETTINGS
+        self.camera.powerOn()
+        self.camera.setModFrequency(1) # 20MHz
+        self.camera.setIntTime_us(1000)
 
-        default=  [
-            (0, 0, 0),
-            (51, 51, 51),
-            (102, 102, 102),
-            (153, 153, 153),
-            (204, 204, 204),
-            (255, 255, 255)
-        ]
-
-        self.defaultmap=pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=default)
+        # IMAGE VIEW
+        self.imageView = pg.ImageView()
+        self.imageView.setImage(np.zeros((8,8)), autoRange=False, autoHistogramRange=False, levels=(0,1000))
+        self.imageView.setLevels(0,1500)
+        self.defaultmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=default)
         self.cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=colors)
 
         # DISTANCE
@@ -179,45 +180,36 @@ class Stream(QtWidgets.QWidget):
 
         self.modulationFrequency.currentIndexChanged.connect(self.modulationChanged)
 
-        #GENERAL
-        gridStarts=QtWidgets.QGridLayout()
+        # GENERAL
+        gridStarts = QtWidgets.QGridLayout()
         gridStarts.addWidget(self.imageTypeGroupBox,1,0)
         gridStarts.addWidget(self.btnGroupBox,2,0)
         gridStarts.addWidget(self.integrationGroupBox,3,0)
         gridStarts.addWidget(self.filterGroupBox,4, 0)
         gridStarts.addWidget(self.modulationGroupBox, 5,0)
 
-        grid=QtWidgets.QGridLayout()
+        grid = QtWidgets.QGridLayout()
         grid.setSpacing(10)
         grid.addLayout(gridStarts,0,0)
-
-        grid.addWidget(self.sg1_image,0,1)
-
+        grid.addWidget(self.imageView,0,1)
         grid.setColumnStretch(1,3)
-
         self.setLayout(grid)
 
-        chipID, waferID = camera.getChipInfo()
-        fwVersion = camera.getFwRelease()
+        chipID, waferID = self.camera.getChipInfo()
+        fwVersion = self.camera.getFwRelease()
         self.setWindowTitle('TOF CAM 611 VIDEO STREAM                                 CHIP ID:{}     WAFER ID:{}      FW VERSION:{}.{}'
                             .format(chipID, waferID, fwVersion[0], fwVersion[1]))
         self.resize(1200,600)
 
-        #FRAMCOUNTERS FOR EACH MODE
-        #COULD BE USED E.G. TO CALCULATE FRAMERATE
-        self.j=0 #DISTANCE
-        self.k=0 #AMPLITUDE
-
-    #ALL BUTTONS
     def startTimerDistance(self):
         self.endTimer()
-        self.sg1_image.setColorMap(self.cmap)
-        self.timerdistance.start(50)         #MIN TIME BETWEEN FRAMES
+        self.imageView.setColorMap(self.cmap)
+        self.timerdistance.start(50)         
 
     def startTimerAmplitude(self):
         self.endTimer()
-        self.sg1_image.setColorMap(self.cmap)
-        self.timeramp.start(50)                #MIN TIME BETWEEN FRAMES
+        self.imageView.setColorMap(self.cmap)
+        self.timeramp.start(50)           
 
     def endTimer(self):
         self.timerdistance.stop()
@@ -229,16 +221,13 @@ class Stream(QtWidgets.QWidget):
         self.startbtn.setEnabled(True)
         self.endbtn.setEnabled(False)
 
-     #UPDATE DISPLAYED IMAGE DEPENDING ON THE CHOSEN MODE
     def updateDistance(self):
-        self.j+=1
-        img = camera.getDistance()
-        self.sg1_image.setImage(img)
+        img = self.camera.getDistance()
+        self.imageView.setImage(img, autoRange=False, autoLevels=False, autoHistogramRange=False)
 
     def updateAmp(self):
-        self.k+=1
-        img=camera.getAmplitude()
-        self.sg1_image.setImage(img)
+        img = self.camera.getAmplitude()
+        self.imageView.setImage(img, autoRange=False, autoLevels=False, autoHistogramRange=False)
       
     def imageTypeChanged(self):
     
@@ -267,14 +256,16 @@ class Stream(QtWidgets.QWidget):
     def filterValueChanged(self):
         factor = self.temporalFilterFactor.value()
         threshold = self.temporalFilterThreshold.value()
-        camera.setFilter(threshold,int(factor*1000))
+        self.camera.setFilter(threshold,int(factor*1000))
         
     def integrationTimeChanged(self):
         integrationTime3D = self.integration3D.value()
-        camera.setIntTime_us(integrationTime3D)
+        self.camera.setIntTime_us(integrationTime3D)
 
     def modulationChanged(self):
         frequencyIndex = self.modulationFrequency.currentIndex()
-        camera.setModFrequency(frequencyIndex)
+        self.camera.setModFrequency(frequencyIndex)
 
-main()
+
+if __name__ == "__main__":
+    startGUI()
