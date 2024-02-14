@@ -118,7 +118,7 @@ class Camera():
     @return firmware release [major, minor]
     """
     self.tofWrite([commandList.COMMAND_GET_FIRMWARE_RELEASE])
-    answer = self.getAnswer(communicationType.DATA_FIRMWARE_RELEASE,12);
+    answer = self.getAnswer(communicationType.DATA_FIRMWARE_RELEASE,12)
     fwRelease=struct.unpack('<'+'I',answer)[0]
     fwVersionMajor = fwRelease>>16
     fwVersionMinor = fwRelease&0xffff
@@ -132,9 +132,13 @@ class Camera():
     self.tofWrite([commandList.COMMAND_SET_MODULATION_FREQUENCY,modClock])
     self.getAcknowledge()
 
+  def setFilter(self, temporalThreshold, temporalFactor):
+    self.tofWrite([commandList.COMMAND_SET_FILTER,  temporalThreshold &0xff, (temporalThreshold>>8)&0xff, temporalFactor&0xff,  (temporalFactor>>8)&0xff])
+    self.getAcknowledge()
+
   def getChipTemperature(self):
     self.tofWrite(commandList.COMMAND_GET_TEMPERATURE)
-    tmp = self.getAnswer(communicationType.DATA_TEMPERATURE,10);
+    tmp = self.getAnswer(communicationType.DATA_TEMPERATURE,10)
     temperature=struct.unpack('<'+'h',tmp)[0]
     return temperature/100.0
 
