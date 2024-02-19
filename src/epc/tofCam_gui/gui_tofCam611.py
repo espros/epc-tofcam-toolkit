@@ -1,6 +1,7 @@
 import sys
 import qdarktheme
 import numpy as np
+import argparse
 
 from PyQt5 import QtWidgets  
 import pyqtgraph as pg
@@ -29,10 +30,10 @@ default = [
     (255, 255, 255)
 ]
 
-def startGUI():
+def startGUI(comPort):
 
     app = QtWidgets.QApplication(sys.argv)
-    stream = Stream()
+    stream = Stream(comPort)
     stream.show()
     qdarktheme.setup_theme()
     sys.exit(app.exec_())
@@ -40,15 +41,16 @@ def startGUI():
 
 class Stream(QtWidgets.QWidget):
 
-    def __init__(self):
+    def __init__(self, comPort):
 
         super(Stream, self).__init__()
+        self.comPort = comPort
         self.initUI()
 
     def initUI(self):
 
         # ESTABLISH CONNECTION
-        com = SerialInterface('COM3') # setup camera COM port 
+        com = SerialInterface(self.comPort) # setup camera COM port 
         self.camera = Camera(com)
 
         # CAMERA DEFAULT SETTINGS
@@ -166,4 +168,7 @@ class Stream(QtWidgets.QWidget):
         self.endbtn.setEnabled(True)
 
 if __name__ == "__main__":
-    startGUI()
+    parser = argparse.ArgumentParser(description="Start 611 GUI with COM port")
+    parser.add_argument("com_port", help="COM port for camera connection (e.g., COM3)")
+    args = parser.parse_args()
+    startGUI(args.com_port)
