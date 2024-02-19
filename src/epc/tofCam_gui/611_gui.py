@@ -57,8 +57,7 @@ class Stream(QtWidgets.QWidget):
 
         # IMAGE VIEW
         self.imageView = pg.ImageView()
-        self.imageView.setImage(np.zeros((8,8)), autoRange=False, autoHistogramRange=False, levels=(0,1000))
-        self.imageView.setLevels(0,1500)
+        self.imageView.setImage(np.zeros((8,8)), autoRange=False, autoHistogramRange=False, levels=(0,7500))
         self.defaultmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=default)
         self.cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 6), color=colors)
 
