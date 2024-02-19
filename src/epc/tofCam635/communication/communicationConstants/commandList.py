@@ -12,7 +12,12 @@ class CommandList():
   COMMAND_SET_OPERATION_MODE = 0x04                           #Command to set the mode
   COMMAND_SET_MODULATION_FREQUENCY = 0x05                     #Command to set the modulation frequency
   COMMAND_SET_DLL_STEP = 0x06                                 #Command to set the DLL step
-  COMMAND_SET_FILTER = 0x07                                   #Command to set the filter for the WF illumination
+  COMMAND_SET_TEMPORAL_FILTER_WFOV = 0x07                                   #Command to set the filter for the WF illumination
+
+  COMMAND_SET_MEDIAN_FILTER = 0x08                            #Command to set the median filter
+  COMMAND_SET_AMPLITUDE_LIMIT = 0x09                          #Command to set the amplitude limit
+  COMMAND_SET_AVERAGE_FILTER = 0x0A                           #Command to set the average filter
+  COMMAND_SET_HDR = 0x0D                                      #Command to set the HDR mode
   COMMAND_SET_FILTER_SINGLE_SPOT = 0x0F                       #Command to set the filter for the NF spot result
   COMMAND_SET_EDGE_FILTER = 0x10                              #Command to set the edge filter
   COMMAND_SET_INTERFERENCE_DETECTION = 0x11                   #Command to set the interference detection settings

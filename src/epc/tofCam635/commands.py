@@ -37,6 +37,22 @@ class Commands():
     if showNotification:
       print('# x0: {:3d} y0: {:3d} x1: {:3d} y1: {:3d}'.format(x0,y0,x1,y1))
 
+  def setHDR(self, mode='off', showNotification=True):
+    hdrMode = 0
+    if mode == 'off':
+      hdrMode = 0
+    elif mode == 'spatial':
+      hdrMode = 1
+    elif mode == 'temporal':
+      hdrMode = 2
+    else:
+      raise ValueError(f"HDR Mode '{mode}' not supported")
+
+    self.tofWrite([communication.CommandList.COMMAND_SET_HDR, hdrMode])
+    self.getAcknowledge()
+    if showNotification:
+      print('# HDR mode: {}'.format(mode))
+
   def initCommands(self,index=0, showNotification=True):
     """
     set modulation Freuency 0=10MHz, 1=20MHz
@@ -245,6 +261,14 @@ class Commands():
     print('# HW version: {:d} device type {:d} chip type {:d} operation mode {:d}'.format(hwVersion,deviceType,chipType,oPmode))
     return [hwVersion, deviceType, chipType, oPmode]
 
+  def setAmplitudeLimit(self, index, limit, showNotification=True):
+    """
+    set amplitude limit
+    """
+    self.tofWrite([communication.CommandList.COMMAND_SET_AMPLITUDE_LIMIT, index, limit & 0xff, (limit>>8) & 0xff])
+    self.getAcknowledge()
+    if showNotification:
+      print('# Amplitude Limit: {:5d} '.format(limit))
 
   def setMode(self,mode):
     """
@@ -265,13 +289,34 @@ class Commands():
     if showNotification:
       print("dll step set to:{}".format(step))
 
-  def setExpFilter(self,threshold = 250,weight = 10):
-    self.tofWrite([communication.CommandList.COMMAND_SET_FILTER,threshold & 0xff, (threshold>>8) & 0xff,weight & 0xff, (weight>>8) & 0xff])
+  def setMedianFilter(self, enable=False, showNotification=True):
+    """
+    set median filter
+    """
+    self.tofWrite([communication.CommandList.COMMAND_SET_MEDIAN_FILTER, int(enable)])
     self.getAcknowledge()
-    if threshold == 0:
-      print('# Exponential Filter disabled')
+    if showNotification:
+      print('# Median Filter: {} '.format(enable))
+
+  def setAverageFilter(self, enable=False, showNotification=True):
+    """
+    set average filter
+    """
+    self.tofWrite([communication.CommandList.COMMAND_SET_AVERAGE_FILTER, int(enable)])
+    self.getAcknowledge()
+    if showNotification:
+      print('# Average Filter: {} '.format(enable))
+
+  def setTemporalFilter(self, enable, threshold=250, weight=10):
+    if enable:
+      self.tofWrite([communication.CommandList.COMMAND_SET_TEMPORAL_FILTER_WFOV,threshold & 0xff, (threshold>>8) & 0xff,weight & 0xff, (weight>>8) & 0xff])
     else:
+      self.tofWrite([communication.CommandList.COMMAND_SET_TEMPORAL_FILTER_WFOV,0,0,0,0])
+    self.getAcknowledge()
+    if enable:
       print('# Exponential Filter set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
+    else:
+      print('# Exponential Filter disabled')
 
   def setExpFilterSpot(self,threshold = 250,weight = 10):
     self.tofWrite([communication.CommandList.COMMAND_SET_FILTER_SINGLE_SPOT,threshold & 0xff, (threshold>>8) & 0xff,weight & 0xff, (weight>>8) & 0xff])
@@ -281,13 +326,16 @@ class Commands():
     else:
       print('# Exponential Filter Spot set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
 
-  def setEdgeFilter(self, threshold=0):
-    self.tofWrite([communication.CommandList.COMMAND_SET_EDGE_FILTER,threshold & 0xff, (threshold>>8) & 0xff])
-    self.getAcknowledge()
-    if threshold == 0:
-      print('# Edge Filter disabled')
+  def setEdgeFilter(self, enable=False, threshold=0):
+    if enable:
+      self.tofWrite([communication.CommandList.COMMAND_SET_EDGE_FILTER,threshold & 0xff, (threshold>>8) & 0xff])
     else:
+      self.tofWrite([communication.CommandList.COMMAND_SET_EDGE_FILTER,0,0])
+    self.getAcknowledge()
+    if enable:
       print('# Edge Filter set: Threshold: {:5d}'.format(threshold))
+    else:
+      print('# Edge Filter disabled')
 
   def setInterferenceDetection(self, enabled=False, useLastValue=False, limit=500):
     self.tofWrite([communication.CommandList.COMMAND_SET_INTERFERENCE_DETECTION, enabled, useLastValue, (limit & 0xff), (limit>>8) & 0xff])

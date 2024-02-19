@@ -8,7 +8,7 @@
             "name": "TOFcam635",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam635.py"
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam635_bridge.py"
         }
     ]
 }
