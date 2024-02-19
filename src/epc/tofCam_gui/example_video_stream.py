@@ -57,7 +57,9 @@ class Stream(QtWidgets.QWidget):
     def initUI(self):
         self.mode='default'
         #GENERAL
-        self.sg1_image=pg.ImageView()
+        self.imageView=pg.ImageView()
+        self.imageView.setImage(np.zeros((320,240)), autoRange=False, autoHistogramRange=False, levels=(0,1250))
+
         #self.sg1_image.setImage(gray)
         #GENERAL COLORMAPS
         colors = [  (  0,   0,   0),
@@ -161,7 +163,7 @@ class Stream(QtWidgets.QWidget):
         grid.setSpacing(10)
         grid.addLayout(gridStarts,0,0)
 
-        grid.addWidget(self.sg1_image,0,1)
+        grid.addWidget(self.imageView,0,1)
 
         grid.setColumnStretch(1,3)
 
@@ -183,17 +185,17 @@ class Stream(QtWidgets.QWidget):
     #ALL BUTTONS
     def startTimerGrsc(self):
         self.endTimer()
-        self.sg1_image.setColorMap(self.defaultmap)
+        self.imageView.setColorMap(self.defaultmap)
         self.timerGrsc.start(20)            #MIN TIME BETWEEN FRAMES
 
     def startTimerDistance(self):
         self.endTimer()
-        self.sg1_image.setColorMap(self.cmap)
+        self.imageView.setColorMap(self.cmap)
         self.timerdistance.start(50)         #MIN TIME BETWEEN FRAMES
 
     def startTimerAmplitude(self):
         self.endTimer()
-        self.sg1_image.setColorMap(self.cmap)
+        self.imageView.setColorMap(self.cmap)
         self.timeramp.start(50)                #MIN TIME BETWEEN FRAMES
 
     def endTimer(self):
@@ -222,7 +224,7 @@ class Stream(QtWidgets.QWidget):
             if(self.mode=='canny'):
                 img=cv2.Canny(img,100,50)
 
-        self.sg1_image.setImage(img)
+        self.imageView.setImage(img, autoRange=False, autoLevels=False, autoHistogramRange=False)
 
     def updateDistance(self):
         self.j+=1
@@ -237,7 +239,7 @@ class Stream(QtWidgets.QWidget):
                 img=transformations.threshgrad(img)
             if(self.mode=='canny'):
                 img=cv2.Canny(img,700,600)
-        self.sg1_image.setImage(img)
+        self.imageView.setImage(img, autoRange=False, autoLevels=False, autoHistogramRange=False)
 
 
     def updateAmp(self):
@@ -253,7 +255,7 @@ class Stream(QtWidgets.QWidget):
                 img=transformations.threshgrad(img)
             if(self.mode=='canny'):
                 img=cv2.Canny(img,220,110)
-        self.sg1_image.setImage(img)
+        self.imageView.setImage(img, autoRange=False, autoLevels=False, autoHistogramRange=False)
 
     def guiFilterChanged(self):
     
