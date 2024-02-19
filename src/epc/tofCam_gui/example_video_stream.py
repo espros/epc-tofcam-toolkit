@@ -60,7 +60,6 @@ class Stream(QtWidgets.QWidget):
         self.imageView=pg.ImageView()
         self.imageView.setImage(np.zeros((320,240)), autoRange=False, autoHistogramRange=False, levels=(0,1250))
 
-        #self.sg1_image.setImage(gray)
         #GENERAL COLORMAPS
         colors = [  (  0,   0,   0),
                      (255,   0,   0),
