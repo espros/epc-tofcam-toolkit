@@ -5,7 +5,7 @@ import numpy as np
 from PyQt5 import QtWidgets  
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QPushButton, QComboBox, QSpinBox, QLabel, QCheckBox, QDoubleSpinBox
+from PyQt5.QtWidgets import QPushButton, QComboBox
 from epc.tofCam611.serialInterface import SerialInterface
 from epc.tofCam611.camera import Camera
 from epc.tofCam_gui.settings_widget_611 import SettingsWidget611
