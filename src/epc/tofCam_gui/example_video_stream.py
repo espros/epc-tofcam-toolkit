@@ -6,10 +6,10 @@ import qdarktheme
 import numpy as np
 import cv2
 
-from PyQt5 import QtWidgets  
+from PySide6 import QtWidgets  
 import pyqtgraph as pg
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QPushButton, QComboBox
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QPushButton, QComboBox
 from epc.tofCam_gui.roi_widget import ROIWidget
 from epc.tofCam_gui.settings_widget import SettingsWidget
 

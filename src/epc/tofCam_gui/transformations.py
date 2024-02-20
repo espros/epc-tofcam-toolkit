@@ -7,8 +7,8 @@ import cv2
 
 
 from pyqtgraph.Qt import  QtGui
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QPushButton
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QPushButton
 from pyqtgraph.functions import Colors
 
 sys.path.append('.')
