@@ -32,7 +32,12 @@ git clone git@gitlab.ch.epc:MOD/06_Utilities/eye_safety_calculations.git
 Create a virtual environment and activate it
 ```bash
 python -m venv .venv  
+
+# linux
 source .venv/bin/activate
+
+# windows
+.\.venv\Scripts\activate
 ```
 
 Install the package in editable mode

@@ -488,7 +488,7 @@ class SettingsWidget(QtWidgets.QWidget):
         self.modulationChannel.addItem("15")
 
         # set the default selections
-        self.modulationFrequency.setCurrentIndex(0)
+        self.modulationFrequency.setCurrentIndex(1)
         self.modulationChannel.setCurrentIndex(0)
 
         # add labels
