@@ -5,12 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File with Arguments",
+            "name": "TOFcam635",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["COM3"]
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam635_bridge.py"
         }
     ]
 }
