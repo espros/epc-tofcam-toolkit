@@ -1,15 +1,80 @@
-from PyQt5 import QtWidgets  
-from PyQt5.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import Qt
+
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout, QToolBar, QStyle, QWidget, QSizePolicy
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtCore import Signal
+# from PyQt6 import QtWidgets  
+# from PyQt6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout, QToolBar, QStyle, QWidget, QSizePolicy
+# from PyQt6.QtCore import Signal
+# from PyQt6.QtGui import QAction, QIcon
 from typing import List
-import logging
+import numpy as np
+
+class ToolBar(QToolBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # assemble play button
+        self._startIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        self._stopIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop)
+        self.playButton = QAction(self._startIcon, "Start", self)
+        self.playButton.setStatusTip('Start and Stop live Stream')
+        self.playButton.setCheckable(True)
+        self.playButton.triggered.connect(lambda: self.__setIcon(self.playButton, self._startIcon, self._stopIcon))
+
+        # assemble capture button
+        captureIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton)
+        self.captureButton = QAction(captureIcon, "Capture", self)
+        self.captureButton.setStatusTip('Capture a single frame')
+        
+        # assemble chip info and fps info
+        self.chipInfo = QLabel('Chip ID:  000\nWafer ID: 000')
+        self.fpsInfo = QLabel('FPS: 0')
+
+        # Create the spacers
+        left_spacer = QWidget()
+        left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        right_spacer = QWidget()
+        right_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+
+        self.addAction(self.playButton)
+        self.addAction(self.captureButton)
+        self.addWidget(left_spacer)
+        self.addWidget(self.chipInfo)
+        self.addWidget(right_spacer)
+        self.addWidget(self.fpsInfo)
+
+    def setFPS(self, fps):
+        self.fpsInfo.setText(f'FPS: {fps}')
+
+    def __setIcon(self, button: QAction, on: QIcon, off: QIcon):
+        if button.isChecked():
+            button.setIcon(off)
+        else:
+            button.setIcon(on)
+
+    def setChipInfo(self, chipID, waferID):
+        self.chipInfo.setText(f'Chip ID:  {chipID}\nWafer ID: {waferID}')
+
+class GUI_Filters(QGroupBox):
+    def __init__(self, parent=None):
+        super(GUI_Filters, self).__init__('GUI Filters', parent)
+        self.comboBox = QComboBox(parent)
+        self.comboBox.addItem('None')
+
+    def apply_filter(self, image: np.ndarray):
+        filter_cb = self.filter_cb[self.comboBox.currentIndex()]
+        if filter_cb is not None:
+            return filter_cb(image)
+        return image
+    
 
 class GroupBoxSelection(QGroupBox):
-    selection_changed_signal = pyqtSignal(str)
-    def __init__(self, label: str,  image_types: List[str]):
-        super(GroupBoxSelection, self).__init__(label)
-        self.comboBox = QComboBox(self)
+    selection_changed_signal = Signal(str)
+    def __init__(self, label: str,  image_types: List[str], parent=None):
+        super(GroupBoxSelection, self).__init__(label, parent)
+        self.comboBox = QComboBox(parent)
         for type in image_types:
             self.comboBox.addItem(type)
         self.comboBox.setCurrentIndex(0)
@@ -23,7 +88,7 @@ class GroupBoxSelection(QGroupBox):
         self.selection_changed_signal.emit(self.comboBox.currentText())
 
 class DropDownSetting(QGroupBox):
-    signal_selection_changed = pyqtSignal(str)
+    signal_selection_changed = Signal(str)
     def __init__(self, label: str, setting: List[str]):
         super(DropDownSetting, self).__init__()
         self.comboBox = QComboBox(self)
@@ -43,10 +108,10 @@ class DropDownSetting(QGroupBox):
         self.signal_selection_changed.emit(self.comboBox.currentText())
 
 class SpinBoxSetting(QGroupBox):
-    signal_value_changed = pyqtSignal(int)
-    def __init__(self, label: str, min: int, max: int):
-        super(SpinBoxSetting, self).__init__()
-        self.spinBox = QSpinBox(self)
+    signal_value_changed = Signal(int)
+    def __init__(self, label: str, min: int, max: int, parent=None):
+        super(SpinBoxSetting, self).__init__(parent)
+        self.spinBox = QSpinBox(parent)
 
         self.label = QLabel(label, self)
 
@@ -72,7 +137,7 @@ class SettingsGroup(QGroupBox):
         self.setLayout(self.layout)
 
 class CheckBoxSettings(QGroupBox):
-    signal_checkbox_changed = pyqtSignal(str, bool)
+    signal_checkbox_changed = Signal(str, bool)
     def __init__(self, label: str, settings: List[str]):
         super(CheckBoxSettings, self).__init__(label)
         self.layout = QVBoxLayout()
@@ -87,7 +152,7 @@ class CheckBoxSettings(QGroupBox):
         self.signal_checkbox_changed.emit(text, state)
 
 class IntegrationTimes(QGroupBox):
-    signal_value_changed = pyqtSignal(str, int)
+    signal_value_changed = Signal(str, int)
     def __init__(self, labels=[], defaults=[], limits=[], min_value=0):
         super(IntegrationTimes, self).__init__('Integration Times')
         self.layout = QGridLayout()
@@ -115,19 +180,19 @@ class IntegrationTimes635(QGroupBox):
     DEFAULT_INT_TIME_NOF = 125
     DEFAULT_INT_TIME_GRAY = 1000
 
-    signal_value_changed = pyqtSignal(str, int)
-    def __init__(self):
-        super(IntegrationTimes635, self).__init__('Integration Times')
+    signal_value_changed = Signal(str, int)
+    def __init__(self, parent=None):
+        super(IntegrationTimes635, self).__init__('Integration Times', parent)
         self.layout = QGridLayout()
 
-        self.autoMode = QCheckBox('Auto', self)
-        self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(x)))
+        self.autoMode = QCheckBox('Auto', parent)
+        self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(self.autoMode.isChecked())))
         self.layout.addWidget(self.autoMode, 0, 0)
 
         self.wFOV = []
         for i, text in enumerate(['WFOV1', 'WFOV2', 'WFOV3', 'WFOV4']):
             label = QLabel(text, self)
-            spbox = QSpinBox(self)
+            spbox = QSpinBox(parent)
             spbox.setRange(0, 1000)
             self.wFOV.append(spbox)
             self.layout.addWidget(label, i+1, 0)
@@ -148,7 +213,7 @@ class IntegrationTimes635(QGroupBox):
         # self.layout.addWidget(self.nFOV, len(self.wFOV)+1, 1)
 
         gray_label = QLabel('Gray', self)
-        self.gray = QSpinBox(self)
+        self.gray = QSpinBox(parent)
         self.gray.setRange(0, 50000)
         self.gray.setValue(self.DEFAULT_INT_TIME_GRAY)
         self.gray.valueChanged.connect(lambda x: self.signal_value_changed.emit('Gray', x))
@@ -179,11 +244,11 @@ class IntegrationTimes635(QGroupBox):
         for w in self.wFOV:
             w.setEnabled(False)
         # self.nFOV.setEnabled(False)
-        self.gray.setEnabled(False)
+        self.gray.setEnabled(True)
         
 
 class SimpleFilter(QtWidgets.QWidget):
-    signal_filter_changed = pyqtSignal(bool)
+    signal_filter_changed = Signal(bool)
     def __init__(self, name: str):
         super(SimpleFilter, self).__init__()
         self.layout = QHBoxLayout()
@@ -200,7 +265,7 @@ class SimpleFilter(QtWidgets.QWidget):
             self.setVisible(False)
 
 class TemporalFilter(SimpleFilter):
-    signal_filter_changed = pyqtSignal(bool, int, float)
+    signal_filter_changed = Signal(bool, int, float)
     def __init__(self):
         super(TemporalFilter, self).__init__('TemporalFilter')
         self.thresholdLabel = QLabel('Treshold', self)
@@ -232,7 +297,7 @@ class TemporalFilter(SimpleFilter):
         self.threshold.setRange(conf['threshold']['min'], conf['threshold']['max'])
 
 class EdgeFilter(SimpleFilter):
-    signal_filter_changed = pyqtSignal(bool, int)
+    signal_filter_changed = Signal(bool, int)
     def __init__(self):
         super(EdgeFilter, self).__init__('EdgeFilter')
         self.thresholdLabel = QLabel('Threshold', self)
@@ -273,52 +338,61 @@ class FilterSettings(QGroupBox):
 
 
 class RoiSettings(QGroupBox):
-    signal_roi_changed = pyqtSignal(int, int, int, int)
-    def __init__(self, width: int, height: int, label='ROI'):
+    signal_roi_changed = Signal(int, int, int, int)
+    def __init__(self, width: int, height: int, label='ROI', steps=1):
         super(RoiSettings, self).__init__(label)
         self.layout = QGridLayout()
-        self.x = QSpinBox(self)
-        self.y = QSpinBox(self)
-        self.width = QSpinBox(self)
-        self.height = QSpinBox(self)
+        self.x1 = QSpinBox(self)
+        self.y1 = QSpinBox(self)
+        self.x2 = QSpinBox(self)
+        self.y2 = QSpinBox(self)
 
-        self.x.setMinimum(0)
-        self.x.setMaximum(width)
-        self.y.setMinimum(0)
-        self.y.setMaximum(height)
-        self.width.setMinimum(0)
-        self.width.setMaximum(width)
-        self.height.setMinimum(0)
-        self.height.setMaximum(height)
+        self.x1.setSingleStep(steps)
+        self.y1.setSingleStep(steps)
+        self.x2.setSingleStep(steps)
+        self.y2.setSingleStep(steps)
 
-        self.x.setValue(0)
-        self.y.setValue(0)
-        self.width.setValue(width)
-        self.height.setValue(height)
+        self.x1.setMinimum(0)
+        self.x1.setMaximum(width)
+        self.y1.setMinimum(0)
+        self.y1.setMaximum(height)
+        self.x2.setMinimum(0)
+        self.x2.setMaximum(width)
+        self.y2.setMinimum(0)
+        self.y2.setMaximum(height)
 
-        self.xLabel = QLabel('X', self)
-        self.yLabel = QLabel('Y', self)
-        self.widthLabel = QLabel('With', self)
-        self.heightLabel = QLabel('Height', self)
+        self.x1.setValue(0)
+        self.y1.setValue(0)
+        self.x2.setValue(width)
+        self.y2.setValue(height)
 
-        self.layout.addWidget(self.xLabel, 0, 0)
-        self.layout.addWidget(self.x, 0, 1)
-        self.layout.addWidget(self.yLabel, 1, 0)
-        self.layout.addWidget(self.y, 1, 1)
-        self.layout.addWidget(self.widthLabel, 0, 2)
-        self.layout.addWidget(self.width, 0, 3)
-        self.layout.addWidget(self.heightLabel, 1, 2)
-        self.layout.addWidget(self.height, 1, 3)
+        self.x1Label = QLabel('X1', self)
+        self.y1Label = QLabel('Y1', self)
+        self.x2Label = QLabel('X2', self)
+        self.y2Label = QLabel('Y2', self)
 
-        self.x.valueChanged.connect(self.roiChanged)
-        self.y.valueChanged.connect(self.roiChanged)
-        self.width.valueChanged.connect(self.roiChanged)
-        self.height.valueChanged.connect(self.roiChanged)
+        self.layout.addWidget(self.x1Label, 0, 0)
+        self.layout.addWidget(self.x1, 0, 1)
+        self.layout.addWidget(self.y1Label, 1, 0)
+        self.layout.addWidget(self.y1, 1, 1)
+        self.layout.addWidget(self.x2Label, 0, 2)
+        self.layout.addWidget(self.x2, 0, 3)
+        self.layout.addWidget(self.y2Label, 1, 2)
+        self.layout.addWidget(self.y2, 1, 3)
+
+        self.x1.valueChanged.connect(self.roiChanged)
+        self.y1.valueChanged.connect(self.roiChanged)
+        self.x2.valueChanged.connect(self.roiChanged)
+        self.y2.valueChanged.connect(self.roiChanged)
 
         self.setLayout(self.layout)
 
     def roiChanged(self):
-        self.signal_roi_changed.emit(self.x.value(), self.y.value(), self.width.value(), self.height.value())
+        self.x1.setRange(0, self.x2.value()-1)
+        self.y1.setRange(0, self.y2.value()-1)
+        self.x2.setRange(self.x1.value()+1, 160)
+        self.y2.setRange(self.y1.value()+1, 60)
+        self.signal_roi_changed.emit(self.x1.value(), self.y1.value(), self.x2.value(), self.y2.value())
 
 class SettingsWidget(QtWidgets.QWidget):
     def __init__(self, server):
