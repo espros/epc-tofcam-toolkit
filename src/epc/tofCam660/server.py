@@ -109,6 +109,7 @@ class Server:
 
     def setIntTimesus(self, grayscaleIntTime, lowIntTime,
                       midIntTime=0, highIntTime=0):
+        print(f'setIntTimesus({grayscaleIntTime}, {lowIntTime}, {midIntTime}, {highIntTime})')
         self.transceive(Command.create(
             'setIntTimes',
             {'lowIntTime': lowIntTime,
@@ -125,6 +126,7 @@ class Server:
                                         'rightColumn': x1,
                                         'bottomRow': y1}))
     def setHdr(self, hdr_mode):
+        print(f'setHdr({hdr_mode})')
         self.transceive(Command.create('setHdr', hdr_mode))
 
     def setBinning(self, binning_type):
@@ -224,10 +226,12 @@ class Server:
         self.dut.interface.transmit(Command.create('jumpToBootloader'))
 
     def setMinAmplitude(self, minimum):
+        print(f'setMinAmplitude({minimum})')
         self.transceive(Command.create('setMinAmplitude', minimum))
 
     def setFilter(self, enableMedianFilter, enableAverageFilter, edgeDetectionThreshold, 
                   temporalFilterFactor, temporalFilterThreshold, interferenceDetectionLimit, interferenceDetectionUseLastValue):
+        print(f'setFilter({enableMedianFilter}, {enableAverageFilter}, {edgeDetectionThreshold}, {temporalFilterFactor}, {temporalFilterThreshold}, {interferenceDetectionLimit}, {interferenceDetectionUseLastValue})')
         self.transceive(Command.create(
             'setFilter',
             {'temporalFilterFactor': temporalFilterFactor,
@@ -250,6 +254,8 @@ class Server:
              'interferenceDetectionLimit': 0}))
 
     def setModulationFrequencyMHz(self, modulationFrequencyMHz, channel=0):
+        print(f'setModulationFrequencyMHz({modulationFrequencyMHz}, {channel})')
+        # logging.log(logging.INFO, f'setModulationFrequencyMHz({modulationFrequencyMHz}, {channel})')
         self.transceive(Command.create(
             'setModulationFrequency',
             {'frequencyCode': {12: 0,

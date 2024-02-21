@@ -103,9 +103,20 @@ class DropDownSetting(QGroupBox):
         self.layout.addWidget(self.label, 0, 0)
         self.layout.addWidget(self.comboBox, 0, 1)
         self.setLayout(self.layout)
+
+    def getSelection(self) -> str:
+        return self.comboBox.currentText()
     
     def selection_changed(self):
         self.signal_selection_changed.emit(self.comboBox.currentText())
+
+class CheckBoxSetting(QGroupBox):
+    def __init__(self, label: str, parent=None):
+        super(CheckBoxSetting, self).__init__(label, parent)
+        self.checkBox = QCheckBox(label, parent)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.checkBox)
+        self.setLayout(self.layout)
 
 class SpinBoxSetting(QGroupBox):
     signal_value_changed = Signal(int)
@@ -136,44 +147,69 @@ class SettingsGroup(QGroupBox):
 
         self.setLayout(self.layout)
 
-class CheckBoxSettings(QGroupBox):
-    signal_checkbox_changed = Signal(str, bool)
-    def __init__(self, label: str, settings: List[str]):
-        super(CheckBoxSettings, self).__init__(label)
-        self.layout = QVBoxLayout()
-        self.settings = settings
-        for setting in self.settings:
-            widget = QCheckBox(setting, self)
-            widget.stateChanged.connect(lambda: self.checkbox_changed(setting, widget.isChecked()))
-            self.layout.addWidget(widget)
-        self.setLayout(self.layout)
+# class CheckBoxSettings(QGroupBox):
+#     signal_checkbox_changed = Signal(str, bool)
+#     def __init__(self, label: str):
+#         super(CheckBoxSettings, self).__init__(label)
+#         self.layout = QVBoxLayout()
+#         self.settings = settings
+#         for setting in self.settings:
+#             widget = QCheckBox(setting, self)
+#             widget.stateChanged.connect(lambda: self.checkbox_changed(setting, widget.isChecked()))
+#             self.layout.addWidget(widget)
+#         self.setLayout(self.layout)
 
-    def checkbox_changed(self, text: str, state: bool):
-        self.signal_checkbox_changed.emit(text, state)
+#     def checkbox_changed(self, text: str, state: bool):
+#         self.signal_checkbox_changed.emit(text, state)
 
 class IntegrationTimes(QGroupBox):
     signal_value_changed = Signal(str, int)
-    def __init__(self, labels=[], defaults=[], limits=[], min_value=0):
+    def __init__(self, labels=[], defaults=[], limits=[], min_value=0, parent=None):
         super(IntegrationTimes, self).__init__('Integration Times')
         self.layout = QGridLayout()
-        self.set_intTimes(labels, defaults, limits, min_value)
 
-    def set_intTimes(self, labels=[], defaults=[], limits=[], min_value=0):
-        # Clear the existing widgets
-        for i in reversed(range(self.layout.count())): 
-            widgetToRemove = self.layout.itemAt(i).widget()
-            # remove it from the layout list
-            self.layout.removeWidget(widgetToRemove)
-            # remove it from the gui
-            widgetToRemove.setParent(None)
+        self.autoMode = QCheckBox('Auto', parent)
+        self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(self.autoMode.isChecked())))
+        self.layout.addWidget(self.autoMode, 0, 0)
 
-        self.layout.addWidget(QLabel(str(labels) + ' us'), 0, 0)
-        for i in range(len(labels)):
-            widget = QSpinBox()
-            widget.setRange(min_value, limits[i])
-            widget.setValue(defaults[i])
-            self.layout.addWidget(widget, 0, i+1)
+        self.spinBoxes = []
+
+        for i, entry in enumerate(labels):
+            label = QLabel(entry, parent)
+            spbox = QSpinBox(parent)
+            spbox.setRange(min_value, limits[i])
+            spbox.setValue(defaults[i])
+            spbox.valueChanged.connect(lambda x: self.signal_value_changed.emit(entry, x))
+            self.spinBoxes.append(spbox) 
+            self.layout.addWidget(label, i+1, 0)
+            self.layout.addWidget(spbox, i+1, 1)
+        
         self.setLayout(self.layout)
+
+    def setEnabled(self, index: int, enabled: bool):
+        self.spinBoxes[index].setEnabled(enabled)
+
+    def getTimeAtIndex(self, index: int) -> int:
+        return self.spinBoxes[index].value()
+
+    #     self.set_intTimes(labels, defaults, limits, min_value)
+
+    # def set_intTimes(self, labels=[], defaults=[], limits=[], min_value=0):
+    #     # Clear the existing widgets
+    #     for i in reversed(range(self.layout.count())): 
+    #         widgetToRemove = self.layout.itemAt(i).widget()
+    #         # remove it from the layout list
+    #         self.layout.removeWidget(widgetToRemove)
+    #         # remove it from the gui
+    #         widgetToRemove.setParent(None)
+
+    #     self.layout.addWidget(QLabel(str(labels) + ' us'), 0, 0)
+    #     for i in range(len(labels)):
+    #         widget = QSpinBox()
+    #         widget.setRange(min_value, limits[i])
+    #         widget.setValue(defaults[i])
+    #         self.layout.addWidget(widget, 0, i+1)
+    #     self.setLayout(self.layout)
 
 class IntegrationTimes635(QGroupBox):
     DEFAULT_INT_TIME_WOF = 125
@@ -258,11 +294,8 @@ class SimpleFilter(QtWidgets.QWidget):
 
         self.checkBox.stateChanged.connect(lambda enable: self.signal_filter_changed.emit(enable))
 
-    def configure(self, conf: dict):
-        if conf['enabled']:
-            self.setVisible(True)
-        else:
-            self.setVisible(False)
+    def isChecked(self) -> bool:
+        return self.checkBox.isChecked()
 
 class TemporalFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int, float)
@@ -315,32 +348,57 @@ class EdgeFilter(SimpleFilter):
         self.thresholdLabel.setEnabled(enable)
         self.signal_filter_changed.emit(enable, self.threshold.value())
 
+class InterferenceFilter(SimpleFilter):
+    signal_filter_changed = Signal(bool, int, bool)
+    def __init__(self):
+        super(InterferenceFilter, self).__init__('Interference Detection')
+        self.limitLabel = QLabel('Limit', self)
+        self.limit = QSpinBox(self)
+        self.limit.setRange(0, 10000)
+        self.layout.addWidget(self.limitLabel)
+        self.layout.addWidget(self.limit)
+
+        self.useLastValue = QCheckBox('Use Last Value', self)
+        self.layout.addWidget(self.useLastValue)
+
+        self.limit.valueChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.limit.value(), self.useLastValue.isChecked()))
+        self.useLastValue.stateChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.limit.value(), self.useLastValue.isChecked()))
+        self.checkBox.stateChanged.disconnect()
+        self.checkBox.stateChanged.connect(self.__set_active)
+        self.__set_active(False)
+
+    def __set_active(self, enable: bool):
+        self.limit.setEnabled(enable)
+        self.limitLabel.setEnabled(enable)
+        self.useLastValue.setEnabled(enable)
+        self.signal_filter_changed.emit(enable, self.limit.value(), self.useLastValue.isChecked())
+
 class FilterSettings(QGroupBox):
     def __init__(self, parent=None):
-        super(FilterSettings, self).__init__(parent)
+        super(FilterSettings, self).__init__('Camera Filters', parent)
         self.layout = QVBoxLayout()
         self.medianFilter = SimpleFilter('Median Filter')
         self.averageFilter = SimpleFilter('Average Filter')
         self.edgeFilter = EdgeFilter()
         self.temporalFilter = TemporalFilter()
+        self.interferenceFilter = InterferenceFilter()
 
         self.layout.addWidget(self.medianFilter)
         self.layout.addWidget(self.averageFilter)
         self.layout.addWidget(self.edgeFilter)
         self.layout.addWidget(self.temporalFilter)
+        self.layout.addWidget(self.interferenceFilter)
 
         self.setLayout(self.layout) 
-    
-    def configure(self, conf: dict):
-        self.medianFilter.configure(conf['medianFilter'])
-        self.averageFilter.setChecked(conf['averageFilter'])
-        self.temporalFilter.setChecked(conf['temporalFilter'])
 
 
 class RoiSettings(QGroupBox):
     signal_roi_changed = Signal(int, int, int, int)
     def __init__(self, width: int, height: int, label='ROI', steps=1):
         super(RoiSettings, self).__init__(label)
+        self.width = width
+        self.height = height
+
         self.layout = QGridLayout()
         self.x1 = QSpinBox(self)
         self.y1 = QSpinBox(self)
@@ -390,8 +448,8 @@ class RoiSettings(QGroupBox):
     def roiChanged(self):
         self.x1.setRange(0, self.x2.value()-1)
         self.y1.setRange(0, self.y2.value()-1)
-        self.x2.setRange(self.x1.value()+1, 160)
-        self.y2.setRange(self.y1.value()+1, 60)
+        self.x2.setRange(self.x1.value()+1, self.width)
+        self.y2.setRange(self.y1.value()+1, self.height)
         self.signal_roi_changed.emit(self.x1.value(), self.y1.value(), self.x2.value(), self.y2.value())
 
 class SettingsWidget(QtWidgets.QWidget):

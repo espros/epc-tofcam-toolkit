@@ -5,10 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "TOFcam635",
+            "name": "TOFcam635_GUI",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam635_bridge.py"
+        },
+        {
+            "name": "TOFcam635_Standalone_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam635.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "TOFcam660_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam660_bridge.py"
+        },
+        {
+            "name": "TOFcam660_Standalone_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam660.py",
+            "console": "integratedTerminal"
         }
     ]
 }
