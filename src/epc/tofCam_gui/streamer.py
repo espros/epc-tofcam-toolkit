@@ -4,6 +4,9 @@ from typing import Optional
 from PySide6.QtCore import QThread, Signal
 
 def pause_streaming(func):
+    """Decorator to pause the streaming while the decorated function is running.\n
+    Decorated function needs to be a class member function and have an attribute called streamer of type Streamer.
+    """
     def wrapper(self, *args, **kwargs):
         running = self.streamer.is_streaming()
         if running:
@@ -23,9 +26,6 @@ class Streamer(QThread):
         self.start_stream_cb = start_stream_cb
         self.stop_stream_cb = stop_stream_cb
         self.__is_streaming = False
-
-    def set_frame_capture_cb(self, get_frame_cb: callable):
-        self.get_frame_cb = get_frame_cb
 
     def is_streaming(self):
         return self.__is_streaming

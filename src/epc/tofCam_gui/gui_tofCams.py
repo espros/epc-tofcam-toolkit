@@ -26,6 +26,8 @@ class Base_GUI_TOFcam(QMainWindow):
         self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
 
     def complete_setup(self):
+        """ ! needs to be called at the end of the __init__ method of the derived class !
+        """
         self.mainLayout.setSpacing(10)
         self.mainLayout.addLayout(self.settingsLayout, 0, 0)
         self.mainLayout.addWidget(self.imageView, 0, 1)
