@@ -1,12 +1,9 @@
 from epc.tofCam635 import TofCam635
 from epc.tofCam_gui.gui_tofCam635 import GUI_TOFcam635
-from epc.tofCam_gui.settings_widget import IntegrationTimes, IntegrationTimes635
-from epc.tofCam_gui.streamer import Streamer
+from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer
 import qdarktheme
-import time
 
 class TofCam635Bridge:
     DEFAULT_INT_TIME_GRAY = 100
@@ -20,12 +17,11 @@ class TofCam635Bridge:
         self.cam = cam
         self.__get_image_cb = self.__get_distance_image
         self.streamer = Streamer(self.__get_image_cb)
-        self.streamer.signal_new_frame.connect(self.updateImage)
+        self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
 
         cam.cmd.setOperationMode(0)
 
-        self.time_last_frame = time.time()
         gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
@@ -43,13 +39,9 @@ class TofCam635Bridge:
         self.updateChipID()
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
 
+    @pause_streaming
     def __set_roi(self, x: int, y: int, w: int, h: int):
-        if self.streamer.is_streaming():
-            self.stopStreaming()
-            self.cam.set_roi(x, y, w, h)
-            self.startStreaming()
-        else:
-            self.cam.set_roi(x, y, w, h)
+        self.cam.set_roi(x, y, w, h)
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -63,6 +55,7 @@ class TofCam635Bridge:
         for i in range(5):
             self.cam.cmd.setAmplitudeLimit(i, minAmp)
 
+    @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
             self.gui.integrationTimes.set_normal_mode()
@@ -76,6 +69,7 @@ class TofCam635Bridge:
         else:
             raise ValueError(f"HDR Mode '{mode}' not supported")
 
+    @pause_streaming
     def _update_int_time(self, type: str, intTime: int):
         if   type == 'WFOV1':
             self.cam.cmd.setIntTimeDist(0, intTime)
@@ -108,6 +102,7 @@ class TofCam635Bridge:
     def __get_amplitude_image(self, mode=0):
         return self.cam.get_amplitude_image(mode)
 
+    @pause_streaming
     def _changeImageType(self, imgType: str):
         self.imageType = imgType
         if imgType == 'Distance':
@@ -129,15 +124,9 @@ class TofCam635Bridge:
     def updateChipID(self):
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
 
-    def updateImage(self, image):
-        fps = round(1 / (time.time() - self.time_last_frame))
-        self.time_last_frame = time.time()
-        self.gui.toolBar.setFPS(fps)
-        self.gui.imageView.setImage(image, autoRange=False, autoLevels=False, autoHistogramRange=False)
-
     def capture(self, mode=0):
         image = self.__get_image_cb(self.captureMode)
-        self.updateImage(image)
+        self.gui.updateImage(image)
 
 def main():
     app = QApplication([])

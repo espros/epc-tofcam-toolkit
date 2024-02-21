@@ -1,21 +1,10 @@
-import time
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam660.server import Server as TOFcam660
 from epc.tofCam_gui.gui_tofCam660 import GUI_TOFcam660
 from epc.tofCam660.productfactory import ProductFactory
-from epc.tofCam_gui.streamer import Streamer
-
-def pause_streaming(func):
-    def wrapper(self, *args, **kwargs):
-        running = self.streamer.is_streaming()
-        if running:
-            self.streamer.stop_stream()
-        func(self, *args, **kwargs)
-        if running:
-            self.streamer.start_stream()
-    return wrapper
+from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
 class TOFcam660_bridge:
     C = 299792458 # m/s
@@ -28,8 +17,7 @@ class TOFcam660_bridge:
         self.__distance_resolution = 0.01 # mm/bit
         self.__distance_unambiguity = 6.25 # m 
         self.streamer = Streamer(self.getImage)
-        self.streamer.signal_new_frame.connect(self.updateImage)
-        self.time_last_frame = time.time()
+        self.streamer.signal_new_frame.connect(self.gui.updateImage)
         
         # update chip information
         chipID = cam.getChipId()
@@ -150,15 +138,9 @@ class TOFcam660_bridge:
         if not self.streamer.is_streaming():
             self.capture()
 
-    def updateImage(self, image):
-        fps = round(1 / (time.time() - self.time_last_frame))
-        self.time_last_frame = time.time()
-        self.gui.toolBar.setFPS(fps)
-        self.gui.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
-
     def capture(self, mode=0):
         image = self.getImage()
-        self.updateImage(image)
+        self.gui.updateImage(image)
 
 def main():
     app = QApplication([])

@@ -1,3 +1,4 @@
+import time
 from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget
 from epc.tofCam_gui.video_widget import VideoWidget
 from epc.tofCam_gui.settings_widget import ToolBar
@@ -7,6 +8,8 @@ class Base_GUI_TOFcam(QMainWindow):
         super(Base_GUI_TOFcam, self).__init__()
         self.setWindowTitle(title)
 
+        self.time_last_frame = time.time()
+
         # create main widgets
         self.toolBar = ToolBar(self)
         self.imageView = VideoWidget()
@@ -15,6 +18,12 @@ class Base_GUI_TOFcam(QMainWindow):
         self.widget = QWidget()
 
         self.addToolBar(self.toolBar)
+
+    def updateImage(self, image):
+        fps = round(1 / (time.time() - self.time_last_frame))
+        self.time_last_frame = time.time()
+        self.toolBar.setFPS(fps)
+        self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
 
     def complete_setup(self):
         self.mainLayout.setSpacing(10)

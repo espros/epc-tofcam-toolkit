@@ -1,12 +1,21 @@
-import time
-import threading
+import logging
 import numpy as np  
 from typing import Optional
 from PySide6.QtCore import QThread, Signal
 
+def pause_streaming(func):
+    def wrapper(self, *args, **kwargs):
+        running = self.streamer.is_streaming()
+        if running:
+            self.streamer.stop_stream()
+        func(self, *args, **kwargs)
+        if running:
+            self.streamer.start_stream()
+    return wrapper
+
 class Streamer(QThread):
     signal_new_frame = Signal(np.ndarray)
-    def __init__(self, get_frame_cb: callable, 
+    def __init__(self, get_frame_cb: Optional[callable]=None, 
                        start_stream_cb: Optional[callable]=None, 
                        stop_stream_cb:  Optional[callable]=None):
         super(Streamer, self).__init__()
@@ -15,16 +24,19 @@ class Streamer(QThread):
         self.stop_stream_cb = stop_stream_cb
         self.__is_streaming = False
 
-        if not self.get_frame_cb:
-            raise ValueError("get_frame_cb must be a callable")
-
+    def set_frame_capture_cb(self, get_frame_cb: callable):
+        self.get_frame_cb = get_frame_cb
 
     def is_streaming(self):
         return self.__is_streaming
 
     def start_stream(self, **kwargs):
         if self.__is_streaming:
-            raise Exception("Already streaming")
+            logging.warning("Already streaming")
+            return
+        if not self.get_frame_cb:
+            logging.error("Starting stream")
+            return
         if self.start_stream_cb:
             self.start_stream_cb(**kwargs)
         self.start()
