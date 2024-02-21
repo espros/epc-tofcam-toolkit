@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 from pyqtgraph import ImageView, ColorMap
 import numpy as np
 
