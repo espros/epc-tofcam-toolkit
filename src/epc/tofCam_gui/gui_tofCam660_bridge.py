@@ -23,6 +23,8 @@ class TOFcam660_bridge:
         chipID = cam.getChipId()
         waferId = cam.getWaferId()
         gui.toolBar.setChipInfo(chipID, waferId)
+        fw_version = cam.getFirmwareVersion()
+        gui.toolBar.setVersionInfo(f"{fw_version['major']}, {fw_version['minor']}")
 
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)

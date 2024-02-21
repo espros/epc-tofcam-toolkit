@@ -258,7 +258,7 @@ class Commands():
     answer = self.getAnswer(communication.Type.DATA_FIRMWARE_RELEASE,12)
     fwRelease=struct.unpack('<'+'I',answer)[0]
     print('# Firmware Version: {:d}.{:d}'.format(fwRelease>>16,fwRelease&0xffff))
-    return fwRelease
+    return float(fwRelease>>16) + float(fwRelease&0xffff)/100
 
   @thread_locker
   def getTemperature(self):

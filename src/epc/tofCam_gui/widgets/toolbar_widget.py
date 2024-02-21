@@ -1,9 +1,13 @@
+import pkg_resources
 from PySide6.QtWidgets import QToolBar, QLabel, QWidget, QSizePolicy, QStyle
 from PySide6.QtGui import QIcon, QAction
+
 
 class ToolBar(QToolBar):
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.gui_version = pkg_resources.get_distribution("epc-tofcam-lib").version
         
         # assemble play button
         self._startIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
@@ -19,7 +23,8 @@ class ToolBar(QToolBar):
         self.captureButton.setStatusTip('Capture a single frame')
         
         # assemble chip info and fps info
-        self.chipInfo = QLabel('Chip ID:  000\nWafer ID: 000')
+        self.chipInfo = QLabel('Chip ID: 000\nWafer ID: 000')
+        self.versionInfo = QLabel(f'GUI: {self.gui_version}\nFW: 000')
         self.fpsInfo = QLabel('FPS: 0')
 
         # Create the spacers
@@ -32,6 +37,7 @@ class ToolBar(QToolBar):
         self.addAction(self.playButton)
         self.addAction(self.captureButton)
         self.addWidget(left_spacer)
+        self.addWidget(self.versionInfo)
         self.addWidget(self.chipInfo)
         self.addWidget(right_spacer)
         self.addWidget(self.fpsInfo)
@@ -44,6 +50,9 @@ class ToolBar(QToolBar):
             button.setIcon(off)
         else:
             button.setIcon(on)
+
+    def setVersionInfo(self, fwVersion):
+        self.versionInfo.setText(f'GUI: {self.gui_version}\nFW: {fwVersion}')
 
     def setChipInfo(self, chipID, waferID):
         self.chipInfo.setText(f'Chip ID:  {chipID}\nWafer ID: {waferID}')

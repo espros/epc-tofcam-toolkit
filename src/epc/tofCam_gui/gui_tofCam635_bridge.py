@@ -35,7 +35,8 @@ class TofCam635Bridge:
         gui.roiSettings.signal_roi_changed.connect(self.__set_roi)
         gui.modulationChannel.signal_selection_changed.connect(lambda channel: self.cam.cmd.setModChannel(int(channel)))
 
-        self.updateChipID()
+        self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
+        self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
 
     def _set_streaming(self, enable: bool):
@@ -118,8 +119,6 @@ class TofCam635Bridge:
             raise ValueError(f"Image Type '{imgType}' not supported")
         self.capture()
 
-    def updateChipID(self):
-        self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
 
     def capture(self, mode=0):
         image = self.__get_image_cb(self.captureMode)
