@@ -10,7 +10,7 @@ from epc.tofCam635.commands import Commands
 class TofCam635:
   CAPTURE_MODE = 1
   CAPTURE_TRYS_BEFORE_FAIL = 10
-  def __init__(self,port = '/dev/ttyACM0'):
+  def __init__(self, port = '/dev/ttyACM0'):
     self.com = SerialInterface(port)
     self.cmd = Commands(self.com,self.com)
 

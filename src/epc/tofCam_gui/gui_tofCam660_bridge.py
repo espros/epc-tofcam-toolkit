@@ -1,8 +1,11 @@
+
+import sys
+import getopt
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
+from epc.tofCam660.epc660 import Epc660Ethernet
 from epc.tofCam660.server import Server as TOFcam660
-from epc.tofCam660.productfactory import ProductFactory
 from epc.tofCam_gui import GUI_TOFcam660
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
@@ -144,11 +147,25 @@ class TOFcam660_bridge:
         image = self.getImage()
         self.gui.updateImage(image)
 
+def get_ipAddress():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "i:p:", ["ip=", 'port='])
+        for opt, arg in opts:
+            if opt in ('-i', '--ip'):
+                ip_address = arg
+            elif opt in ('-p', '--port'):
+                port = arg
+    except:
+        ip_address = '10.10.31.180'
+        print(f'No ip-address specified. Trying to use default ip-address {ip_address}')
+    return ip_address
+
 def main():
+    ip_address = get_ipAddress()
+    epc660 = Epc660Ethernet(ip_address)
+    cam = TOFcam660(epc660)
+
     app = QApplication([])
-    cam = TOFcam660()
-    cam.setProduct(ProductFactory().create_product('660_ethernet', 0))
-    cam.startup()
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()
     bridge = TOFcam660_bridge(gui, cam)

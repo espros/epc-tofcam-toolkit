@@ -21,7 +21,11 @@
             "name": "TOFcam660_GUI",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam660_bridge.py"
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam660_bridge.py",
+            "args": [
+                "--ip",
+                "10.10.31.180"
+            ],
         },
         {
             "name": "TOFcam660_Standalone_GUI",

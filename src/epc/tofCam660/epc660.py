@@ -36,42 +36,32 @@ class Epc660(abc.ABC):
     def transceive(self, command):
         return self.interface.transceive(command)
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def startup(self):
         pass
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def waitTillCameraBooted(self):
         pass
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def shutdown(self):
         pass
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def getImageData(self, command, bytecount):
         pass
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def calibrate(self, calibrationCommand, logfilename):
         pass
 
 
 class Epc660Ethernet(Epc660):
-    def startup(self):
-        self.interface = Interface()
-        self.udpInterface = UdpInterface()
-
-    def waitTillCameraBooted(self):
-        for i in range(60):
-            try:
-                socket_ = socket.create_connection(('10.10.31.180', 50660), 0.5)
-                socket_.close()
-                break
-            except socket.timeout:
-                pass
-        else:
-            raise RuntimeError('no camera found')
+    def __init__(self, ip_address='10.10.31.180', tcp_port=50660, udp_port=45454, memRev=0):
+        super().__init__(memRev)
+        self.interface = Interface(ip_address, tcp_port)
+        self.udpInterface = UdpInterface(ip_address, udp_port)
 
     def shutdown(self):
         self.interface.close()

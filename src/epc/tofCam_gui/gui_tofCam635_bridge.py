@@ -1,3 +1,5 @@
+import sys
+import getopt
 import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam635 import TofCam635
@@ -124,9 +126,24 @@ class TofCam635Bridge:
         image = self.__get_image_cb(self.captureMode)
         self.gui.updateImage(image)
 
+def get_port():
+    port = None
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "p:", ['port='])
+        for opt, arg in opts:
+            if opt in ('-p', '--port'):
+                port = arg
+    except:
+        print('Argument parsing failed')
+    if port == None:
+        print(f'No port specified. Trying to find port automatically')
+    return port
+
 def main():
+    port = get_port()
+    cam = TofCam635(port)
+
     app = QApplication([])
-    cam = TofCam635(port='/dev/ttyACM1')
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam635()
     gui.centralWidget().releaseKeyboard()

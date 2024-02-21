@@ -5,15 +5,34 @@
 
 
 import serial as Serial
+import serial.tools.list_ports
 import sys
 from time import sleep
 
 class SerialInterface():
-  def __init__(self, port,baudrate = 10000000, timeout = 0.2):
+  def __init__(self, port: None, baudrate = 10000000, timeout = 0.2):
+    if port == None:
+      port = self.find_ports()
+
     self.serial=Serial.Serial(port,baudrate,timeout=timeout)
     self.port = port
     self.baudrate = baudrate
     self.timeout = timeout
+
+  def find_ports(self):
+    result = None
+    ports = serial.tools.list_ports.comports()
+    if len(ports) == 0:
+      raise('No serial port found')
+    for port, desc, hwid in sorted(ports):
+      if desc == 'STM32 Virtual ComPort':
+        print(f'Device found at port:')
+        print(f'port: {port}, desc: {desc}, hwid: {hwid}')
+        result = port
+    
+    if result == None:
+      raise('Device not found')
+    return result
 
   def open(self,port,baudrate = 10000000, timeout = 0.2):
     self.serial=Serial.Serial(port,baudrate,timeout=timeout)

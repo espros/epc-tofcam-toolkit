@@ -23,7 +23,10 @@ class Interface:
     def __init__(self, ipAddress='10.10.31.180', port=50660):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.socket.connect((ipAddress, port))
+        try: 
+            self.socket.connect((ipAddress, port))
+        except Exception as e:
+            raise ConnectionError(f'No camera found at address {ipAddress}:{port}\n{e}')
 
     def close(self):
         self.socket.close()

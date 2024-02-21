@@ -22,6 +22,7 @@ from PIL import Image
 from epc.tofCam660.command import Command
 from epc.tofCam660.parser import GrayscaleParser, DistanceParser, DistanceAndAmplitudeParser, DcsParser
 from epc.tofCam660.mac_address_generator import total_random as generateRandomMacAddress
+from epc.tofCam660.epc660 import Epc660
 
 colors = [(0, 0, 0),
           (255, 0, 0),
@@ -33,8 +34,8 @@ colors = [(0, 0, 0),
 
 
 class Server:
-    def __init__(self):
-        self.dut = None
+    def __init__(self, dut: Epc660):
+        self.dut = dut
         self.registerAtExits()
 
     def recordVideo(self, frames, folder):
@@ -75,8 +76,6 @@ class Server:
     def registerAtExits(self):
         atexit.register(self.shutdown)
 
-    def setProduct(self, product):
-        self.dut = product
 
     def transceive(self, command):
         return self.dut.transceive(command).data
@@ -86,10 +85,6 @@ class Server:
 
     def readRegister(self, register):
         return self.transceive(Command.create('readRegister', register))
-
-    def startup(self):
-        self.waitTillCameraBooted()
-        self.dut.startup()
 
     def waitTillCameraBooted(self):
         self.dut.waitTillCameraBooted()
