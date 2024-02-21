@@ -148,6 +148,7 @@ class TOFcam660_bridge:
         self.gui.updateImage(image)
 
 def get_ipAddress():
+    ip_address = None
     try:
         opts, args = getopt.getopt(sys.argv[1:], "i:p:", ["ip=", 'port='])
         for opt, arg in opts:
@@ -156,6 +157,8 @@ def get_ipAddress():
             elif opt in ('-p', '--port'):
                 port = arg
     except:
+        print('Argument parsing failed')
+    if ip_address == None:
         ip_address = '10.10.31.180'
         print(f'No ip-address specified. Trying to use default ip-address {ip_address}')
     return ip_address
