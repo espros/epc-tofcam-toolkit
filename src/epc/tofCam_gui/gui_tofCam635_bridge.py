@@ -15,7 +15,7 @@ class TofCam635Bridge:
     def __init__(self, gui: GUI_TOFcam635, cam: TofCam635) -> None:
         self.gui = gui
         self.cam = cam
-        self.__get_image_cb = self.__get_distance_image
+        self.__get_image_cb = self.cam.get_distance_image
         self.streamer = Streamer(self.__get_image_cb)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
@@ -39,10 +39,6 @@ class TofCam635Bridge:
         self.updateChipID()
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
 
-    @pause_streaming
-    def __set_roi(self, x: int, y: int, w: int, h: int):
-        self.cam.set_roi(x, y, w, h)
-
     def _set_streaming(self, enable: bool):
         if enable:
             self.captureMode = 1
@@ -54,6 +50,10 @@ class TofCam635Bridge:
     def _set_min_amplitudes(self, minAmp: int):
         for i in range(5):
             self.cam.cmd.setAmplitudeLimit(i, minAmp)
+
+    @pause_streaming
+    def __set_roi(self, x: int, y: int, w: int, h: int):
+        self.cam.set_roi(x, y, w, h)
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
@@ -93,28 +93,19 @@ class TofCam635Bridge:
         else:
             raise ValueError(f"Integration Time Type '{type}' not supported")
 
-    def __get_grayscale_image(self, mode=0):
-        return self.cam.get_grayscale_image(mode)
-
-    def __get_distance_image(self, mode=0):
-        return self.cam.get_distance_image(mode)
-
-    def __get_amplitude_image(self, mode=0):
-        return self.cam.get_amplitude_image(mode)
-
     @pause_streaming
     def _changeImageType(self, imgType: str):
         self.imageType = imgType
         if imgType == 'Distance':
-            self.__get_image_cb = self.__get_distance_image
+            self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
         elif imgType == 'Amplitude':
-            self.__get_image_cb = self.__get_amplitude_image
+            self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif imgType == 'Grayscale':
-            self.__get_image_cb = self.__get_grayscale_image
+            self.__get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         else:
@@ -130,7 +121,7 @@ class TofCam635Bridge:
 
 def main():
     app = QApplication([])
-    cam = TofCam635(port='/dev/ttyACM0')
+    cam = TofCam635(port='/dev/ttyACM1')
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam635()
     gui.centralWidget().releaseKeyboard()
