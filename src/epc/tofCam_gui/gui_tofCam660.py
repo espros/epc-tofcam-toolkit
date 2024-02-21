@@ -28,7 +28,6 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.roiSettings = RoiSettings(320, 240)
 
         #Create Layout for settings
-        self.settingsLayout = QtWidgets.QVBoxLayout()
         self.settingsLayout.addWidget(self.imageTypeWidget)
         self.settingsLayout.addWidget(self.guiFilterGroupBox)
         self.settingsLayout.addWidget(self.modeSettings)
