@@ -2,8 +2,8 @@ import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam660.server import Server as TOFcam660
-from epc.tofCam_gui.gui_tofCam660 import GUI_TOFcam660
 from epc.tofCam660.productfactory import ProductFactory
+from epc.tofCam_gui import GUI_TOFcam660
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
 class TOFcam660_bridge:

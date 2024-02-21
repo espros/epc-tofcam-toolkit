@@ -10,8 +10,8 @@ from PySide6 import QtWidgets
 import pyqtgraph as pg
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QPushButton, QComboBox
-from epc.tofCam_gui.roi_widget import ROIWidget
-from epc.tofCam_gui.settings_widget import SettingsWidget
+from epc.tofCam_gui.widgets.roi_widget import ROIWidget
+from epc.tofCam_gui.widgets.settings_widget import SettingsWidget
 
 from epc.tofCam660.productfactory import ProductFactory
 from epc.tofCam660.server import Server

@@ -1,10 +1,8 @@
-import qdarktheme
 import sys
-
+import qdarktheme
 from PySide6 import QtWidgets
-from epc.tofCam_gui.settings_widget import FilterSettings, IntegrationTimes635, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings
-from epc.tofCam_gui.video_widget import VideoWidget
-from epc.tofCam_gui.gui_tofCams import Base_GUI_TOFcam
+from epc.tofCam_gui import Base_GUI_TOFcam
+from epc.tofCam_gui.widgets import VideoWidget, FilterSettings, IntegrationTimes, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings
 
 class GUI_TOFcam635(Base_GUI_TOFcam):
     def __init__(self, title='TOF CAM 635 VIDEO STREAM', parent=None):
@@ -19,7 +17,7 @@ class GUI_TOFcam635(Base_GUI_TOFcam):
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['20 MHz'])
         self.operationMode = DropDownSetting('Operation Mode', ['WFO'])
         self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.modulationChannel, self.operationMode, self.hdrModeDropDown])
-        self.integrationTimes = IntegrationTimes635(self)
+        self.integrationTimes = IntegrationTimes(['WFOV1', 'WFOV2', 'WFOV3', 'WFOV4', 'Gray'], [125, 250, 375, 500, 1000], [1000, 1000, 1000, 1000, 50000])
         self.minAmplitude = SpinBoxSetting('Minimal Amplitude', 0, 1000)
         self.builtInFilter = FilterSettings()
         self.roiSettings = RoiSettings(160, 60, steps=4)

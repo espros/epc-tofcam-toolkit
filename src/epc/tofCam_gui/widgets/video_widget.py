@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget
-from pyqtgraph import ImageView, ColorMap
 import numpy as np
+from pyqtgraph import ImageView, ColorMap
+
 
 CMAP_DISTANCE = [   (  0,   0,   0),
                     (255,   0,   0),

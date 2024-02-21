@@ -1,7 +1,6 @@
 import time
 from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget
-from epc.tofCam_gui.video_widget import VideoWidget
-from epc.tofCam_gui.settings_widget import ToolBar
+from epc.tofCam_gui.widgets import VideoWidget, ToolBar
 
 class Base_GUI_TOFcam(QMainWindow):
     def __init__(self, title: str, parent=None):

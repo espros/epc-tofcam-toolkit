@@ -1,9 +1,8 @@
-from epc.tofCam635 import TofCam635
-from epc.tofCam_gui.gui_tofCam635 import GUI_TOFcam635
-from epc.tofCam_gui.streamer import Streamer, pause_streaming
-
-from PySide6.QtWidgets import QApplication
 import qdarktheme
+from PySide6.QtWidgets import QApplication
+from epc.tofCam635 import TofCam635
+from epc.tofCam_gui import GUI_TOFcam635
+from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
 class TofCam635Bridge:
     DEFAULT_INT_TIME_GRAY = 100
@@ -51,6 +50,12 @@ class TofCam635Bridge:
         for i in range(5):
             self.cam.cmd.setAmplitudeLimit(i, minAmp)
 
+    def _set_hdrTimesEnabled(self, enabled: bool):
+        self.gui.integrationTimes.setEnabled(1, enabled)
+        self.gui.integrationTimes.setEnabled(2, enabled)
+        self.gui.integrationTimes.setEnabled(3, enabled)
+        self.gui.integrationTimes.autoMode.setEnabled(not enabled)
+
     @pause_streaming
     def __set_roi(self, x: int, y: int, w: int, h: int):
         self.cam.set_roi(x, y, w, h)
@@ -58,13 +63,14 @@ class TofCam635Bridge:
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
-            self.gui.integrationTimes.set_normal_mode()
+            self._set_hdrTimesEnabled(False)
             self.cam.cmd.setHDR('spatial')
         elif mode == 'HDR Temporal':
+            self._set_hdrTimesEnabled(True)
             self.gui.integrationTimes.set_hdr_mode()
             self.cam.cmd.setHDR('temporal')
         elif mode == 'HDR Off':
-            self.gui.integrationTimes.set_normal_mode()
+            self._set_hdrTimesEnabled(False)
             self.cam.cmd.setHDR('off')
         else:
             raise ValueError(f"HDR Mode '{mode}' not supported")

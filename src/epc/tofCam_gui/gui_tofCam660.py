@@ -1,11 +1,8 @@
-import qdarktheme
 import sys
-
+import qdarktheme
 from PySide6 import QtWidgets  
-from epc.tofCam_gui.settings_widget import FilterSettings, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings, IntegrationTimes
-from epc.tofCam_gui.video_widget import VideoWidget
-from epc.tofCam_gui.gui_tofCams import Base_GUI_TOFcam
-
+from epc.tofCam_gui.widgets import VideoWidget, FilterSettings, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings, IntegrationTimes
+from epc.tofCam_gui import Base_GUI_TOFcam
 
 
 class GUI_TOFcam660(Base_GUI_TOFcam):
