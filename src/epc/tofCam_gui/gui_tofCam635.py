@@ -2,20 +2,13 @@ import qdarktheme
 import sys
 
 from PySide6 import QtWidgets
-from PySide6.QtWidgets import QMainWindow
-# from PyQt6 import QtWidgets  
-# from PyQt6.QtWidgets import QMainWindow
-from epc.tofCam_gui.settings_widget import ToolBar, FilterSettings, GUI_Filters, IntegrationTimes635, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings, IntegrationTimes
+from epc.tofCam_gui.settings_widget import FilterSettings, IntegrationTimes635, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings
 from epc.tofCam_gui.video_widget import VideoWidget
+from epc.tofCam_gui.gui_tofCams import Base_GUI_TOFcam
 
-class GUI_TOFcam635(QMainWindow):
+class GUI_TOFcam635(Base_GUI_TOFcam):
     def __init__(self, title='TOF CAM 635 VIDEO STREAM', parent=None):
-        super(GUI_TOFcam635, self).__init__()
-        self.setWindowTitle(title)
-
-        # Create the toolbar
-        self.toolBar = ToolBar(self)
-        self.addToolBar(self.toolBar)
+        super(GUI_TOFcam635, self).__init__(title)
 
         # Create Widgets
         self.imageView = VideoWidget()
@@ -41,19 +34,7 @@ class GUI_TOFcam635(QMainWindow):
         self.settingsLayout.addWidget(self.builtInFilter)
         self.settingsLayout.addWidget(self.roiSettings)
 
-        # Create main layout
-        self.mainLayout=QtWidgets.QGridLayout()
-        self.mainLayout.setSpacing(10)
-        self.mainLayout.addLayout(self.settingsLayout,0,0)
-        self.mainLayout.addWidget(self.imageView,0,1)
-        self.mainLayout.setColumnStretch(1,3)
-
-        self.widget = QtWidgets.QWidget()
-        self.widget.setLayout(self.mainLayout)
-
-        self.setCentralWidget(self.widget)
-        self.resize(1200,600)
-        
+        self.complete_setup()
         
 def main():
     app = QtWidgets.QApplication(sys.argv)
