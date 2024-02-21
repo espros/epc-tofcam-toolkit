@@ -1,3 +1,5 @@
+from PySide6 import QtWidgets  
+from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox
 
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QVBoxLayout, QGridLayout, QToolBar, QStyle, QWidget, QSizePolicy

@@ -5,19 +5,18 @@ import subprocess
 import time
 import struct
 
-from epc.tofCam611.crc import crc
 from epc.tofCam611.commandList import commandList
 from epc.tofCam611.communicationType import communicationType
 from epc.tofCam611.update import update
 from epc.tofCam611.constants import __constants  as Constants
-
+from epc.tofCam_lib import Crc
 
 
 class Camera():
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
-    self.crc = crc()
+    self.crc = Crc(revout=False, stmMode=True)
 
   def powerOn(self,enable=True):
     self.tofWrite([commandList.COMMAND_SET_POWER, enable])
@@ -310,7 +309,8 @@ class Camera():
     a=[0xf5]*14
     a[1:10]=values
 
-    crc=np.array(self.crc.calcCrc32(a[:10],10))
+    crc = np.array(self.crc.calcCrc32Uint8(a[:10]))
+    
     a[10] = crc & 0xff
     a[11] = (crc>>8) & 0xff
     a[12] = (crc>>16) & 0xff
@@ -331,7 +331,7 @@ class Camera():
     @returns data of serial port with verified checksum
     """
     tmp=self.com.read(length)
-    if not self.crc.isCrcValid(tmp):
+    if not self.crc.verify(tmp):
       raise Exception("CRC not valid!!")
     if len(tmp) != length:
       raise Exception("Not enought bytes!!")
@@ -358,7 +358,7 @@ class Camera():
     length = struct.unpack('<'+'H',tmp[2:4])[0]
     tmp = self.com.read(length+4)
     total+=bytes(tmp)
-    self.crc.isCrcValid(total)
+    self.crc.verify(total)
     if typeId != total[1]:
       raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
 
@@ -375,7 +375,7 @@ class Camera():
       tmp=self.comDll.read(LEN_BYTES)
     else:
       tmp=self.com.read(LEN_BYTES)
-    if not self.crc.isCrcValid(tmp):
+    if not self.crc.verify(tmp):
       raise Exception("CRC not valid!!")
       return False
     if tmp[1] != communicationType.DATA_ACK:

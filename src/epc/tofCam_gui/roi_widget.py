@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets  
-from PyQt5.QtWidgets import QSpinBox, QLabel
+from PySide6 import QtWidgets  
+from PySide6.QtWidgets import QSpinBox, QLabel
 
 class ROIWidget(QtWidgets.QWidget):
     def __init__(self, server):
