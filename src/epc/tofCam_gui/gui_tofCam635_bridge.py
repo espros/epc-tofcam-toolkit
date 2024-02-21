@@ -1,15 +1,12 @@
 from epc.tofCam635 import TofCam635
 from epc.tofCam_gui.gui_tofCam635 import GUI_TOFcam635
 from epc.tofCam_gui.settings_widget import IntegrationTimes, IntegrationTimes635
+from epc.tofCam_gui.streamer import Streamer
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTimer
-# from PyQt6.QtWidgets import QApplication
-# from PyQt6.QtCore import QTimer
 import qdarktheme
 import time
-import threading
-import queue
 
 class TofCam635Bridge:
     DEFAULT_INT_TIME_GRAY = 100
@@ -21,14 +18,17 @@ class TofCam635Bridge:
     def __init__(self, gui: GUI_TOFcam635, cam: TofCam635) -> None:
         self.gui = gui
         self.cam = cam
-        self.getImage_cb = None
+        self.__get_image_cb = self.__get_distance_image
+        self.streamer = Streamer(self.__get_image_cb)
+        self.streamer.signal_new_frame.connect(self.updateImage)
+        self.captureMode = 0
 
         cam.cmd.setOperationMode(0)
 
         self.time_last_frame = time.time()
-        self.gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(self.gui.toolBar.playButton.isChecked()))
-        self.gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
+        gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
         gui.toolBar.captureButton.triggered.connect(self.capture)
+        gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
         gui.imageTypeWidget.selection_changed_signal.connect(self._changeImageType)
         gui.hdrModeDropDown.signal_selection_changed.connect(self._set_hdr_mode)
         gui.minAmplitude.signal_value_changed.connect(lambda value: self._set_min_amplitudes(value))
@@ -43,41 +43,21 @@ class TofCam635Bridge:
         self.updateChipID()
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
 
-        self.__is_streaming = False
-        self.__streaming_thread = None
-
     def __set_roi(self, x: int, y: int, w: int, h: int):
-        if self.__is_streaming:
+        if self.streamer.is_streaming():
             self.stopStreaming()
             self.cam.set_roi(x, y, w, h)
             self.startStreaming()
         else:
             self.cam.set_roi(x, y, w, h)
-
-
-    def __streaming_thread_cb(self):
-        self.__is_streaming = True
-        while self.__is_streaming:
-            self.capture(mode=1)
-
-    def startStreaming(self):
-        if self.__is_streaming:
-            raise Exception("Already streaming")
-        self.__streaming_thread = threading.Thread(target=self.__streaming_thread_cb, )
-        self.__streaming_thread.start()
-
-    def stopStreaming(self):
-        if not self.__is_streaming:
-            return
-        self.__is_streaming = False
-        self.__streaming_thread.join()
-        self.cam.cmd.com.serial.flush()
 
     def _set_streaming(self, enable: bool):
         if enable:
-            self.startStreaming()
+            self.captureMode = 1
+            self.streamer.start_stream()
         else:
-            self.stopStreaming()
+            self.captureMode = 0
+            self.streamer.stop_stream()
 
     def _set_min_amplitudes(self, minAmp: int):
         for i in range(5):
@@ -131,15 +111,15 @@ class TofCam635Bridge:
     def _changeImageType(self, imgType: str):
         self.imageType = imgType
         if imgType == 'Distance':
-            self.getImage_cb = self.__get_distance_image
+            self.__get_image_cb = self.__get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
         elif imgType == 'Amplitude':
-            self.getImage_cb = self.__get_amplitude_image
+            self.__get_image_cb = self.__get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif imgType == 'Grayscale':
-            self.getImage_cb = self.__get_grayscale_image
+            self.__get_image_cb = self.__get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         else:
@@ -149,13 +129,15 @@ class TofCam635Bridge:
     def updateChipID(self):
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
 
-    def capture(self, mode=0):
+    def updateImage(self, image):
         fps = round(1 / (time.time() - self.time_last_frame))
         self.time_last_frame = time.time()
-
-        image = self.getImage_cb(mode)
-        self.gui.imageView.setImage(image, autoRange=False, autoLevels=False, autoHistogramRange=False)
         self.gui.toolBar.setFPS(fps)
+        self.gui.imageView.setImage(image, autoRange=False, autoLevels=False, autoHistogramRange=False)
+
+    def capture(self, mode=0):
+        image = self.__get_image_cb(self.captureMode)
+        self.updateImage(image)
 
 def main():
     app = QApplication([])

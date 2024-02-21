@@ -13,8 +13,11 @@ class Streamer(QThread):
         self.get_frame_cb = get_frame_cb
         self.start_stream_cb = start_stream_cb
         self.stop_stream_cb = stop_stream_cb
-
         self.__is_streaming = False
+
+        if not self.get_frame_cb:
+            raise ValueError("get_frame_cb must be a callable")
+
 
     def is_streaming(self):
         return self.__is_streaming

@@ -24,11 +24,11 @@ class TOFcam660_bridge:
     def __init__(self, gui: GUI_TOFcam660, cam: TOFcam660):
         self.gui = gui
         self.cam = cam
-        self.__capture_cb = cam.getTofDistance
+        self.__get_image_cb = cam.getTofDistance
         self.__distance_resolution = 0.01 # mm/bit
         self.__distance_unambiguity = 6.25 # m 
-        self.streamer = Streamer(self._stream_frame)
-        self.streamer.signal_new_frame.connect(lambda image: gui.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False))
+        self.streamer = Streamer(self.getImage)
+        self.streamer.signal_new_frame.connect(self.updateImage)
         self.time_last_frame = time.time()
         
         # update chip information
@@ -58,15 +58,9 @@ class TOFcam660_bridge:
         self._set_modulation_settings()
         self._set_integration_times('Low', 100)
 
-    def __update_fps(self):
-        fps = round(1 / (time.time() - self.time_last_frame))
-        self.time_last_frame = time.time()
-        self.gui.toolBar.setFPS(fps)
 
-    def _stream_frame(self):
-        self.__update_fps()
-
-        image = self.__capture_cb()
+    def getImage(self):
+        image = self.__get_image_cb()
         return np.rot90(image, 1, (2, 1))
 
     def _set_streaming(self, enable: bool):
@@ -141,24 +135,30 @@ class TOFcam660_bridge:
     @pause_streaming
     def _set_image_type(self, image_type: str):
         if image_type == 'Distance':
-            self.__capture_cb = self.cam.getTofDistance
+            self.__get_image_cb = self.cam.getTofDistance
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif image_type == 'Amplitude':
-            self.__capture_cb = self.cam.getTofAmplitude
+            self.__get_image_cb = self.cam.getTofAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
-            self.__capture_cb = self.cam.getGrayscaleAmplitude
+            self.__get_image_cb = self.cam.getGrayscaleAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         
         if not self.streamer.is_streaming():
             self.capture()
 
-    def capture(self, mode=0):
-        image = self._stream_frame()
+    def updateImage(self, image):
+        fps = round(1 / (time.time() - self.time_last_frame))
+        self.time_last_frame = time.time()
+        self.gui.toolBar.setFPS(fps)
         self.gui.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
+
+    def capture(self, mode=0):
+        image = self.getImage()
+        self.updateImage(image)
 
 def main():
     app = QApplication([])
