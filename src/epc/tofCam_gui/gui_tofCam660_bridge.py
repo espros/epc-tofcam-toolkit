@@ -27,7 +27,7 @@ class TOFcam660_bridge:
         waferId = cam.getWaferId()
         gui.toolBar.setChipInfo(chipID, waferId)
         fw_version = cam.getFirmwareVersion()
-        gui.toolBar.setVersionInfo(f"{fw_version['major']}, {fw_version['minor']}")
+        gui.toolBar.setVersionInfo(f"{fw_version['major']}.{fw_version['minor']}")
 
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
@@ -84,7 +84,7 @@ class TOFcam660_bridge:
             interferenceLimit = self.gui.builtInFilter.interferenceFilter.limit.value()
             interferenceUseLatest = self.gui.builtInFilter.interferenceFilter.useLastValue.isChecked()     
 
-        self.cam.setFilter(medianOn, averageOn, edgeThreshold, temp_factor, temp_threshold, interferenceLimit, interferenceUseLatest)
+        self.cam.setFilter(int(medianOn), int(averageOn), edgeThreshold, int(temp_factor*1000), temp_threshold, interferenceLimit, int(interferenceUseLatest))
 
     def __set_hdrTimesEnabled(self, enabled: bool):
         self.gui.integrationTimes.setEnabled(1, enabled)
