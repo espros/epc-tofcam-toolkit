@@ -24,11 +24,11 @@ class SerialInterface():
     ports = serial.tools.list_ports.comports()
     if len(ports) == 0:
       raise('No serial port found')
-    for port, desc, hwid in sorted(ports):
-      if desc == 'STM32 Virtual ComPort':
+    for port in ports:
+      if port.vid == 1155:
         print(f'Device found at port:')
-        print(f'port: {port}, desc: {desc}, hwid: {hwid}')
-        result = port
+        print(f'port: {port.device}, desc: {port.description}, vendor id: {port.vid}')
+        result = port.device
     
     if result == None:
       raise('Device not found')

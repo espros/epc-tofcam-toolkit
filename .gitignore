@@ -1,5 +1,6 @@
 .venv
 .venv37
+build
 doc/build
 dist
 tmp
