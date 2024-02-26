@@ -1,10 +1,29 @@
 
 import serial as Serial
+import serial.tools.list_ports
 import sys
 
 class SerialInterface():
-  def __init__(self, port,baudrate = 921600, timeout = 0.5): 
+  def __init__(self, port=None,baudrate = 921600, timeout = 0.5): 
+    if port == None:
+      port = self.find_ports()
+
     self.serial=Serial.Serial(port,baudrate,timeout=timeout)
+
+  def find_ports(self):
+    result = None
+    ports = serial.tools.list_ports.comports()
+    if len(ports) == 0:
+      raise('No serial port found')
+    for port in ports:
+      if port.vid == 1027:
+        print(f'Device found at port:')
+        print(f'port: {port.device}, desc: {port.description}, vendor id: {port.vid}')
+        result = port.device
+    
+    if result == None:
+      raise('Device not found')
+    return result
 
   def open(self,port,baudrate = 921600, timeout = 0.5):
     self.serial=Serial.Serial(port,baudrate,timeout=timeout)
