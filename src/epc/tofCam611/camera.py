@@ -309,7 +309,7 @@ class Camera():
     a=[0xf5]*14
     a[1:10]=values
 
-    crc = np.array(self.crc.calcCrc32Uint8(a[:10]))
+    crc = np.array(self.crc.calculate(a[:10]))
     
     a[10] = crc & 0xff
     a[11] = (crc>>8) & 0xff
@@ -331,7 +331,7 @@ class Camera():
     @returns data of serial port with verified checksum
     """
     tmp=self.com.read(length)
-    if not self.crc.verify(tmp):
+    if not self.crc.verify(tmp[:-4], tmp[-4:]):
       raise Exception("CRC not valid!!")
     if len(tmp) != length:
       raise Exception("Not enought bytes!!")
@@ -358,7 +358,7 @@ class Camera():
     length = struct.unpack('<'+'H',tmp[2:4])[0]
     tmp = self.com.read(length+4)
     total+=bytes(tmp)
-    self.crc.verify(total)
+    self.crc.verify(total[:-4], total[-4:])
     if typeId != total[1]:
       raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
 
@@ -375,7 +375,7 @@ class Camera():
       tmp=self.comDll.read(LEN_BYTES)
     else:
       tmp=self.com.read(LEN_BYTES)
-    if not self.crc.verify(tmp):
+    if not self.crc.verify(tmp[:-4], tmp[-4:]):
       raise Exception("CRC not valid!!")
       return False
     if tmp[1] != communicationType.DATA_ACK:

@@ -485,7 +485,7 @@ class Commands():
     a=[0xf5]*14
     a[1:10]=values
 
-    crc = np.array(self.crc.calcCrc32Uint8(bytearray(a[:10])))
+    crc = np.array(self.crc.calculate(bytearray(a[:10])))
     
     a[10] = crc & 0xff
     a[11] = (crc>>8) & 0xff
@@ -527,7 +527,7 @@ class Commands():
 
     tmp=self.com.read(length)
     
-    if not self.crc.verify(tmp):
+    if not self.crc.verify(tmp[:-4], tmp[-4:]):
       raise Exception("CRC not valid!!")
     if len(tmp) != length:
       raise Exception("Not enough bytes!!, expected {:02d}, got {:02d}".format(length, len(tmp)))
@@ -556,7 +556,7 @@ class Commands():
     length = struct.unpack('<'+'H',tmp[communication.Data.INDEX_LENGTH:communication.Data.INDEX_LENGTH + communication.Data.SIZE_LENGTH])[0]
     tmp = self.com.read(length+4)
     total+=bytes(tmp)
-    if not self.crc.verify(total):
+    if not self.crc.verify(total[:-4], total[-4:]):
       raise Exception("CRC not valid!!")
     if typeId != total[1]:
       raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
@@ -592,7 +592,7 @@ class Commands():
 
         #Check the CRC as usual
         total+=bytes(tmp)
-        if self.crc.verify(total):
+        if self.crc.verify(total[:-4], total[-4:]):
           raise Exception("CRC not valid!!")
         if typeId != total[1]:
             raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
@@ -623,7 +623,7 @@ class Commands():
       tmp=self.comDll.read(LEN_BYTES)
     else:
       tmp=self.com.read(LEN_BYTES)
-    if not self.crc.verify(tmp):
+    if not self.crc.verify(tmp[:-4], tmp[-4:]):
       raise Exception("CRC not valid!!")
       return False
     if tmp[1] != communication.Type.DATA_ACK:

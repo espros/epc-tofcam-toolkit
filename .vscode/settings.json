@@ -8,8 +8,10 @@
     },
     "python.testing.pytestArgs": [
         "tests",
-        "-m systemTest"
+        "-m",
+        ""
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "editor.tabSize": 4
 }

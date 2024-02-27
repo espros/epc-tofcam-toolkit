@@ -3,22 +3,26 @@ from sys import platform
 import ctypes
 import pkg_resources
 import numpy as np
+from enum import Enum
+
+class CrcMode(Enum):
+    CRC32_UINT8 = 1
+    CRC32_UINT8_LIB = 2
+    CRC32_STM32 = 3
 
 class Crc:
-    def __init__(self, polynom=0x04C11DB7, 
+    def __init__(self, mode: CrcMode = CrcMode.CRC32_UINT8,
+                       polynom=0x04C11DB7, 
                        initvalue=0xFFFFFFFF, 
                        xorout=0x00000000, 
-                       revout=False, 
-                       useLib = False,
-                       stmMode = False):
+                       revout=False):
         self.polynom = polynom
         self.initvalue = initvalue
         self.revout = revout
         self.xorout = xorout
-        self.useLib = useLib
-        self.stmMode = stmMode
+        self.mode = mode
 
-        if self.useLib:
+        if mode == CrcMode.CRC32_UINT8_LIB:
             self.useLib = self.__loadLib()
 
     def __loadLib(self):
@@ -37,7 +41,7 @@ class Crc:
 
     def __calcCrc32_python(self, crc: int, data: int):
 
-        if(self.stmMode):
+        if(self.mode == CrcMode.CRC32_STM32):
             # this shift is done to make it compatible to the STM32 hardware CRC
             crc = np.uint32(crc^np.uint32(data << 24))
             bitRange = 8
@@ -65,20 +69,21 @@ class Crc:
 
         return self.lib.calcCrc32_32(carray,len(data),ctypes.c_uint32(self.polynom))
 
-    
-    def calcCrc32Uint8(self, data: bytearray):
-
-        if(self.stmMode): # for tofCam611
-            crc = self.__calcCrc32Uin8_python(data)
-        else:
-            if self.useLib:
-                crc = self.__calcCrc32Uint8_lib(data)
-            else:
+    def calculate(self, data: bytearray):
+        crc = bytearray([])
+        match self.mode:
+            case CrcMode.CRC32_UINT8:
                 crc = self.__calcCrc32Uin8_python(data)
+            case CrcMode.CRC32_UINT8_LIB:
+                crc = self.__calcCrc32Uint8_lib(data)
+            case CrcMode.CRC32_STM32:
+                crc = self.__calcCrc32Uin8_python(data)
+        
         if self.revout:
             crc = struct.unpack('>I', struct.pack('<I', crc))[0]
+        
         return crc
 
-    def verify(self, data: bytearray):
-        crc = self.calcCrc32Uint8(data[:-4])
-        return crc == struct.unpack('<I', data[-4:])[0]
+    def verify(self, data: bytearray, crc: bytearray):
+        crc_calc = self.calculate(data)
+        return crc_calc == struct.unpack('<I', bytearray(crc))[0]
