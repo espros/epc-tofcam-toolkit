@@ -20,6 +20,7 @@ Connect and startup the camera. Them simply run the gui with:
 ```bash 
 epc-tofcam660
 epc-tofcam635
+epc-tofcam611
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
@@ -29,6 +30,7 @@ You can also specify the communication port
 ```bash 
 epc-tofcam660 --ip 10.10.31.180
 epc-tofcam635 --port COM3
+epc-tofcam611 --port COM3
 ```
 
 ## Installation for development
