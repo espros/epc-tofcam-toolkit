@@ -38,11 +38,11 @@ class TOFcam660_bridge:
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
         gui.hdrModeDropDown.signal_selection_changed.connect(self._set_hdr_mode)
         gui.minAmplitude.signal_value_changed.connect(lambda value: self.cam.setMinAmplitude(value))
-        gui.builtInFilter.medianFilter.signal_filter_changed.connect(self.__set_filter_settings)
-        gui.builtInFilter.temporalFilter.signal_filter_changed.connect(self.__set_filter_settings)
-        gui.builtInFilter.averageFilter.signal_filter_changed.connect(self.__set_filter_settings)
-        gui.builtInFilter.edgeFilter.signal_filter_changed.connect(self.__set_filter_settings)
-        gui.builtInFilter.interferenceFilter.signal_filter_changed.connect(self.__set_filter_settings)
+        gui.builtInFilter.medianFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
+        gui.builtInFilter.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
+        gui.builtInFilter.averageFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
+        gui.builtInFilter.edgeFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
+        gui.builtInFilter.interferenceFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
         gui.roiSettings.signal_roi_changed.connect(lambda x1, y1, x2, y2: self.cam.setRoi(x1, y1, x2, y2))
 
         # set default settings
@@ -62,6 +62,7 @@ class TOFcam660_bridge:
         else:
             self.streamer.stop_stream()
 
+    @pause_streaming
     def __set_filter_settings(self):
         temp_factor = 0
         temp_threshold = 0
