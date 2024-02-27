@@ -19,9 +19,12 @@ class Base_GUI_TOFcam(QMainWindow):
         self.addToolBar(self.toolBar)
 
     def updateImage(self, image):
-        fps = round(1 / (time.time() - self.time_last_frame))
+        time_diff = time.time() - self.time_last_frame
+        if time_diff != 0:
+            fps = round(1 / time_diff)
+            self.toolBar.setFPS(fps)
+
         self.time_last_frame = time.time()
-        self.toolBar.setFPS(fps)
         self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
 
     def complete_setup(self):
