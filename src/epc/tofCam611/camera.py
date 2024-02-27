@@ -9,14 +9,14 @@ from epc.tofCam611.commandList import commandList
 from epc.tofCam611.communicationType import communicationType
 from epc.tofCam611.update import update
 from epc.tofCam611.constants import __constants  as Constants
-from epc.tofCam_lib import Crc
+from epc.tofCam_lib.crc import Crc, CrcMode
 
 
 class Camera():
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
-    self.crc = Crc(revout=False, stmMode=True)
+    self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
 
   def powerOn(self,enable=True):
     self.tofWrite([commandList.COMMAND_SET_POWER, enable])

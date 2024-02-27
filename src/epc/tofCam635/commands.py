@@ -14,14 +14,14 @@ from time import strftime
 from epc.tofCam635.communication import communicationConstants as communication
 from epc.tofCam635.constants import __constants  as Constants
 from epc.tofCam635 import tofcam635Header
-from epc.tofCam_lib import Crc
+from epc.tofCam_lib.crc import Crc, CrcMode
 
 class Commands():
 
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
-    self.crc = Crc(revout=False)
+    self.crc = Crc(mode=CrcMode.CRC32_UINT8, revout=False)
 
     self.printWrite=False
     self.printRead=False
