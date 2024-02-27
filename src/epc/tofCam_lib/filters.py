@@ -1,19 +1,6 @@
-import sys
 import numpy as np
-import pyqtgraph as pg
-import matplotlib.pyplot as plt
 from scipy.ndimage import convolve, label
 import cv2
-
-
-from pyqtgraph.Qt import  QtGui
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QPushButton
-from pyqtgraph.functions import Colors
-
-sys.path.append('.')
-from epc.tofCam660.productfactory import ProductFactory
-from epc.tofCam660.server import Server
 
 def gradimg (curimg):
     gaussian= gaussian_filter(9, 1.4)
@@ -45,4 +32,7 @@ def threshgrad(curimg,highsens=200,lowsens=100):#DEFAULT 8,2 FOR GREYSCALE IMAGE
 
 
 def cannyE (curimg):
-    return cv2.Canny
+    normImg = curimg / curimg.max()
+    normImg *= 255
+    normImg = normImg.astype(np.uint8)
+    return cv2.Canny(normImg, 100, 50)

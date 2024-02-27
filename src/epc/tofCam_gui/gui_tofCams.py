@@ -8,6 +8,7 @@ class Base_GUI_TOFcam(QMainWindow):
         self.setWindowTitle(title)
 
         self.time_last_frame = time.time()
+        self.__filter_cb = None
 
         # create main widgets
         self.toolBar = ToolBar(self)
@@ -18,10 +19,15 @@ class Base_GUI_TOFcam(QMainWindow):
 
         self.addToolBar(self.toolBar)
 
+    def setFilter_cb(self, filter_cb):
+        self.__filter_cb = filter_cb
+
     def updateImage(self, image):
         fps = round(1 / (time.time() - self.time_last_frame))
         self.time_last_frame = time.time()
         self.toolBar.setFPS(fps)
+        if self.__filter_cb is not None:
+            image = self.__filter_cb(image)
         self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
 
     def complete_setup(self):

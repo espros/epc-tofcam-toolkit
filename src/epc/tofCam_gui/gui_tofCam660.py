@@ -12,7 +12,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         # Create the video widget
         self.imageView = VideoWidget()
         self.imageTypeWidget = GroupBoxSelection('Image Type', ['Distance', 'Amplitude', 'Grayscale'])
-        self.guiFilterGroupBox = GroupBoxSelection('GUI Filters', ['None'])
+        self.guiFilterGroupBox = GroupBoxSelection('GUI Filters', ['None', 'Canny', 'Gradient', 'Threshold'])
         self.integrationTimes = IntegrationTimes(['Low', 'Mid', 'High', 'Gray'], defaults=[100, 0, 0, 1000], limits=4*[10000])
         self.hdrModeDropDown = DropDownSetting('HDR Mode', ['HDR Off', 'HDR Spatial', 'HDR Temporal'])
         self.modulationChannel = DropDownSetting('Modulation Channel', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'])

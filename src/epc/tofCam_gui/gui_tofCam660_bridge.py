@@ -8,6 +8,7 @@ from epc.tofCam660.epc660 import Epc660Ethernet
 from epc.tofCam660.server import Server as TOFcam660
 from epc.tofCam_gui import GUI_TOFcam660
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
 
 class TOFcam660_bridge:
     C = 299792458 # m/s
@@ -33,6 +34,7 @@ class TOFcam660_bridge:
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
         gui.imageTypeWidget.selection_changed_signal.connect(self._set_image_type)
+        gui.guiFilterGroupBox.selection_changed_signal.connect(self._setGuiFilter)
         gui.modulationFrequency.signal_selection_changed.connect(lambda freq: self._set_modulation_settings())
         gui.modulationChannel.signal_selection_changed.connect(lambda: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
@@ -51,10 +53,20 @@ class TOFcam660_bridge:
         self._set_modulation_settings()
         self._set_integration_times('Low', 100)
 
+    def _setGuiFilter(self, filter: str):
+        match filter:
+            case 'None':
+                self.gui.setFilter_cb(None)
+            case 'Gradient':
+                self.gui.setFilter_cb(gradimg)
+            case 'Canny':
+                self.gui.setFilter_cb(cannyE)
+            case 'Threshold':
+                self.gui.setFilter_cb(threshgrad)
 
     def getImage(self):
         image = self.__get_image_cb()
-        return np.rot90(image, 1, (2, 1))
+        return np.rot90(image, 1, (2, 1))[0]
 
     def _set_streaming(self, enable: bool):
         if enable:

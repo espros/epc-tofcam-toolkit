@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 from epc.tofCam635 import TofCam635
 from epc.tofCam_gui import GUI_TOFcam635
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
 
 class TofCam635Bridge:
     DEFAULT_INT_TIME_GRAY = 100
@@ -17,7 +18,7 @@ class TofCam635Bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = self.cam.get_distance_image
-        self.streamer = Streamer(self.__get_image_cb)
+        self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
 
@@ -25,6 +26,7 @@ class TofCam635Bridge:
 
         gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
         gui.toolBar.captureButton.triggered.connect(self.capture)
+        gui.guiFilterGroupBox.selection_changed_signal.connect(self._setGuiFilter)
         gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
         gui.imageTypeWidget.selection_changed_signal.connect(self._changeImageType)
         gui.hdrModeDropDown.signal_selection_changed.connect(self._set_hdr_mode)
@@ -40,6 +42,20 @@ class TofCam635Bridge:
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
         self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
+
+    def getImage(self):
+        return self.__get_image_cb(self.captureMode)
+
+    def _setGuiFilter(self, filter: str):
+        match filter:
+            case 'None':
+                self.gui.setFilter_cb(None)
+            case 'Gradient':
+                self.gui.setFilter_cb(gradimg)
+            case 'Canny':
+                self.gui.setFilter_cb(cannyE)
+            case 'Threshold':
+                self.gui.setFilter_cb(threshgrad)
 
     def _set_streaming(self, enable: bool):
         if enable:

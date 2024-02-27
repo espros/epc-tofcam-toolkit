@@ -97,7 +97,7 @@ class SettingsGroup(QGroupBox):
 class IntegrationTimes(QGroupBox):
     signal_value_changed = Signal(str, int)
     def __init__(self, labels=[], defaults=[], limits=[], min_value=0, parent=None):
-        super(IntegrationTimes, self).__init__('Integration Times')
+        super(IntegrationTimes, self).__init__('Integration Times [us]')
         self.layout = QGridLayout()
 
         self.autoMode = QCheckBox('Auto', parent)
