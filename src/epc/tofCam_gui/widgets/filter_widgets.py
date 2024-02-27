@@ -19,10 +19,16 @@ class TemporalFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int, float)
     def __init__(self):
         super(TemporalFilter, self).__init__('TemporalFilter')
-        self.thresholdLabel = QLabel('Treshold', self)
+        self.thresholdLabel = QLabel('Threshold', self)
         self.threshold = QSpinBox(self)
+        self.threshold.setSingleStep(10)
+        self.threshold.setRange(0, 1000)
         self.factorLabel = QLabel('Factor', self)
         self.factor = QDoubleSpinBox(self)
+        self.factor.setSingleStep(0.1)
+        self.factor.setDecimals(2)
+        self.factor.setRange(0.0, 1.0)
+
         self.layout.addWidget(self.thresholdLabel)
         self.layout.addWidget(self.threshold)
         self.layout.addWidget(self.factorLabel)

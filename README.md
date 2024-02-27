@@ -1,14 +1,5 @@
 # EPC TOFCam python package
-This folder contains the python framework for the TOFCAM660.
-It allows communication with the camera via ethernet and usb connection.
-
-For USB connections on windows it may be necessary to set the USB port manually.  
-This can be done at the top of the usb_interface.py file.  
-Parameters for the ethernet connection can be changed in trace_interface.py.  
-
-The server.py file contains most of the functionality, including all implemented commands.  
-
-Examples on how to establish a connection, and use these commands are provided in the examples folder.  
+This repository contains the python GUI framework for TOF cameras.
 
 ## Installation for usage
 install the package using pip
@@ -16,26 +7,28 @@ install the package using pip
 pip install epc-tofcam
 ```
 
-Connect and startup the camera. Them simply run the gui with: 
+Connect and startup the camera. Then simply run the gui with: 
 ```bash 
 epc-tofcam660
 epc-tofcam635
+epc-tofcam611
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
 - TOFcam611 will try to find the com port automatically
 
-You can also specify the communication port
+You can also manually specify the communication port
 ```bash 
 epc-tofcam660 --ip 10.10.31.180
 epc-tofcam635 --port COM3
+epc-tofcam611 --port COM3
 ```
 
 ## Installation for development
 
 Clone this repository 
 ```bash
-git clone git@gitlab.ch.epc:MOD/06_Utilities/eye_safety_calculations.git
+git clone git@gitlab.ch.epc:MOD/02_Applications/EPC-TOFcam-GUI.git
 ```
 
 Create a virtual environment and activate it
