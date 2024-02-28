@@ -47,7 +47,7 @@ class TOFcam611_bridge:
 
     @pause_streaming
     def __set_filter_settings(self):
-        temp_factor = 0
+        temp_factor = 0.0
         temp_threshold = 0
 
         tempOn = self.gui.builtInFilter.temporalFilter.isChecked()

@@ -76,7 +76,7 @@ class TOFcam660_bridge:
 
     @pause_streaming
     def __set_filter_settings(self):
-        temp_factor = 0
+        temp_factor = 0.0
         temp_threshold = 0
         edgeThreshold = 0
         interferenceLimit = 0
@@ -100,8 +100,8 @@ class TOFcam660_bridge:
         self.cam.setFilter(int(medianOn), int(averageOn), edgeThreshold, int(temp_factor*1000), temp_threshold, interferenceLimit, int(interferenceUseLatest))
 
     def __set_hdrTimesEnabled(self, enabled: bool):
-        self.gui.integrationTimes.setEnabled(1, enabled)
-        self.gui.integrationTimes.setEnabled(2, enabled)
+        self.gui.integrationTimes.setTimeEnabled(1, enabled)
+        self.gui.integrationTimes.setTimeEnabled(2, enabled)
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):

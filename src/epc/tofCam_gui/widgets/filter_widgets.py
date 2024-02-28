@@ -5,10 +5,10 @@ class SimpleFilter(QWidget):
     signal_filter_changed = Signal(bool)
     def __init__(self, name: str):
         super(SimpleFilter, self).__init__()
-        self.layout = QHBoxLayout()
+        boxLayout = QHBoxLayout()
         self.checkBox = QCheckBox(name, self)
-        self.layout.addWidget(self.checkBox)
-        self.setLayout(self.layout)
+        boxLayout.addWidget(self.checkBox)
+        self.setLayout(boxLayout)
 
         self.checkBox.stateChanged.connect(lambda enable: self.signal_filter_changed.emit(enable))
 
@@ -47,11 +47,6 @@ class TemporalFilter(SimpleFilter):
         self.thresholdLabel.setEnabled(enable)
         self.signal_filter_changed.emit(enable, self.threshold.value(), self.factor.value())
 
-
-    def configure(self, conf: dict):
-        super().configure(conf)
-        self.threshold.setValue(conf['threshold']['value'])
-        self.threshold.setRange(conf['threshold']['min'], conf['threshold']['max'])
 
 class EdgeFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int)
@@ -100,17 +95,17 @@ class InterferenceFilter(SimpleFilter):
 class FilterSettings(QGroupBox):
     def __init__(self, parent=None):
         super(FilterSettings, self).__init__('Camera Filters', parent)
-        self.layout = QVBoxLayout()
+        layout = QVBoxLayout()
         self.medianFilter = SimpleFilter('Median Filter')
         self.averageFilter = SimpleFilter('Average Filter')
         self.edgeFilter = EdgeFilter()
         self.temporalFilter = TemporalFilter()
         self.interferenceFilter = InterferenceFilter()
 
-        self.layout.addWidget(self.medianFilter)
-        self.layout.addWidget(self.averageFilter)
-        self.layout.addWidget(self.edgeFilter)
-        self.layout.addWidget(self.temporalFilter)
-        self.layout.addWidget(self.interferenceFilter)
+        layout.addWidget(self.medianFilter)
+        layout.addWidget(self.averageFilter)
+        layout.addWidget(self.edgeFilter)
+        layout.addWidget(self.temporalFilter)
+        layout.addWidget(self.interferenceFilter)
 
-        self.setLayout(self.layout) 
+        self.setLayout(layout) 

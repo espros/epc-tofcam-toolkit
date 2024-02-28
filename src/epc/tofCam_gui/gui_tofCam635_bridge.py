@@ -70,9 +70,9 @@ class TofCam635Bridge:
             self.cam.cmd.setAmplitudeLimit(i, minAmp)
 
     def _set_hdrTimesEnabled(self, enabled: bool):
-        self.gui.integrationTimes.setEnabled(1, enabled)
-        self.gui.integrationTimes.setEnabled(2, enabled)
-        self.gui.integrationTimes.setEnabled(3, enabled)
+        self.gui.integrationTimes.setTimeEnabled(1, enabled)
+        self.gui.integrationTimes.setTimeEnabled(2, enabled)
+        self.gui.integrationTimes.setTimeEnabled(3, enabled)
         self.gui.integrationTimes.autoMode.setEnabled(not enabled)
 
     @pause_streaming

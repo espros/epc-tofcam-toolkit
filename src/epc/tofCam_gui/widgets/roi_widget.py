@@ -6,10 +6,10 @@ class RoiSettings(QGroupBox):
     signal_roi_changed = Signal(int, int, int, int)
     def __init__(self, width: int, height: int, label='ROI', steps=1):
         super(RoiSettings, self).__init__(label)
-        self.width = width
-        self.height = height
+        self.roi_width = width
+        self.roi_height = height
 
-        self.layout = QGridLayout()
+        self.gridLayout = QGridLayout()
         self.x1 = QSpinBox(self)
         self.y1 = QSpinBox(self)
         self.x2 = QSpinBox(self)
@@ -39,27 +39,27 @@ class RoiSettings(QGroupBox):
         self.x2Label = QLabel('X2', self)
         self.y2Label = QLabel('Y2', self)
 
-        self.layout.addWidget(self.x1Label, 0, 0)
-        self.layout.addWidget(self.x1, 0, 1)
-        self.layout.addWidget(self.y1Label, 1, 0)
-        self.layout.addWidget(self.y1, 1, 1)
-        self.layout.addWidget(self.x2Label, 0, 2)
-        self.layout.addWidget(self.x2, 0, 3)
-        self.layout.addWidget(self.y2Label, 1, 2)
-        self.layout.addWidget(self.y2, 1, 3)
+        self.gridLayout.addWidget(self.x1Label, 0, 0)
+        self.gridLayout.addWidget(self.x1, 0, 1)
+        self.gridLayout.addWidget(self.y1Label, 1, 0)
+        self.gridLayout.addWidget(self.y1, 1, 1)
+        self.gridLayout.addWidget(self.x2Label, 0, 2)
+        self.gridLayout.addWidget(self.x2, 0, 3)
+        self.gridLayout.addWidget(self.y2Label, 1, 2)
+        self.gridLayout.addWidget(self.y2, 1, 3)
 
         self.x1.valueChanged.connect(self.roiChanged)
         self.y1.valueChanged.connect(self.roiChanged)
         self.x2.valueChanged.connect(self.roiChanged)
         self.y2.valueChanged.connect(self.roiChanged)
 
-        self.setLayout(self.layout)
+        self.setLayout(self.gridLayout)
 
     def roiChanged(self):
         self.x1.setRange(0, self.x2.value()-1)
         self.y1.setRange(0, self.y2.value()-1)
-        self.x2.setRange(self.x1.value()+1, self.width)
-        self.y2.setRange(self.y1.value()+1, self.height)
+        self.x2.setRange(self.x1.value()+1, self.roi_width)
+        self.y2.setRange(self.y1.value()+1, self.roi_height)
         self.signal_roi_changed.emit(self.x1.value(), self.y1.value(), self.x2.value(), self.y2.value())
 
 

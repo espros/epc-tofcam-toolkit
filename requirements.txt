@@ -3,3 +3,4 @@ pytest-cov
 wheel
 urllib3==1.26.7
 devpi-client
+mypy

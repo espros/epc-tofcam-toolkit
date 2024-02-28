@@ -4,18 +4,6 @@ from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QVBoxLayout, QGridLayout
 from PySide6.QtCore import Signal
 
-class GUI_Filters(QGroupBox):
-    def __init__(self, parent=None):
-        super(GUI_Filters, self).__init__('GUI Filters', parent)
-        self.comboBox = QComboBox(parent)
-        self.comboBox.addItem('None')
-
-    def apply_filter(self, image: np.ndarray):
-        filter_cb = self.filter_cb[self.comboBox.currentIndex()]
-        if filter_cb is not None:
-            return filter_cb(image)
-        return image
-    
 
 class GroupBoxSelection(QGroupBox):
     selection_changed_signal = Signal(str)
@@ -27,9 +15,9 @@ class GroupBoxSelection(QGroupBox):
         self.comboBox.setCurrentIndex(0)
         self.comboBox.currentIndexChanged.connect(self.__selection_changed)
 
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.comboBox)
-        self.setLayout(self.layout)
+        self.boxLayout = QVBoxLayout()
+        self.boxLayout.addWidget(self.comboBox)
+        self.setLayout(self.boxLayout)
 
     def __selection_changed(self):
         self.selection_changed_signal.emit(self.comboBox.currentText())
@@ -46,10 +34,10 @@ class DropDownSetting(QGroupBox):
 
         self.label = QLabel(label, self)
 
-        self.layout = QGridLayout()
-        self.layout.addWidget(self.label, 0, 0)
-        self.layout.addWidget(self.comboBox, 0, 1)
-        self.setLayout(self.layout)
+        self.boxLayout = QGridLayout()
+        self.boxLayout.addWidget(self.label, 0, 0)
+        self.boxLayout.addWidget(self.comboBox, 0, 1)
+        self.setLayout(self.boxLayout)
 
     def getSelection(self) -> str:
         return self.comboBox.currentText()
@@ -61,9 +49,9 @@ class CheckBoxSetting(QGroupBox):
     def __init__(self, label: str, parent=None):
         super(CheckBoxSetting, self).__init__(label, parent)
         self.checkBox = QCheckBox(label, parent)
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.checkBox)
-        self.setLayout(self.layout)
+        self.boxLayout = QVBoxLayout()
+        self.boxLayout.addWidget(self.checkBox)
+        self.setLayout(self.boxLayout)
 
 class SpinBoxSetting(QGroupBox):
     signal_value_changed = Signal(int)
@@ -73,10 +61,10 @@ class SpinBoxSetting(QGroupBox):
 
         self.label = QLabel(label, self)
 
-        self.layout = QGridLayout()
-        self.layout.addWidget(self.label, 0, 0)
-        self.layout.addWidget(self.spinBox, 0, 1)
-        self.setLayout(self.layout)
+        self.gridLayout = QGridLayout()
+        self.gridLayout.addWidget(self.label, 0, 0)
+        self.gridLayout.addWidget(self.spinBox, 0, 1)
+        self.setLayout(self.gridLayout)
         self.spinBox.valueChanged.connect(self.value_changed)
     
     def value_changed(self):
@@ -85,24 +73,24 @@ class SpinBoxSetting(QGroupBox):
 class SettingsGroup(QGroupBox):
     def __init__(self, label='', settings = []):
         super(SettingsGroup, self).__init__(label)
-        self.layout = QGridLayout()
+        self.gridLayout = QGridLayout()
         self.settings = settings
         for row, setting in enumerate(self.settings):
             for i in range(setting.layout.count()):
                 widget = setting.layout.takeAt(0).widget()
-                self.layout.addWidget(widget, row, i)
+                self.gridLayout.addWidget(widget, row, i)
 
-        self.setLayout(self.layout)
+        self.setLayout(self.gridLayout)
 
 class IntegrationTimes(QGroupBox):
     signal_value_changed = Signal(str, int)
     def __init__(self, labels=[], defaults=[], limits=[], min_value=0, parent=None):
         super(IntegrationTimes, self).__init__('Integration Times [us]')
-        self.layout = QGridLayout()
+        self.gridLayout = QGridLayout()
 
         self.autoMode = QCheckBox('Auto', parent)
         self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(self.autoMode.isChecked())))
-        self.layout.addWidget(self.autoMode, 0, 0)
+        self.gridLayout.addWidget(self.autoMode, 0, 0)
 
         self.spinBoxes = []
 
@@ -113,12 +101,12 @@ class IntegrationTimes(QGroupBox):
             spbox.setValue(defaults[i])
             spbox.valueChanged.connect(lambda x: self.signal_value_changed.emit(entry, x))
             self.spinBoxes.append(spbox) 
-            self.layout.addWidget(label, i+1, 0)
-            self.layout.addWidget(spbox, i+1, 1)
+            self.gridLayout.addWidget(label, i+1, 0)
+            self.gridLayout.addWidget(spbox, i+1, 1)
         
-        self.setLayout(self.layout)
+        self.setLayout(self.gridLayout)
 
-    def setEnabled(self, index: int, enabled: bool):
+    def setTimeEnabled(self, index: int, enabled: bool):
         self.spinBoxes[index].setEnabled(enabled)
 
     def getTimeAtIndex(self, index: int) -> int:

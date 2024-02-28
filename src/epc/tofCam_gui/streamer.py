@@ -1,6 +1,6 @@
 import logging
 import numpy as np  
-from typing import Optional
+from typing import Optional, Callable
 from PySide6.QtCore import QThread, Signal
 
 def pause_streaming(func):
@@ -18,9 +18,9 @@ def pause_streaming(func):
 
 class Streamer(QThread):
     signal_new_frame = Signal(np.ndarray)
-    def __init__(self, get_frame_cb: Optional[callable]=None, 
-                       start_stream_cb: Optional[callable]=None, 
-                       stop_stream_cb:  Optional[callable]=None):
+    def __init__(self, get_frame_cb: Optional[Callable[[], np.ndarray]]=None, 
+                       start_stream_cb: Optional[Callable[[], None]]=None, 
+                       stop_stream_cb:  Optional[Callable[[], None]]=None):
         super(Streamer, self).__init__()
         self.get_frame_cb = get_frame_cb
         self.start_stream_cb = start_stream_cb
@@ -51,6 +51,8 @@ class Streamer(QThread):
 
     def run(self):
         self.__is_streaming = True
+        if not self.get_frame_cb:
+            raise ValueError("No get_frame_cb set")
         while self.__is_streaming:
             image = self.get_frame_cb()
             self.signal_new_frame.emit(image)

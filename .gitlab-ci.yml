@@ -2,7 +2,9 @@ image: python:3.11
 
 cache:
   paths:
+    - .cache/pip
     - .venv/
+    - .mypy_cache/
 
 before_script:
   - python3 --version ; python3 -m pip --version  # For debugging
@@ -16,6 +18,18 @@ stages:
   - build
   - test
   - deploy
+
+code-analysis:
+  stage: test
+  tags:
+    - docker-tag1
+  script:
+    - pip install mypy mypy-gitlab-code-quality
+    - mypy src/epc/ --no-error-summary > mypy-out.txt
+    - mypy-gitlab-code-quality < mypy-out.txt > codequality.json
+  artifacts:
+    reports:
+      codequality: codequality.json
 
 build-job:
   stage: build
