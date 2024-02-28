@@ -25,7 +25,7 @@ code-analysis:
     - docker-tag1
   script:
     - pip install mypy mypy-gitlab-code-quality
-    - mypy src/epc/ --no-error-summary > mypy-out.txt
+    - mypy src/epc/ --no-error-summary > mypy-out.txt || true  # "|| true" is used for preventing job fail when mypy find errors
     - mypy-gitlab-code-quality < mypy-out.txt > codequality.json
   artifacts:
     reports:

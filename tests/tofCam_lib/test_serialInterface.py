@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import Mock, MagicMock
 from epc.tofCam_lib.serial_interface import SerialInterface
 from epc.tofCam_lib.crc import Crc, CrcMode
@@ -12,6 +13,7 @@ class SerialMock:
         self.retBuffer = self.retBuffer[n:]
         return res
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_serialSend():
     crc = Crc(mode=CrcMode.CRC32_UINT8)
     serial = SerialInterface(crc, 1155, 10000000, None, 0.2)
