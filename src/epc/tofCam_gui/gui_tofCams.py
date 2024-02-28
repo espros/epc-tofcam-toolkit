@@ -29,6 +29,8 @@ class Base_GUI_TOFcam(QMainWindow):
             self.toolBar.setFPS(fps)
 
         self.time_last_frame = time.time()
+        if self.__filter_cb:
+            image = self.__filter_cb(image)
         self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
 
     def complete_setup(self):
