@@ -61,10 +61,10 @@ class SpinBoxSetting(QGroupBox):
 
         self.label = QLabel(label, self)
 
-        self.gridLayout = QGridLayout()
-        self.gridLayout.addWidget(self.label, 0, 0)
-        self.gridLayout.addWidget(self.spinBox, 0, 1)
-        self.setLayout(self.gridLayout)
+        self.boxLayout = QGridLayout()
+        self.boxLayout.addWidget(self.label, 0, 0)
+        self.boxLayout.addWidget(self.spinBox, 0, 1)
+        self.setLayout(self.boxLayout)
         self.spinBox.valueChanged.connect(self.value_changed)
     
     def value_changed(self):
@@ -73,14 +73,14 @@ class SpinBoxSetting(QGroupBox):
 class SettingsGroup(QGroupBox):
     def __init__(self, label='', settings = []):
         super(SettingsGroup, self).__init__(label)
-        self.gridLayout = QGridLayout()
+        self.boxLayout = QGridLayout()
         self.settings = settings
         for row, setting in enumerate(self.settings):
-            for i in range(setting.layout.count()):
-                widget = setting.layout.takeAt(0).widget()
-                self.gridLayout.addWidget(widget, row, i)
+            for i in range(setting.layout().count()):
+                widget = setting.layout().takeAt(0).widget()
+                self.boxLayout.addWidget(widget, row, i)
 
-        self.setLayout(self.gridLayout)
+        self.setLayout(self.boxLayout)
 
 class IntegrationTimes(QGroupBox):
     signal_value_changed = Signal(str, int)

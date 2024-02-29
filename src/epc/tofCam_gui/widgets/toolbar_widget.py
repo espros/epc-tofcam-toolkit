@@ -18,9 +18,15 @@ class ToolBar(QToolBar):
         self.playButton.triggered.connect(lambda: self.__setIcon(self.playButton, self._startIcon, self._stopIcon))
 
         # assemble capture button
-        captureIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton)
-        self.captureButton = QAction(captureIcon, "Capture", self)
+        self._captureIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton)
+        self.captureButton = QAction(self._captureIcon, "Capture", self)
         self.captureButton.setStatusTip('Capture a single frame')
+        self.playButton.toggled.connect(lambda checked: self.captureButton.setEnabled(not checked))
+
+        # # assemble console button
+        # self._consoleIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        # self.consoleButton = QAction(self._consoleIcon, "Console", self)
+        # self.consoleButton.setStatusTip('Open interactive ipython console')
         
         # assemble chip info and fps info
         self.chipInfo = QLabel('Chip ID: 000\nWafer ID: 000')
@@ -36,6 +42,7 @@ class ToolBar(QToolBar):
 
         self.addAction(self.playButton)
         self.addAction(self.captureButton)
+        # self.addAction(self.consoleButton)
         self.addWidget(left_spacer)
         self.addWidget(self.versionInfo)
         self.addWidget(self.chipInfo)

@@ -33,6 +33,8 @@ class TOFcam660_bridge:
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
+        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
+        # gui.toolBar.consoleButton.triggered.connect(lambda: gui.console.startup_kernel(cam))
         gui.imageTypeWidget.selection_changed_signal.connect(self._set_image_type)
         gui.guiFilterGroupBox.selection_changed_signal.connect(self._setGuiFilter)
         gui.modulationFrequency.signal_selection_changed.connect(lambda freq: self._set_modulation_settings())
@@ -177,13 +179,16 @@ def get_ipAddress():
     return ip_address
 
 def main():
-    ip_address = get_ipAddress()
-    epc660 = Epc660Ethernet(ip_address)
-    cam = TOFcam660(epc660)
+    print('Hello')
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()
+    
+    ip_address = get_ipAddress()
+    epc660 = Epc660Ethernet(ip_address)
+    cam = TOFcam660(epc660)
+
     bridge = TOFcam660_bridge(gui, cam)
     gui.show()
     app.exec()

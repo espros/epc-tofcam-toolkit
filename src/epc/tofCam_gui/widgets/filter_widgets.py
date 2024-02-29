@@ -29,10 +29,12 @@ class TemporalFilter(SimpleFilter):
         self.factor.setDecimals(2)
         self.factor.setRange(0.0, 1.0)
 
-        self.layout.addWidget(self.thresholdLabel)
-        self.layout.addWidget(self.threshold)
-        self.layout.addWidget(self.factorLabel)
-        self.layout.addWidget(self.factor)
+        layout = self.layout()
+
+        layout.addWidget(self.thresholdLabel)
+        layout.addWidget(self.threshold)
+        layout.addWidget(self.factorLabel)
+        layout.addWidget(self.factor)
 
         self.threshold.valueChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.threshold.value(), self.factor.value()))
         self.factor.valueChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.threshold.value(), self.factor.value()))
@@ -54,8 +56,8 @@ class EdgeFilter(SimpleFilter):
         super(EdgeFilter, self).__init__('EdgeFilter')
         self.thresholdLabel = QLabel('Threshold', self)
         self.threshold = QSpinBox(self)
-        self.layout.addWidget(self.thresholdLabel)
-        self.layout.addWidget(self.threshold)
+        self.layout().addWidget(self.thresholdLabel)
+        self.layout().addWidget(self.threshold)
 
         self.threshold.valueChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.threshold.value()))
         self.checkBox.stateChanged.disconnect()
@@ -74,11 +76,13 @@ class InterferenceFilter(SimpleFilter):
         self.limitLabel = QLabel('Limit', self)
         self.limit = QSpinBox(self)
         self.limit.setRange(0, 10000)
-        self.layout.addWidget(self.limitLabel)
-        self.layout.addWidget(self.limit)
+
+        layout = self.layout()
+        layout.addWidget(self.limitLabel)
+        layout.addWidget(self.limit)
 
         self.useLastValue = QCheckBox('Use Last Value', self)
-        self.layout.addWidget(self.useLastValue)
+        layout.addWidget(self.useLastValue)
 
         self.limit.valueChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.limit.value(), self.useLastValue.isChecked()))
         self.useLastValue.stateChanged.connect(lambda: self.signal_filter_changed.emit(self.checkBox.isChecked(), self.limit.value(), self.useLastValue.isChecked()))
