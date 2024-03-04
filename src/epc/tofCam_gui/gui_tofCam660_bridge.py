@@ -137,23 +137,31 @@ class TOFcam660_bridge:
             self.__distance_resolution = 0.1 # m/bit
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity*1000)
         self.cam.setModulationFrequencyMHz(frequency, channel)
         self.capture()
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
         if image_type == 'Distance':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getTofDistance
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif image_type == 'Amplitude':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getTofAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getGrayscaleAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
+        elif image_type == 'Point Cloud':
+            self.gui.imageView.setActiveView('pointcloud')
+            self.__get_image_cb = self.cam.getTofDistance
+
         
         if not self.streamer.is_streaming():
             self.capture()
