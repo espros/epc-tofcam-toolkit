@@ -1,6 +1,7 @@
 import pkg_resources
 from PySide6.QtWidgets import QToolBar, QLabel, QWidget, QSizePolicy, QStyle
-from PySide6.QtGui import QIcon, QAction
+from PySide6.QtGui import QIcon, QAction, QPixmap
+from PySide6.QtCore import Qt
 
 
 class ToolBar(QToolBar):
@@ -33,6 +34,14 @@ class ToolBar(QToolBar):
         self.versionInfo = QLabel(f'GUI: {self.gui_version}\nFW: 000')
         self.fpsInfo = QLabel('FPS: 0')
 
+        # logo
+        esprosLogo = QPixmap('src/epc/tofCam_gui/icons/epc-logo.png')
+        esprosLogo = esprosLogo.scaled(100, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.logo = QLabel()
+        self.logo.setPixmap(esprosLogo)
+        self.logo.setAlignment(Qt.AlignCenter)
+        self.logo.setFixedSize(100, 50)
+
         # Create the spacers
         left_spacer = QWidget()
         left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -48,6 +57,7 @@ class ToolBar(QToolBar):
         self.addWidget(self.chipInfo)
         self.addWidget(right_spacer)
         self.addWidget(self.fpsInfo)
+        self.addWidget(self.logo)
 
     def setFPS(self, fps):
         self.fpsInfo.setText(f'FPS: {fps}')
