@@ -1,8 +1,9 @@
 import time
 import numpy as np
 from PySide6.QtGui import QCloseEvent, QPixmap
-from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget, QSplashScreen, QApplication, QFileDialog
+from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget, QSplashScreen, QApplication, QFileDialog, QStackedWidget
 from epc.tofCam_gui.widgets import VideoWidget, ToolBar, MenuBar
+from epc.tofCam_gui.widgets.video_widget import PointCloudWidget
 from epc.tofCam_gui.widgets.console_widget import Console_Widget
 
 
