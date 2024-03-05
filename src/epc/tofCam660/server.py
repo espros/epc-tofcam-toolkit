@@ -17,14 +17,13 @@ import time
 import atexit
 import struct
 import numpy as np
-import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
 from epc.tofCam660.command import Command
 from epc.tofCam660.parser import GrayscaleParser, DistanceParser, DistanceAndAmplitudeParser, DcsParser
 from epc.tofCam660.mac_address_generator import total_random as generateRandomMacAddress
 from epc.tofCam660.epc660 import Epc660
-from epc.tofCam_lib.transformations_3d import Transformation3D
+from epc.tofCam_lib.transformations_3d import Lense_Projection
 
 colors = [(0, 0, 0),
           (255, 0, 0),
@@ -34,20 +33,12 @@ colors = [(0, 0, 0),
           (0, 0, 255),
           (255, 0, 255)]
 
-MXT = np.array([
-            [117.65908368,   0.        , 154.48399236],
-            [  0.        , 115.15310731, 126.99638559],
-            [  0.        ,   0.        ,   1.        ]])
-
-DIST = np.array([[ 6.31494575e-01, -3.06389796e+00, -1.31581191e-02, -6.54674525e-04,  3.29421024e+00]])
-
-
 class Server:
     def __init__(self, dut: Epc660):
         self.dut = dut
         self.registerAtExits()
         self.__maxDepth = 16000
-        self.trans=Transformation3D()
+        self.test = Lense_Projection.from_lense_calibration()
 
     def recordVideo(self, frames, folder):
         try:
@@ -211,16 +202,16 @@ class Server:
         return response
     
     def getPointCloud(self, mode=0, frameCount=1):
-
+        # capture depth image & corrections
         depth = self.getTofDistance(mode, frameCount)
-        # depth = np.rot90(depth, 1, (2, 1))[0]
-        # depth  = depth.astype(np.float32)
-        # depth[depth >= self.__maxDepth] = np.nan
+        depth = np.rot90(depth, 1, (2, 1))[0]
+        depth  = depth.astype(np.float32)
+        depth[depth >= self.__maxDepth] = np.nan
 
-        # undistortedDepth = cv2.undistort(depth, MXT, DIST, None, None)
-        # points = depth_to_3d(undistortedDepth, MXT)
-        points = self.trans.depth_to_3d_1(depth[0])
-
+        # calculate point cloud from the depth image
+        points = 1E-3 * self.test.transformImage(np.fliplr(depth))
+        points = np.transpose(points, (1, 2, 0))
+        points = points.reshape(-1, 3)
         return points
 
 

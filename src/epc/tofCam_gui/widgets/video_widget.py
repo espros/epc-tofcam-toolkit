@@ -2,6 +2,7 @@ import numpy as np
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import getFromMatplotlib, ColorMap
 from pyqtgraph.opengl import GLViewWidget, GLScatterPlotItem, GLGridItem
+from PySide6.QtGui import QVector3D
 from PySide6.QtWidgets import QStackedWidget
 
 CMAP_DISTANCE = [   (  0,   0,   0),
@@ -19,14 +20,15 @@ CMAP_GRAYSCALE =  [ (0, 0, 0),
                     (204, 204, 204),
                     (255, 255, 255)]
 
+
 class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
         super(PointCloudWidget, self).__init__(parent, rotationMethod='quaternion')
         self.pcd = GLScatterPlotItem()
         self.addItem(self.pcd)
-        grid = GLGridItem()
+        grid = GLGridItem(size=QVector3D(10, 10, 1))
         grid.rotate(90, 1, 0, 0)
-        grid.translate(0, -5, -2)
+        grid.translate(0, -0.5, 0)
         self.addItem(grid)
         self.setMouseTracking(True)
         self.__maxDepth = 16000
@@ -35,15 +37,13 @@ class PointCloudWidget(GLViewWidget):
         self.__maxDepth = maxDepth
 
     def set_pc_from_depth(self, points: np.ndarray):
-
-        norm_depths = points[2] / self.__maxDepth
+        dists = np.linalg.norm(points, axis=1)
+        norm_depths = dists / self.__maxDepth
         norm_depths[norm_depths > 1] = np.nan
         norm_depths = np.nan_to_num(norm_depths)
-
         cmap = getFromMatplotlib('turbo')
-
         colors = cmap.map(norm_depths, 'float')
-        self.pcd.setData(pos=-0.01*points.T, color=colors, size=1)
+        self.pcd.setData(pos=points, color=colors, size=1)
         
 
 class VideoWidget(QStackedWidget):
