@@ -1,5 +1,11 @@
 import numpy as np
 
+lens_type_map = {
+    'wide field': 'src/epc/data/lense_calibration_wide_field.csv',
+    'narrow field': 'src/epc/data/lense_calibration_narrow_field.csv',
+    'standard field': 'src/epc/data/lense_calibration_standard_field.csv'
+}
+
 def depth_to_3d(depth, camera_matrix):
     # Get the shape of the depth image
     height, width = depth.shape
@@ -22,7 +28,7 @@ def depth_to_3d(depth, camera_matrix):
 
 class Lense_Projection():
 
-    def __init__(self,rp, angle, width=320,height=240,offsetX=0,offsetY=0):
+    def __init__(self, rp, angle, width=320,height=240,offsetX=0,offsetY=0):
         self.angle=np.zeros(101)
         self.rp=np.zeros(101)
         self.height=height
@@ -52,8 +58,8 @@ class Lense_Projection():
                 self.lenseMatrix[2, x, y] = np.cos(angle_rad)
 
 
-    def from_lense_calibration(offset=(0,0), 
-                               file_path: str = 'src/epc/data/lense_calibration.csv'):
+    def from_lense_calibration(lensType = 'wide field'):
+        file_path = lens_type_map.get(lensType)
         angle, rp = np.loadtxt(file_path, delimiter=',', skiprows=1).T
         return Lense_Projection(rp, angle)
 
