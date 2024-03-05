@@ -37,8 +37,8 @@ class Server:
     def __init__(self, dut: Epc660):
         self.dut = dut
         self.registerAtExits()
-        self.__maxDepth = 16000
-        self.test = Lense_Projection.from_lense_calibration()
+        self.maxDepth = 16000
+        self.lensProjection = Lense_Projection.from_lense_calibration()
 
     def recordVideo(self, frames, folder):
         try:
@@ -206,10 +206,10 @@ class Server:
         depth = self.getTofDistance(mode, frameCount)
         depth = np.rot90(depth, 1, (2, 1))[0]
         depth  = depth.astype(np.float32)
-        depth[depth >= self.__maxDepth] = np.nan
+        depth[depth >= self.maxDepth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.test.transformImage(np.fliplr(depth))
+        points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth))
         points = np.transpose(points, (1, 2, 0))
         points = points.reshape(-1, 3)
         return points
@@ -321,3 +321,6 @@ class Server:
                                                                   'setAmbientLightCompensationEnabled': setAmbientLightCompensation,
                                                                   'setGrayscaleCompensationEnabled': setGrayscaleCompensation,
                                                                   }))
+    
+    def setLensType(self, lensType):
+        self.lensProjection = Lense_Projection.from_lense_calibration(lensType)
