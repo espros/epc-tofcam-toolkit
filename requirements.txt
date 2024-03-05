@@ -4,3 +4,6 @@ wheel
 urllib3==1.26.7
 devpi-client
 mypy
+sphinx
+sphinx_rtd_theme
+myst-parser

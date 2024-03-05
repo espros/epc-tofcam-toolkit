@@ -25,6 +25,7 @@ class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
         super(PointCloudWidget, self).__init__(parent, rotationMethod='quaternion')
         self.pcd = GLScatterPlotItem()
+        self.pcd.setGLOptions('translucent')
         self.addItem(self.pcd)
         grid = GLGridItem(size=QVector3D(10, 10, 1))
         grid.rotate(90, 1, 0, 0)
@@ -43,7 +44,7 @@ class PointCloudWidget(GLViewWidget):
         norm_depths = np.nan_to_num(norm_depths)
         cmap = getFromMatplotlib('turbo')
         colors = cmap.map(norm_depths, 'float')
-        self.pcd.setData(pos=points, color=colors, size=1)
+        self.pcd.setData(pos=points, color=colors, size=3)
         
 
 class VideoWidget(QStackedWidget):
