@@ -1,2 +1,3 @@
 recursive-include docs/build/html *
 recursive-include src/epc/tofCam_lib/bin *
+src/epc/data *

@@ -5,7 +5,7 @@ from pyqtgraph.colormap import getFromMatplotlib, ColorMap
 from pyqtgraph.opengl import GLViewWidget, GLScatterPlotItem, GLGridItem
 from PySide6.QtGui import QQuaternion, QVector3D
 from PySide6.QtWidgets import QStackedWidget
-from epc.tofCam_lib.transformations_3d import depth_to_3d
+from epc.tofCam_lib.transformations_3d import Lense_Projection
 
 
 CMAP_DISTANCE = [   (  0,   0,   0),
@@ -23,43 +23,38 @@ CMAP_GRAYSCALE =  [ (0, 0, 0),
                     (204, 204, 204),
                     (255, 255, 255)]
 
-MXT = np.array([
-            [117.65908368,   0.        , 154.48399236],
-            [  0.        , 115.15310731, 126.99638559],
-            [  0.        ,   0.        ,   1.        ]])
-
-DIST = np.array([[ 6.31494575e-01, -3.06389796e+00, -1.31581191e-02, -6.54674525e-04,  3.29421024e+00]])
-
 
 class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
         super(PointCloudWidget, self).__init__(parent, rotationMethod='quaternion')
         self.pcd = GLScatterPlotItem()
         self.addItem(self.pcd)
-        grid = GLGridItem()
+        grid = GLGridItem(size=QVector3D(10, 10, 1))
         grid.rotate(90, 1, 0, 0)
-        grid.translate(0, -5, -2)
+        grid.translate(0, -0.5, 0)
         self.addItem(grid)
         self.setMouseTracking(True)
         self.__maxDepth = 16000
+        self.test = Lense_Projection.from_lense_calibration()
 
     def set_max_depth(self, maxDepth: int):
         self.__maxDepth = maxDepth
 
     def set_pc_from_depth(self, depth: np.ndarray):
         depth[depth >= self.__maxDepth] = np.nan
+        points = 1E-3 * self.test.transformImage(np.fliplr(depth))
+        points = np.transpose(points, (1, 2, 0))
+        points = points.reshape(-1, 3)
 
-        result = cv2.undistort(depth, MXT, DIST, None, None)
-        points = depth_to_3d(result, MXT)
-
-        norm_depths = points[2] / self.__maxDepth
+        dists = np.linalg.norm(points, axis=1)
+        norm_depths = dists / self.__maxDepth
         norm_depths[norm_depths > 1] = np.nan
         norm_depths = np.nan_to_num(norm_depths)
 
         cmap = getFromMatplotlib('turbo')
 
         colors = cmap.map(norm_depths, 'float')
-        self.pcd.setData(pos=-0.01*points.T, color=colors, size=1)
+        self.pcd.setData(pos=points, color=colors, size=1)
         
 
 class VideoWidget(QStackedWidget):
