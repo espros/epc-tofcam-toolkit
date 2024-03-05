@@ -24,7 +24,7 @@ from epc.tofCam660.command import Command
 from epc.tofCam660.parser import GrayscaleParser, DistanceParser, DistanceAndAmplitudeParser, DcsParser
 from epc.tofCam660.mac_address_generator import total_random as generateRandomMacAddress
 from epc.tofCam660.epc660 import Epc660
-from epc.tofCam_lib.transformations_3d import depth_to_3d
+from epc.tofCam_lib.transformations_3d import Transformation3D
 
 colors = [(0, 0, 0),
           (255, 0, 0),
@@ -47,6 +47,7 @@ class Server:
         self.dut = dut
         self.registerAtExits()
         self.__maxDepth = 16000
+        self.trans=Transformation3D()
 
     def recordVideo(self, frames, folder):
         try:
@@ -212,12 +213,13 @@ class Server:
     def getPointCloud(self, mode=0, frameCount=1):
 
         depth = self.getTofDistance(mode, frameCount)
-        depth = np.rot90(depth, 1, (2, 1))[0]
-        depth  = depth.astype(np.float32)
-        depth[depth >= self.__maxDepth] = np.nan
+        # depth = np.rot90(depth, 1, (2, 1))[0]
+        # depth  = depth.astype(np.float32)
+        # depth[depth >= self.__maxDepth] = np.nan
 
-        undistortedDepth = cv2.undistort(depth, MXT, DIST, None, None)
-        points = depth_to_3d(undistortedDepth, MXT)
+        # undistortedDepth = cv2.undistort(depth, MXT, DIST, None, None)
+        # points = depth_to_3d(undistortedDepth, MXT)
+        points = self.trans.depth_to_3d_1(depth[0])
 
         return points
 

@@ -1,12 +1,8 @@
 import numpy as np
-import cv2
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import getFromMatplotlib, ColorMap
 from pyqtgraph.opengl import GLViewWidget, GLScatterPlotItem, GLGridItem
-from PySide6.QtGui import QQuaternion, QVector3D
 from PySide6.QtWidgets import QStackedWidget
-from epc.tofCam_lib.transformations_3d import depth_to_3d
-
 
 CMAP_DISTANCE = [   (  0,   0,   0),
                     (255,   0,   0),
