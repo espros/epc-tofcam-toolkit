@@ -49,6 +49,7 @@ class TOFcam660_bridge:
         gui.builtInFilter.edgeFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
         gui.builtInFilter.interferenceFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
         gui.roiSettings.signal_roi_changed.connect(lambda x1, y1, x2, y2: self.cam.setRoi(x1, y1, x2, y2))
+        gui.lensType.signal_selection_changed.connect(lambda value: self.cam.setLensType(value))
 
         # set default settings
         self.__set_hdrTimesEnabled(False)
@@ -148,6 +149,7 @@ class TOFcam660_bridge:
     @pause_streaming
     def _set_image_type(self, image_type: str):
         self.image_type = image_type
+        self.gui.pointCloudSettings.setVisible(False)
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getTofDistance
@@ -164,6 +166,7 @@ class TOFcam660_bridge:
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         elif image_type == 'Point Cloud':
+            self.gui.pointCloudSettings.setVisible(True)
             self.gui.imageView.setActiveView('pointcloud')
             self.__get_image_cb = self.cam.getPointCloud
 

@@ -1,9 +1,9 @@
 import numpy as np
 
 lens_type_map = {
-    'wide field': 'src/epc/data/lense_calibration_wide_field.csv',
-    'narrow field': 'src/epc/data/lense_calibration_narrow_field.csv',
-    'standard field': 'src/epc/data/lense_calibration_standard_field.csv'
+    'Wide Field': 'src/epc/data/lense_calibration_wide_field.csv',
+    'Narrow Field': 'src/epc/data/lense_calibration_narrow_field.csv',
+    'Standard Field': 'src/epc/data/lense_calibration_standard_field.csv'
 }
 
 def depth_to_3d(depth, camera_matrix):
@@ -58,8 +58,10 @@ class Lense_Projection():
                 self.lenseMatrix[2, x, y] = np.cos(angle_rad)
 
 
-    def from_lense_calibration(lensType = 'wide field'):
+    def from_lense_calibration(lensType = 'Wide Field'):
         file_path = lens_type_map.get(lensType)
+        if file_path is None:
+            raise KeyError(f"Invalid lensType '{lensType}'")
         angle, rp = np.loadtxt(file_path, delimiter=',', skiprows=1).T
         return Lense_Projection(rp, angle)
 
