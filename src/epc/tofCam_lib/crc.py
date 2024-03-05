@@ -39,7 +39,7 @@ class Crc:
                 return False
 
 
-    def __calcCrc32_python(self, crc: np.uint32, data: np.uint32):
+    def __calcCrc32_python(self, crc, data):
 
         if(self.mode == CrcMode.CRC32_STM32):
             # this shift is done to make it compatible to the STM32 hardware CRC
@@ -53,13 +53,13 @@ class Crc:
             if crc & 0x80000000:
                 crc = ((crc << 1) & 0xFFFFFFFF) ^ self.polynom
             else:
-                crc = np.uint32((crc << 1) & 0xFFFFFFFF)
+                crc = (crc << 1) & 0xFFFFFFFF
         return crc
     
     def __calcCrc32Uin8_python(self, data: bytearray):
-        crc = np.uint32(self.initvalue)
+        crc = self.initvalue
         for i in range(len(data)):
-            crc = self.__calcCrc32_python(crc, np.uint32(data[i]))
+            crc = self.__calcCrc32_python(crc, data[i])
             crc = crc ^ self.xorout
         return crc
     
