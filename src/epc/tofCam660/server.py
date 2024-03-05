@@ -17,12 +17,14 @@ import time
 import atexit
 import struct
 import numpy as np
+import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
 from epc.tofCam660.command import Command
 from epc.tofCam660.parser import GrayscaleParser, DistanceParser, DistanceAndAmplitudeParser, DcsParser
 from epc.tofCam660.mac_address_generator import total_random as generateRandomMacAddress
 from epc.tofCam660.epc660 import Epc660
+from epc.tofCam_lib.transformations_3d import depth_to_3d
 
 colors = [(0, 0, 0),
           (255, 0, 0),
@@ -32,11 +34,19 @@ colors = [(0, 0, 0),
           (0, 0, 255),
           (255, 0, 255)]
 
+MXT = np.array([
+            [117.65908368,   0.        , 154.48399236],
+            [  0.        , 115.15310731, 126.99638559],
+            [  0.        ,   0.        ,   1.        ]])
+
+DIST = np.array([[ 6.31494575e-01, -3.06389796e+00, -1.31581191e-02, -6.54674525e-04,  3.29421024e+00]])
+
 
 class Server:
     def __init__(self, dut: Epc660):
         self.dut = dut
         self.registerAtExits()
+        self.__maxDepth = 16000
 
     def recordVideo(self, frames, folder):
         try:
@@ -198,6 +208,19 @@ class Server:
                 response[:, :, :, :] = self.getErrorData()
                 break
         return response
+    
+    def getPointCloud(self, mode=0, frameCount=1):
+
+        depth = self.getTofDistance(mode, frameCount)
+        depth = np.rot90(depth, 1, (2, 1))[0]
+        depth  = depth.astype(np.float32)
+        depth[depth >= self.__maxDepth] = np.nan
+
+        undistortedDepth = cv2.undistort(depth, MXT, DIST, None, None)
+        points = depth_to_3d(undistortedDepth, MXT)
+
+        return points
+
 
     def getErrorData(self):
         """Return a matrix of '-1's to indicate a failure in data read out. """

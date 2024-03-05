@@ -23,14 +23,6 @@ CMAP_GRAYSCALE =  [ (0, 0, 0),
                     (204, 204, 204),
                     (255, 255, 255)]
 
-MXT = np.array([
-            [117.65908368,   0.        , 154.48399236],
-            [  0.        , 115.15310731, 126.99638559],
-            [  0.        ,   0.        ,   1.        ]])
-
-DIST = np.array([[ 6.31494575e-01, -3.06389796e+00, -1.31581191e-02, -6.54674525e-04,  3.29421024e+00]])
-
-
 class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
         super(PointCloudWidget, self).__init__(parent, rotationMethod='quaternion')
@@ -46,11 +38,7 @@ class PointCloudWidget(GLViewWidget):
     def set_max_depth(self, maxDepth: int):
         self.__maxDepth = maxDepth
 
-    def set_pc_from_depth(self, depth: np.ndarray):
-        depth[depth >= self.__maxDepth] = np.nan
-
-        result = cv2.undistort(depth, MXT, DIST, None, None)
-        points = depth_to_3d(result, MXT)
+    def set_pc_from_depth(self, points: np.ndarray):
 
         norm_depths = points[2] / self.__maxDepth
         norm_depths[norm_depths > 1] = np.nan
@@ -83,7 +71,6 @@ class VideoWidget(QStackedWidget):
             self.video.setImage(*args, **kwargs)
         else:
             depth = args[0]
-            depth = depth.astype(np.float32)
             self.pc.set_pc_from_depth(depth)
             
 

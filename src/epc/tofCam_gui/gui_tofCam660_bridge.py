@@ -18,6 +18,7 @@ class TOFcam660_bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = cam.getTofDistance
+        self.image_type = 'Distance'
         self.__distance_resolution = 0.01 # mm/bit
         self.__distance_unambiguity = 6.25 # m 
         self.streamer = Streamer(self.getImage)
@@ -67,8 +68,11 @@ class TOFcam660_bridge:
                 self.gui.setFilter_cb(threshgrad)
 
     def getImage(self):
-        image = self.__get_image_cb()
-        return np.rot90(image, 1, (2, 1))[0]
+        if self.image_type == 'Point Cloud':
+            return self.__get_image_cb()
+        else:
+            image = self.__get_image_cb()
+            return np.rot90(image, 1, (2, 1))[0]
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -143,6 +147,7 @@ class TOFcam660_bridge:
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
+        self.image_type = image_type
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getTofDistance
@@ -160,7 +165,7 @@ class TOFcam660_bridge:
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         elif image_type == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
-            self.__get_image_cb = self.cam.getTofDistance
+            self.__get_image_cb = self.cam.getPointCloud
 
         
         if not self.streamer.is_streaming():
