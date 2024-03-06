@@ -3,7 +3,8 @@ import numpy as np
 lens_type_map = {
     'Wide Field': 'src/epc/data/lense_calibration_wide_field.csv',
     'Narrow Field': 'src/epc/data/lense_calibration_narrow_field.csv',
-    'Standard Field': 'src/epc/data/lense_calibration_standard_field.csv'
+    'Standard Field': 'src/epc/data/lense_calibration_standard_field.csv',
+    '635': 'src/epc/data/lense_calibration_wide_field.csv'
 }
 
 def depth_to_3d(depth, camera_matrix):

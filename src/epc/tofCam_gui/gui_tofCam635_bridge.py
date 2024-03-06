@@ -18,6 +18,7 @@ class TofCam635Bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = self.cam.get_distance_image
+        self.image_type = 'Distance'
         self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
@@ -133,6 +134,9 @@ class TofCam635Bridge:
             self.__get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
+        elif imgType == 'Point Cloud':
+            self.gui.imageView.setActiveView('pointcloud')
+            self.__get_image_cb = self.cam.get_point_cloud
         else:
             raise ValueError(f"Image Type '{imgType}' not supported")
         self.capture()
