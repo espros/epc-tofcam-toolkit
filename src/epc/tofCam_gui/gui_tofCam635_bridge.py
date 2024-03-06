@@ -100,7 +100,6 @@ class TofCam635Bridge:
             self.cam.cmd.setHDR('spatial')
         elif mode == 'HDR Temporal':
             self._set_hdrTimesEnabled(True)
-            self.gui.integrationTimes.set_hdr_mode()
             self.cam.cmd.setHDR('temporal')
         elif mode == 'HDR Off':
             self._set_hdrTimesEnabled(False)
