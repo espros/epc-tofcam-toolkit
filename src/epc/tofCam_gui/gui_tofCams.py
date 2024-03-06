@@ -68,7 +68,8 @@ class Base_GUI_TOFcam(QMainWindow):
         self.splash.show()
         self.splash.raise_()
         app = QApplication.instance()
-        app.processEvents()
+        if app is not None:
+            app.processEvents()
 
     def show(self) -> None:
         super().show()

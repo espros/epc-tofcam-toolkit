@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Optional, Any
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QVBoxLayout, QGridLayout
 from PySide6.QtCore import Signal
@@ -19,13 +19,13 @@ class CameraSetting(QGroupBox):
     def setDefaultValue(self):
         self.setValue(self.default)
 
-    def setValue(self, setting):
+    def setValue(self, *args, **kwargs):
         raise NotImplementedError('This method must be implemented in the derived class')
     
 
 class GroupBoxSelection(CameraSetting):
     signal_value_changed = Signal(str)
-    def __init__(self, label: str,  settings: List[str], default: str=None, parent=None):
+    def __init__(self, label: str,  settings: List[str], default: Optional[str]=None, parent=None):
         super(GroupBoxSelection, self).__init__(label, settings, default, parent)
         self.comboBox = QComboBox(parent)
         for type in settings:
@@ -46,7 +46,7 @@ class GroupBoxSelection(CameraSetting):
 
 class DropDownSetting(GroupBoxSelection):
     signal_value_changed = Signal(str)
-    def __init__(self, label: str, setting: List[str], default: str=None, parent=None):
+    def __init__(self, label: str, setting: List[str], default: Optional[str]=None, parent=None):
         super(DropDownSetting, self).__init__('', setting, default, parent)
         self.gridLayout.addWidget(QLabel(label, self), 0, 0)
         self.gridLayout.addWidget(self.comboBox, 0, 1)
@@ -54,7 +54,7 @@ class DropDownSetting(GroupBoxSelection):
 
 class SpinBoxSetting(CameraSetting):
     signal_value_changed = Signal(int)
-    def __init__(self, label: str, minvalue: int, maxValue: int, default: int=None, parent=None):
+    def __init__(self, label: str, minvalue: int, maxValue: int, default: Optional[int]=None, parent=None):
         super(SpinBoxSetting, self).__init__('', [minvalue, maxValue], default, parent)
         self.spinBox = QSpinBox(parent)
         self.spinBox.setRange(minvalue, maxValue)
@@ -110,7 +110,7 @@ class IntegrationTimes(CameraSetting):
             spinBox.valueChanged.emit(self.default[i])
 
 class SettingsGroup(QGroupBox):
-    def __init__(self, label='', settings: List[CameraSetting]=[]):
+    def __init__(self, label='', settings: List=[]):
         super(SettingsGroup, self).__init__(label)
         self.gridLayout = QGridLayout()
         self.settings = settings

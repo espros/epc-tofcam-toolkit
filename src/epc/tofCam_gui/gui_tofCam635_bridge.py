@@ -46,7 +46,7 @@ class TofCam635Bridge:
         self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
         self.gui.setDefaultValues()
 
-        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
+        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 
     def getImage(self):
         return self.__get_image_cb(self.captureMode)

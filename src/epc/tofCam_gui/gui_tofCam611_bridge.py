@@ -39,7 +39,7 @@ class TOFcam611_bridge:
         self._set_modulation_settings()
         self._set_integration_times('TOF', 1000)
 
-        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
+        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -75,7 +75,7 @@ class TOFcam611_bridge:
             freqIndex = 0 # for 10MHz
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
+        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
         self.cam.setModFrequency(freqIndex)
         self.capture()
 
