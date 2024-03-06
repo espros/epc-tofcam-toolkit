@@ -71,14 +71,14 @@ class Lense_Projection():
                 self.lenseMatrix[1, x, y] = row * rUA / rr
                 self.lenseMatrix[2, x, y] = np.cos(angle_rad)
 
-
-    def from_lense_calibration(lensType = 'Wide Field'):
+    @staticmethod
+    def from_lense_calibration(lensType='Wide Field'):
         file_path = lens_type_map.get(lensType)
         if file_path is None:
             raise KeyError(f"Invalid lensType '{lensType}'")
         angle, rp = np.loadtxt(file_path, delimiter=',', skiprows=1).T
         return Lense_Projection(rp, angle)
 
-    def transformImage(self, depth: np.array):
+    def transformImage(self, depth: np.ndarray):
         return depth * self.lenseMatrix[:, 0:depth.shape[0], 0:depth.shape[1]]
     
