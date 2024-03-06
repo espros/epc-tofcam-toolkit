@@ -11,7 +11,10 @@ def pause_streaming(func):
         running = self.streamer.is_streaming()
         if running:
             self.streamer.stop_stream()
-        func(self, *args, **kwargs)
+        try:
+            func(self, *args, **kwargs)
+        except Exception as e:
+            logging.error(f"Failed capturing frame with exception: {e}")
         if running:
             self.streamer.start_stream()
     return wrapper

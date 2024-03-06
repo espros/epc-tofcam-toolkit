@@ -1,6 +1,7 @@
 import select
 import socket
 import struct
+from threading import Lock
 from epc.tofCam660.response import Response
 
 
@@ -21,6 +22,7 @@ class Interface:
     markerEndBytes = struct.pack('!I', markerEnd)
 
     def __init__(self, ipAddress='10.10.31.180', port=50660):
+        self.lock = Lock()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try: 
@@ -32,8 +34,10 @@ class Interface:
         self.socket.close()
 
     def transceive(self, command):
+        self.lock.acquire()
         self.transmit(command)
         response = self.receive()
+        self.lock.release()
         if response.isError():
             raise RuntimeError(f'command {command} failed with response {response}')
         return response

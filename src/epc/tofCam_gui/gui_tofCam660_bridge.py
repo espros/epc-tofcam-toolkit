@@ -35,27 +35,22 @@ class TOFcam660_bridge:
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
         gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
-        # gui.toolBar.consoleButton.triggered.connect(lambda: gui.console.startup_kernel(cam))
-        gui.imageTypeWidget.selection_changed_signal.connect(self._set_image_type)
-        gui.guiFilterGroupBox.selection_changed_signal.connect(self._setGuiFilter)
-        gui.modulationFrequency.signal_selection_changed.connect(lambda freq: self._set_modulation_settings())
-        gui.modulationChannel.signal_selection_changed.connect(lambda: self._set_modulation_settings())
+        gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
+        gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
+        gui.modulationFrequency.signal_value_changed.connect(lambda: self._set_modulation_settings())
+        gui.modulationChannel.signal_value_changed.connect(lambda: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
-        gui.hdrModeDropDown.signal_selection_changed.connect(self._set_hdr_mode)
-        gui.minAmplitude.signal_value_changed.connect(lambda value: self.cam.setMinAmplitude(value))
-        gui.builtInFilter.medianFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
-        gui.builtInFilter.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
-        gui.builtInFilter.averageFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
-        gui.builtInFilter.edgeFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
-        gui.builtInFilter.interferenceFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
-        gui.roiSettings.signal_roi_changed.connect(lambda x1, y1, x2, y2: self.cam.setRoi(x1, y1, x2, y2))
-        gui.lensType.signal_selection_changed.connect(lambda value: self.cam.setLensType(value))
+        gui.hdrModeDropDown.signal_value_changed.connect(self._set_hdr_mode)
+        gui.minAmplitude.signal_value_changed.connect(self._set_min_amplitudes)
+        gui.medianFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.temporalFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.averageFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.edgeFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.interferenceFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.roiSettings.signal_roi_changed.connect(self._set_roi)
+        gui.lensType.signal_value_changed.connect(lambda value: self.cam.setLensType(value))
 
-        # set default settings
-        self.__set_hdrTimesEnabled(False)
-        self._set_image_type('Distance')
-        self._set_modulation_settings()
-        self._set_integration_times('Low', 100)
+        gui.setDefaultValues()
 
     def _setGuiFilter(self, filter: str):
         match filter:
@@ -82,27 +77,27 @@ class TOFcam660_bridge:
             self.streamer.stop_stream()
 
     @pause_streaming
-    def __set_filter_settings(self):
+    def _set_filter_settings(self):
         temp_factor = 0.0
         temp_threshold = 0
         edgeThreshold = 0
         interferenceLimit = 0
         interferenceUseLatest = False
 
-        tempOn = self.gui.builtInFilter.temporalFilter.isChecked()
-        medianOn = self.gui.builtInFilter.medianFilter.isChecked()
-        averageOn = self.gui.builtInFilter.averageFilter.isChecked()
-        edgeOn = self.gui.builtInFilter.edgeFilter.isChecked()
-        interferenceOn = self.gui.builtInFilter.interferenceFilter.isChecked()
+        tempOn = self.gui.temporalFilter.isChecked()
+        medianOn = self.gui.medianFilter.isChecked()
+        averageOn = self.gui.averageFilter.isChecked()
+        edgeOn = self.gui.edgeFilter.isChecked()
+        interferenceOn = self.gui.interferenceFilter.isChecked()
 
         if tempOn:
-            temp_factor = self.gui.builtInFilter.temporalFilter.factor.value()
-            temp_threshold = self.gui.builtInFilter.temporalFilter.threshold.value()
+            temp_factor = self.gui.temporalFilter.factor.value()
+            temp_threshold = self.gui.temporalFilter.threshold.value()
         if edgeOn:
-            edgeThreshold = self.gui.builtInFilter.edgeFilter.threshold.value()
+            edgeThreshold = self.gui.edgeFilter.threshold.value()
         if interferenceOn:
-            interferenceLimit = self.gui.builtInFilter.interferenceFilter.limit.value()
-            interferenceUseLatest = self.gui.builtInFilter.interferenceFilter.useLastValue.isChecked()     
+            interferenceLimit = self.gui.interferenceFilter.limit.value()
+            interferenceUseLatest = self.gui.interferenceFilter.useLastValue.isChecked()     
 
         self.cam.setFilter(int(medianOn), int(averageOn), edgeThreshold, int(temp_factor*1000), temp_threshold, interferenceLimit, int(interferenceUseLatest))
 
@@ -121,6 +116,14 @@ class TOFcam660_bridge:
         elif mode == 'HDR Temporal':
             self.cam.setHdr(2)
             self.__set_hdrTimesEnabled(True)
+
+    @pause_streaming
+    def _set_roi(self, x1, y1, x2, y2):
+        self.cam.setRoi(x1, y1, x2, y2)
+
+    @pause_streaming
+    def _set_min_amplitudes(self, minAmp: int):
+        self.cam.setMinAmplitude(minAmp)
 
     @pause_streaming
     def _set_integration_times(self, type: str, value: int):
@@ -195,8 +198,6 @@ def get_ipAddress():
     return ip_address
 
 def main():
-    print('Hello')
-
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()

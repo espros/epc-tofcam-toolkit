@@ -30,6 +30,7 @@ class Base_GUI_TOFcam(QMainWindow):
 
         self.topMenuBar.saveRawAction.triggered.connect(self._save_raw)
         self.topMenuBar.savePngAction.triggered.connect(self._save_png)
+        self.topMenuBar.setDefaultValuesAction.triggered.connect(self.setDefaultValues)
 
     def complete_setup(self):
         """ ! needs to be called at the end of the __init__ method of the derived class !
@@ -43,6 +44,12 @@ class Base_GUI_TOFcam(QMainWindow):
         self.setCentralWidget(self.widget)
 
         self.resize(1200, 600)
+
+    def setDefaultValues(self):
+        for i in range(self.settingsLayout.count()):
+            widget = self.settingsLayout.itemAt(i).widget()
+            if widget:
+                widget.setDefaultValue()
 
     def _save_raw(self):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.raw')

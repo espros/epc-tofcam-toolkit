@@ -28,7 +28,7 @@ def depth_to_3d(depth, camera_matrix):
 
 class Lense_Projection():
 
-    def __init__(self, rp, angle, width=320,height=240,offsetX=0,offsetY=0):
+    def __init__(self, rp, angle, width=320, height=240, offsetX=0, offsetY=0):
         self.angle=np.zeros(101)
         self.rp=np.zeros(101)
         self.height=height

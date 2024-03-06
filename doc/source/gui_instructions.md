@@ -11,6 +11,10 @@ While each espros TOFcam implements there own control settings, the gui is struc
 
 ![GUI_Explained](images/gui660_explained.png)
 
+### TOFcam console
+When you click on View/Console the following iPython console opens. You can use it to explore the TOFcam API and set additional parameters.
+![GUI_Console](images/console_window.png)
+
 ## TOFcam660
 1. Make sure the camera is running and has a stable ethernet connection.  
 2. Run the following command in your terminal. 

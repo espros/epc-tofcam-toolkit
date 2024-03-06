@@ -4,7 +4,7 @@ This repository contains the python GUI framework for TOF cameras.
 ## Installation for usage
 install the package using pip
 ```bash
-pip install epc-tofcam
+pip install epc-tofcam-toolkit
 ```
 
 Connect and startup the camera. Then simply run the gui with: 

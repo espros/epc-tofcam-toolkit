@@ -26,22 +26,24 @@ class TofCam635Bridge:
 
         gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
         gui.toolBar.captureButton.triggered.connect(self.capture)
-        gui.guiFilterGroupBox.selection_changed_signal.connect(self._setGuiFilter)
+        gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
         gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
-        gui.imageTypeWidget.selection_changed_signal.connect(self._changeImageType)
-        gui.hdrModeDropDown.signal_selection_changed.connect(self._set_hdr_mode)
+        gui.imageTypeWidget.signal_value_changed.connect(self._changeImageType)
+        gui.hdrModeDropDown.signal_value_changed.connect(self._set_hdr_mode)
         gui.minAmplitude.signal_value_changed.connect(lambda value: self._set_min_amplitudes(value))
 
-        gui.builtInFilter.medianFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setMedianFilter(enable))
-        gui.builtInFilter.temporalFilter.signal_filter_changed.connect(lambda enable, threshold, factor: self.cam.cmd.setTemporalFilter(enable, threshold, factor))
-        gui.builtInFilter.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setAverageFilter(enable))
-        gui.builtInFilter.edgeFilter.signal_filter_changed.connect(lambda enable, threshold: self.cam.cmd.setEdgeFilter(enable, threshold))
+        gui.medianFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setMedianFilter(enable))
+        gui.temporalFilter.signal_filter_changed.connect(lambda enable, threshold, factor: self.cam.cmd.setTemporalFilter(enable, int(threshold), int(1000*factor)))
+        gui.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setAverageFilter(enable))
+        gui.interferenceFilter.signal_filter_changed.connect(lambda enable, limit, useLast: self.cam.cmd.setInterferenceDetection(enable, useLast, limit))
+        gui.edgeFilter.signal_filter_changed.connect(lambda enable, threshold: self.cam.cmd.setEdgeFilter(enable, threshold))
         gui.roiSettings.signal_roi_changed.connect(self.__set_roi)
-        gui.modulationChannel.signal_selection_changed.connect(lambda channel: self.cam.cmd.setModChannel(int(channel)))
+        gui.modulationChannel.signal_value_changed.connect(lambda channel: self.cam.cmd.setModChannel(int(channel)))
+        gui.modulationFrequency.signal_value_changed.connect(self._set_mod_freq)
 
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
         self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
-        self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
+        self.gui.setDefaultValues()
 
     def getImage(self):
         return self.__get_image_cb(self.captureMode)
@@ -78,6 +80,14 @@ class TofCam635Bridge:
     @pause_streaming
     def __set_roi(self, x: int, y: int, w: int, h: int):
         self.cam.set_roi(x, y, w, h)
+
+    def _set_mod_freq(self, freq: str):
+        if freq == '10 MHz':
+            self.cam.cmd.setModFrequency(0)
+        elif freq == '20 MHz':
+            self.cam.cmd.setModFrequency(1)
+        else:
+            raise ValueError(f"Modulation Frequency '{freq}' not supported")
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
