@@ -26,7 +26,7 @@ code-analysis:
   allow_failure: true
   script:
     - pip install mypy mypy-gitlab-code-quality
-    - mypy src/epc/ --no-error-summary > mypy-out.txt
+    - mypy src/epc/tofCam_lib src/epc/tofCam_gui --no-error-summary > mypy-out.txt
   after_script:
     - echo "Collecting mypy results:"
     - cat mypy-out.txt
