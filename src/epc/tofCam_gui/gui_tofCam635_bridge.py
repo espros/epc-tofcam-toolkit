@@ -18,7 +18,6 @@ class TofCam635Bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = self.cam.get_distance_image
-        self.image_type = 'Distance'
         self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
@@ -127,7 +126,6 @@ class TofCam635Bridge:
 
     @pause_streaming
     def _changeImageType(self, imgType: str):
-        self.imageType = imgType
         if imgType == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_distance_image

@@ -17,9 +17,8 @@ class TOFcam611_bridge:
         self.cam = cam
         self.__get_image_cb = cam.getDistance
         self.__distance_unambiguity = 7.5 # m 
-        self.streamer = Streamer(self.__get_image_cb)
+        self.streamer = Streamer(self.get_image)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
-        self.image_type = 'Distance'
         
         # update chip information
         chipID, waferId = cam.getChipInfo()
@@ -82,7 +81,6 @@ class TOFcam611_bridge:
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
-        self.image_type = image_type
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getDistance
@@ -100,8 +98,11 @@ class TOFcam611_bridge:
         if not self.streamer.is_streaming():
             self.capture()
 
+    def get_image(self):
+         return self.__get_image_cb()
+    
     def capture(self, mode=0):
-        image = self.__get_image_cb()
+        image = self.get_image()
         self.gui.updateImage(image)
 
 def get_port():
