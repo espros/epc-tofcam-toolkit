@@ -60,25 +60,23 @@ class Parser(abc.ABC):
 
 class GrayscaleParser(Parser):
     def parseData(self, frame):
-        frame.amplitude = np.bitwise_and(np.frombuffer(self.bytestream, dtype=np.uint16)
-                                         .reshape(frame.rows, frame.cols), 2 ** 11 - 1)
+        frame.amplitude = np.frombuffer(self.bytestream, dtype=np.uint16).reshape(frame.rows, frame.cols)
 
 
 class DistanceParser(Parser):
     def parseData(self, frame):
-        frame.distance = np.bitwise_and(np.frombuffer(self.bytestream, dtype=np.uint16)
-                                        .reshape(frame.rows, frame.cols), 2 ** 14 - 1)
+        frame.distance = np.frombuffer(self.bytestream, dtype=np.uint16).reshape(frame.rows, frame.cols)
 
 
 class DistanceAndAmplitudeParser(Parser):
     def parseData(self, frame):
         data = np.frombuffer(self.bytestream, dtype=np.uint16)
-        frame.distance = np.bitwise_and(data[::2].reshape(frame.rows, frame.cols), 2 ** 14 - 1)
-        frame.amplitude = np.bitwise_and(data[1::2].reshape(frame.rows, frame.cols), 2 ** 12 - 1)
+        frame.distance = data[::2].reshape(frame.rows, frame.cols)
+        frame.amplitude = data[1::2].reshape(frame.rows, frame.cols)
 
 
 class DcsParser(Parser):
     def parseData(self, frame):
         data = np.frombuffer(self.bytestream, dtype=np.uint16)
-        data = np.bitwise_and(data.reshape(4, frame.rows, frame.cols), 2 ** 12 - 1)
+        data = data.reshape(4, frame.rows, frame.cols)
         frame.dcs = np.array([data])

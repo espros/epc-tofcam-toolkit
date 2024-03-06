@@ -45,6 +45,8 @@ class Base_GUI_TOFcam(QMainWindow):
 
         self.resize(1200, 600)
 
+        self.setDefaultValues()
+
     def setDefaultValues(self):
         for i in range(self.settingsLayout.count()):
             widget = self.settingsLayout.itemAt(i).widget()

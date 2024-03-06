@@ -141,8 +141,9 @@ class Server:
                 datastream = self.dut.getImageData(
                     Command.create('getGrayscale', mode),
                     self.dut.getFrameByteCount() + parser.headerStruct.size)
-                response = np.empty((frameCount, parser.parse(datastream).rows, parser.parse(datastream).cols), dtype=np.uint16)
-                response[n, :, :] = parser.parse(datastream).amplitude
+                frame = parser.parse(datastream)
+                response = np.empty((frameCount, frame.rows, frame.cols), dtype=np.uint16)
+                response[n, :, :] = frame.amplitude
             except (ValueError, EOFError, RuntimeError, TimeoutError, struct.error):
                 response[:, :, :] = self.getErrorData()
                 break
@@ -156,8 +157,9 @@ class Server:
                 datastream = self.dut.getImageData(
                     Command.create('getDistance', mode),
                     self.dut.getFrameByteCount() + parser.headerStruct.size)
-                response = np.empty((frameCount, parser.parse(datastream).rows, parser.parse(datastream).cols), dtype=np.uint16)
-                response[n, :, :] = parser.parse(datastream).distance
+                frame = parser.parse(datastream)
+                response = np.empty((frameCount, frame.rows, frame.cols), dtype=np.uint16)
+                response[n, :, :] = frame.distance
             except (ValueError, EOFError, RuntimeError, TimeoutError, struct.error):
                 response[:, :, :] = self.getErrorData()
                 break
@@ -175,9 +177,9 @@ class Server:
                 datastream = self.dut.getImageData(
                     Command.create('getDistanceAndAmplitude', mode),
                     2 * self.dut.getFrameByteCount() + parser.headerStruct.size)
-                distance = np.empty((frameCount, parser.parse(datastream).rows, parser.parse(datastream).cols), dtype=np.uint16)
-                amplitude = np.empty((frameCount, parser.parse(datastream).rows, parser.parse(datastream).cols), dtype=np.uint16)
                 frame = parser.parse(datastream)
+                distance = np.empty((frameCount,frame.rows,frame.cols), dtype=np.uint16)
+                amplitude = np.empty((frameCount,frame.rows,frame.cols), dtype=np.uint16)
                 distance[n, :, :] = frame.distance
                 amplitude[n, :, :] = frame.amplitude
             except (ValueError, EOFError, RuntimeError, TimeoutError, struct.error):
@@ -195,8 +197,9 @@ class Server:
                 datastream = self.dut.getImageData(
                     Command.create('getDcs', mode),
                     4 * self.dut.getFrameByteCount() + parser.headerStruct.size)
-                response = np.empty((frameCount, 4, parser.parse(datastream).rows, parser.parse(datastream).cols), dtype=np.uint16)
-                response[n, :, :, :] = parser.parse(datastream).dcs
+                frame = parser.parse(datastream)
+                response = np.empty((frameCount, 4, frame.rows, frame.cols), dtype=np.uint16)
+                response[n, :, :, :] = frame.dcs
             except (ValueError, EOFError, RuntimeError, TimeoutError, struct.error):
                 response[:, :, :, :] = self.getErrorData()
                 break

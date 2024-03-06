@@ -76,16 +76,23 @@ class IntegrationTimes(CameraSetting):
         self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(self.autoMode.isChecked())))
         self.gridLayout.addWidget(self.autoMode, 0, 0)
         self.spinBoxes = []
+        self.labels = labels
 
         for i, entry in enumerate(labels):
             label = QLabel(entry, parent)
             spbox = QSpinBox(parent)
             spbox.setRange(min_value, limits[i])
             spbox.setValue(defaults[i])
-            spbox.valueChanged.connect(lambda x: self.signal_value_changed.emit(entry, x))
+            spbox.valueChanged.connect(self.__emit_signal)
             self.spinBoxes.append(spbox) 
             self.gridLayout.addWidget(label, i+1, 0)
             self.gridLayout.addWidget(spbox, i+1, 1)
+
+    def __emit_signal(self, value: int):
+        sender = self.sender()
+        for index, sp in enumerate(self.spinBoxes):
+            if sp == sender:
+                self.signal_value_changed.emit(self.labels[index], self.spinBoxes[index].value())
         
     def setTimeEnabled(self, index: int, enabled: bool):
         self.spinBoxes[index].setEnabled(enabled)

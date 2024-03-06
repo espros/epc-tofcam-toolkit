@@ -58,7 +58,7 @@ class TofCam635:
         return np.reshape(image, self.resolution)
       except:
         continue
-    # raise Exception("Failed to get distance image")
+    raise Exception("Failed to get distance image")
   
   def get_amplitude_image(self, mode=0):
     for i in range(self.CAPTURE_TRYS_BEFORE_FAIL):

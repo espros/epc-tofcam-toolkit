@@ -22,14 +22,14 @@ class SimpleFilter(QWidget):
 
 class TemporalFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int, float)
-    def __init__(self, range_treshold=(0, 1000), range_factor=(0.0, 1.0), treshold=300, factor=0.3, default_on=False):
+    def __init__(self, range_threshold=(0, 1000), range_factor=(0.0, 1.0), threshold=300, factor=0.3, default_on=False):
         super(TemporalFilter, self).__init__('TemporalFilter', default_on)
-        self.defaultThreshold = treshold
+        self.defaultThreshold = threshold
         self.defaultFactor = factor
         self.thresholdLabel = QLabel('Threshold [mm]', self)
         self.threshold = QSpinBox(self)
         self.threshold.setSingleStep(10)
-        self.threshold.setRange(*range_treshold)
+        self.threshold.setRange(*range_threshold)
         self.factorLabel = QLabel('Factor', self)
         self.factor = QDoubleSpinBox(self)
         self.factor.setSingleStep(0.1)

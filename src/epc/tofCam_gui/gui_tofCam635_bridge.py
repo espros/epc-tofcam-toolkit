@@ -77,8 +77,8 @@ class TofCam635Bridge:
 
     def _set_hdrTimesEnabled(self, enabled: bool):
         self.gui.integrationTimes.setTimeEnabled(1, enabled)
-        self.gui.integrationTimes.setTimeEnabled(2, enabled)
-        self.gui.integrationTimes.setTimeEnabled(3, enabled)
+        # self.gui.integrationTimes.setTimeEnabled(2, enabled)
+        # self.gui.integrationTimes.setTimeEnabled(3, enabled)
         self.gui.integrationTimes.autoMode.setEnabled(not enabled)
 
     @pause_streaming
@@ -96,11 +96,11 @@ class TofCam635Bridge:
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
-            self._set_hdrTimesEnabled(False)
             self.cam.cmd.setHDR('spatial')
-        elif mode == 'HDR Temporal':
             self._set_hdrTimesEnabled(True)
+        elif mode == 'HDR Temporal':
             self.cam.cmd.setHDR('temporal')
+            self._set_hdrTimesEnabled(True)
         elif mode == 'HDR Off':
             self._set_hdrTimesEnabled(False)
             self.cam.cmd.setHDR('off')
@@ -109,16 +109,10 @@ class TofCam635Bridge:
 
     @pause_streaming
     def _update_int_time(self, type: str, intTime: int):
-        if   type == 'WFOV1':
+        if   type == 'Integration Time 1':
             self.cam.cmd.setIntTimeDist(0, intTime)
-        elif type == 'WFOV2':
+        elif type == 'Integration Time 2':
             self.cam.cmd.setIntTimeDist(1, intTime)
-        elif type == 'WFOV3':
-            self.cam.cmd.setIntTimeDist(2, intTime)
-        elif type == 'WFOV4':
-            self.cam.cmd.setIntTimeDist(3, intTime)
-        elif type == 'NFOV':
-            self.cam.cmd.setIntTimeDist(4, intTime)
         elif type == 'Gray':
             self.cam.cmd.setIntTimeGray(0, intTime)
         elif type == 'auto':

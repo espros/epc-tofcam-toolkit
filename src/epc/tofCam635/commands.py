@@ -35,11 +35,10 @@ class Commands():
     return wrapper
 
   @thread_locker
-  def setROI(self,x0=0,y0=0,x1=159,y1=59, showNotification=True):
+  def setROI(self,x0=0,y0=0,x1=160,y1=60, showNotification=True):
     """
     set ROI
     """
-
     self.tofWrite([communication.CommandList.COMMAND_SET_ROI, x0&0xff, (x0>>8)&0xff,  y0&0xff, (y0>>8)&0xff,  x1&0xff, (x1>>8)&0xff,  y1&0xff, (y1>>8)&0xff])
     self.getAcknowledge()
     if showNotification:
