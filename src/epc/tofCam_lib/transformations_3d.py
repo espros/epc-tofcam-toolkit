@@ -79,8 +79,6 @@ class Lense_Projection():
         angle, rp = np.loadtxt(file_path, delimiter=',', skiprows=1).T
         return Lense_Projection(rp, angle)
 
-    def transformImage(self, depth: np.array, roi=None):
-        if roi is not None:
-            return depth * self.lenseMatrix[:, roi[0]:roi[1], roi[2]:roi[3]]
-        return depth * self.lenseMatrix
+    def transformImage(self, depth: np.array):
+        return depth * self.lenseMatrix[:, 0:depth.shape[0], 0:depth.shape[1]]
     

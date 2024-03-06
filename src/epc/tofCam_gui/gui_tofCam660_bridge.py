@@ -200,7 +200,6 @@ def get_ipAddress():
     return ip_address
 
 def main():
-    print('Hello')
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')

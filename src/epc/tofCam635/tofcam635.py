@@ -83,12 +83,11 @@ class TofCam635:
   def get_point_cloud(self, mode=0):
     # capture depth image & corrections
     depth = self.get_distance_image(mode)
-    #depth = np.rot90(depth, 1, (2, 1))[0]
     depth  = depth.astype(np.float32)
     depth[depth >= self.maxDepth] = np.nan
 
     # calculate point cloud from the depth image
-    points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth.T), roi = [0,self.resolution[1],0,self.resolution[0]])
+    points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth.T))
     points = np.transpose(points, (1, 2, 0))
     points = points.reshape(-1, 3)
     return points
