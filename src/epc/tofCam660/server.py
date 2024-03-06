@@ -209,7 +209,7 @@ class Server:
         depth[depth >= self.maxDepth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth))
+        points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth), roi = [0,self.dut.getColCount(),0,self.dut.getRowCount()])
         points = np.transpose(points, (1, 2, 0))
         points = points.reshape(-1, 3)
         return points

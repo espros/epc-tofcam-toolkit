@@ -88,7 +88,7 @@ class TofCam635:
     depth[depth >= self.maxDepth] = np.nan
 
     # calculate point cloud from the depth image
-    points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth.T), roi = [0,160,0,60])
+    points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth.T), roi = [0,self.resolution[1],0,self.resolution[0]])
     points = np.transpose(points, (1, 2, 0))
     points = points.reshape(-1, 3)
     return points
