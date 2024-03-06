@@ -115,6 +115,7 @@ class Server:
              'grayscaleIntTime': grayscaleIntTime}))
 
     def setRoi(self, x0, y0, x1, y1):
+        print(f'setRoi({x0}, {y0}, {x1}, {y1})')
         self.dut.setColCount(x1-x0)
         self.dut.setRowCount(y1-y0)
         self.transceive(Command.create('setRoi',

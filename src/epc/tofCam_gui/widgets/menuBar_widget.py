@@ -7,6 +7,8 @@ class MenuBar(QMenuBar):
         super(MenuBar, self).__init__(parent=parent)
 
         self.fileMenu = QMenu("File", self)
+        self.setDefaultValuesAction = QAction("Set default values", self)
+        self.fileMenu.addAction(self.setDefaultValuesAction)
         self.savePngAction = QAction("Save png", self)
         self.fileMenu.addAction(self.savePngAction)
         self.saveRawAction = QAction("Save raw", self)

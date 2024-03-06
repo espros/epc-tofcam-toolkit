@@ -29,10 +29,10 @@ class TOFcam611_bridge:
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
-        gui.imageTypeWidget.selection_changed_signal.connect(self._set_image_type)
-        gui.modulationFrequency.signal_selection_changed.connect(lambda freq: self._set_modulation_settings())
+        gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
+        gui.modulationFrequency.signal_value_changed.connect(lambda freq: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
-        gui.builtInFilter.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
+        gui.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
 
         # set default settings
         self._set_image_type('Distance')

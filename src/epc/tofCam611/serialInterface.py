@@ -22,7 +22,7 @@ class SerialInterface():
         result = port.device
     
     if result == None:
-      raise('Device not found')
+      raise ConnectionError('Device not found')
     return result
 
   def open(self,port,baudrate = 921600, timeout = 0.5):
