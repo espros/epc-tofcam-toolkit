@@ -22,6 +22,7 @@ class TofCam635Bridge:
         self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
+        self.__distance_unambiguity = 7.5 # m 
 
         cam.cmd.setOperationMode(0)
 
@@ -43,6 +44,8 @@ class TofCam635Bridge:
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
         self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
         self._changeImageType(gui.imageTypeWidget.comboBox.currentText())
+
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
 
     def getImage(self):
         return self.__get_image_cb(self.captureMode)
@@ -125,7 +128,8 @@ class TofCam635Bridge:
         if imgType == 'Distance':
             self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
+            #self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
+            self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif imgType == 'Amplitude':
             self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)

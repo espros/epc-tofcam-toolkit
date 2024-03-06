@@ -32,7 +32,7 @@ class PointCloudWidget(GLViewWidget):
         grid.translate(0, -0.5, 0)
         self.addItem(grid)
         self.setMouseTracking(True)
-        self.__maxDepth = 16000
+        self.__maxDepth = 6.25 # unambiguity distance in m
 
     def set_max_depth(self, maxDepth: int):
         self.__maxDepth = maxDepth

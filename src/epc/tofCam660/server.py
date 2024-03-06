@@ -37,7 +37,7 @@ class Server:
     def __init__(self, dut: Epc660):
         self.dut = dut
         self.registerAtExits()
-        self.maxDepth = 16000
+        self.maxDepth = 16000 # pixel code limit for valid data 
         self.lensProjection = Lense_Projection.from_lense_calibration()
 
     def recordVideo(self, frames, folder):
