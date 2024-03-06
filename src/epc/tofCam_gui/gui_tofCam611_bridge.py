@@ -16,9 +16,10 @@ class TOFcam611_bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = cam.getDistance
-        self.__distance_unambiguity = 6.25 # m 
+        self.__distance_unambiguity = 7.5 # m 
         self.streamer = Streamer(self.__get_image_cb)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
+        self.image_type = 'Distance'
         
         # update chip information
         chipID, waferId = cam.getChipInfo()
@@ -38,6 +39,8 @@ class TOFcam611_bridge:
         self._set_image_type('Distance')
         self._set_modulation_settings()
         self._set_integration_times('TOF', 1000)
+
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -73,19 +76,26 @@ class TOFcam611_bridge:
             freqIndex = 0 # for 10MHz
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
         self.cam.setModFrequency(freqIndex)
         self.capture()
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
+        self.image_type = image_type
         if image_type == 'Distance':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getDistance
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif image_type == 'Amplitude':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
+        elif image_type == 'Point Cloud':
+            self.gui.imageView.setActiveView('pointcloud')
+            self.__get_image_cb = self.cam.getPointCloud
         
         if not self.streamer.is_streaming():
             self.capture()

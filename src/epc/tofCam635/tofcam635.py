@@ -5,7 +5,7 @@
 import numpy as np
 from epc.tofCam635.communication import *
 from epc.tofCam635.commands import Commands
-
+from epc.tofCam_lib.transformations_3d import Lense_Projection
 
 class TofCam635:
   CAPTURE_MODE = 1
@@ -14,9 +14,12 @@ class TofCam635:
     self.com = SerialInterface(port)
     self.cmd = Commands(self.com,self.com)
 
-    self.resolution = (60, 160)
+    self.resolution = (60, 160) #(y,x)
     self.set_default_parameters()
 
+    self.maxDepth = 16000 # pixel code limit for valid data 
+    self.lensProjection = Lense_Projection.from_lense_calibration(lensType='635')
+    
   def set_default_parameters(self):
     self.set_roi(0, 0, self.resolution[1], self.resolution[0])
     self.cmd.setIntTimeGray(0, 1000)
@@ -76,6 +79,19 @@ class TofCam635:
       except:
         continue
     raise Exception("Failed to get grayscale image")
+  
+  def get_point_cloud(self, mode=0):
+    # capture depth image & corrections
+    depth = self.get_distance_image(mode)
+    #depth = np.rot90(depth, 1, (2, 1))[0]
+    depth  = depth.astype(np.float32)
+    depth[depth >= self.maxDepth] = np.nan
+
+    # calculate point cloud from the depth image
+    points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth.T), roi = [0,self.resolution[1],0,self.resolution[0]])
+    points = np.transpose(points, (1, 2, 0))
+    points = points.reshape(-1, 3)
+    return points
 
   def __del__(self):
     self.com.close()

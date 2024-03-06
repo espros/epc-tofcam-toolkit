@@ -51,6 +51,8 @@ class TOFcam660_bridge:
         gui.lensType.signal_value_changed.connect(lambda value: self.cam.setLensType(value))
 
         gui.setDefaultValues()
+        
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
 
     def _setGuiFilter(self, filter: str):
         match filter:
@@ -198,6 +200,8 @@ def get_ipAddress():
     return ip_address
 
 def main():
+    print('Hello')
+
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()

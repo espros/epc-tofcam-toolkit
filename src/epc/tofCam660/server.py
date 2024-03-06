@@ -37,7 +37,7 @@ class Server:
     def __init__(self, dut: Epc660):
         self.dut = dut
         self.registerAtExits()
-        self.maxDepth = 16000
+        self.maxDepth = 16000 # pixel code limit for valid data 
         self.lensProjection = Lense_Projection.from_lense_calibration()
 
     def recordVideo(self, frames, folder):
@@ -210,11 +210,10 @@ class Server:
         depth[depth >= self.maxDepth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth))
+        points = 1E-3 * self.lensProjection.transformImage(np.fliplr(depth), roi = [0,self.dut.getColCount(),0,self.dut.getRowCount()])
         points = np.transpose(points, (1, 2, 0))
         points = points.reshape(-1, 3)
         return points
-
 
     def getErrorData(self):
         """Return a matrix of '-1's to indicate a failure in data read out. """

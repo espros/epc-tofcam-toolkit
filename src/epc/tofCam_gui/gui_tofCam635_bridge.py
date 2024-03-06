@@ -18,9 +18,11 @@ class TofCam635Bridge:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = self.cam.get_distance_image
+        self.image_type = 'Distance'
         self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         self.captureMode = 0
+        self.__distance_unambiguity = 7.5 # m 
 
         cam.cmd.setOperationMode(0)
 
@@ -44,6 +46,8 @@ class TofCam635Bridge:
         self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
         self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
         self.gui.setDefaultValues()
+
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
 
     def getImage(self):
         return self.__get_image_cb(self.captureMode)
@@ -132,17 +136,23 @@ class TofCam635Bridge:
     def _changeImageType(self, imgType: str):
         self.imageType = imgType
         if imgType == 'Distance':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
+            self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif imgType == 'Amplitude':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif imgType == 'Grayscale':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
+        elif imgType == 'Point Cloud':
+            self.gui.imageView.setActiveView('pointcloud')
+            self.__get_image_cb = self.cam.get_point_cloud
         else:
             raise ValueError(f"Image Type '{imgType}' not supported")
         self.capture()
