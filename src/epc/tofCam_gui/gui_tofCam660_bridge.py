@@ -142,7 +142,7 @@ class TOFcam660_bridge:
             self.__distance_resolution = 0.1 # m/bit
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity*1000)
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
         self.cam.setModulationFrequencyMHz(frequency, channel)
         self.capture()
 
