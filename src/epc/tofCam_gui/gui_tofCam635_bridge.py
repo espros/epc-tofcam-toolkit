@@ -126,15 +126,17 @@ class TofCam635Bridge:
     def _changeImageType(self, imgType: str):
         self.imageType = imgType
         if imgType == 'Distance':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            #self.gui.imageView.setLevels(0, self.MAX_DISTANCE)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif imgType == 'Amplitude':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif imgType == 'Grayscale':
+            self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)

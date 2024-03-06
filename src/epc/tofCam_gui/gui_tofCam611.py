@@ -11,7 +11,7 @@ class GUI_TOFcam611(Base_GUI_TOFcam):
 
         # Create the video widget
         self.imageView = VideoWidget()
-        self.imageTypeWidget = GroupBoxSelection('Image Type', ['Distance', 'Amplitude'])
+        self.imageTypeWidget = GroupBoxSelection('Image Type', ['Distance', 'Amplitude', 'Point Cloud'])
         self.integrationTimes = IntegrationTimes(['TOF'], defaults=[1000], limits=[1600])
         self.integrationTimes.autoMode.setVisible(False)
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['20 MHz'])       

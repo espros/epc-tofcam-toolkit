@@ -214,7 +214,6 @@ class Server:
         points = points.reshape(-1, 3)
         return points
 
-
     def getErrorData(self):
         """Return a matrix of '-1's to indicate a failure in data read out. """
         nrows, ncols = self.dut.getRowCount(), self.dut.getColCount()

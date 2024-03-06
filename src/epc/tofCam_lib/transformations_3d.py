@@ -7,7 +7,19 @@ lens_type_map = {
     '635': 'src/epc/data/lense_calibration_wide_field.csv'
 }
 
-def depth_to_3d(depth, camera_matrix):
+def get_camera_matrix(resolution, focalLength):
+
+    # based on the pinhole camera model
+    cx, cy = np.array(resolution) / 2.0
+    fx = fy = focalLength
+    camera_matrix = np.array([[fx, 0, cx],
+                            [0, fy, cy],
+                            [0, 0, 1]])
+    return camera_matrix
+
+def depth_to_3d(depth, resolution, focalLengh):
+
+    camera_matrix = get_camera_matrix(resolution, focalLengh)
     # Get the shape of the depth image
     height, width = depth.shape
 
@@ -23,6 +35,7 @@ def depth_to_3d(depth, camera_matrix):
 
     # Multiply the coordinates by the depth to get 3D points
     points = coords * depth.reshape(1, -1)
+    points = points.reshape(3,height,width)
 
     return points
 

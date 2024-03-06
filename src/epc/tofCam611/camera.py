@@ -10,12 +10,14 @@ from epc.tofCam611.communicationType import communicationType
 from epc.tofCam611.update import update
 from epc.tofCam611.constants import __constants  as Constants
 from epc.tofCam_lib.crc import Crc, CrcMode
-
+from epc.tofCam_lib.transformations_3d import Lense_Projection, depth_to_3d
 
 class Camera():
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
+    self.resolution = (8, 8) #(x,y)
+    self.maxDepth = 16000 # pixel code limit for valid data 
     self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
 
   def powerOn(self,enable=True):
@@ -218,6 +220,18 @@ class Camera():
       amplRaw   = np.array((struct.unpack('<'+'I'*(length//8),tmp[length//2:])))
       amplitude = np.reshape(amplRaw,(8,8))
     return [distance/Constants.CONVERT_TO_MM,amplitude]
+  
+  def getPointCloud(self):
+      # capture depth image & corrections
+      depth = self.getDistance()
+      depth  = depth.astype(np.float32)
+      depth[depth >= self.maxDepth] = np.nan
+
+      # calculate point cloud from the depth image
+      points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=self.resolution, focalLengh=40) # focul lengh in px (0.8 mm)
+      points = np.transpose(points, (1, 2, 0))
+      points = points.reshape(-1, 3)
+      return points
 
   def getCalibrationData(self,device=None):
     if device == None:

@@ -56,6 +56,8 @@ class TOFcam660_bridge:
         self._set_image_type('Distance')
         self._set_modulation_settings()
         self._set_integration_times('Low', 100)
+        
+        self.gui.imageView.pc.set_max_depth(self.__distance_unambiguity)
 
     def _setGuiFilter(self, filter: str):
         match filter:

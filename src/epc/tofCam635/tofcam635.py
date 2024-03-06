@@ -14,7 +14,7 @@ class TofCam635:
     self.com = SerialInterface(port)
     self.cmd = Commands(self.com,self.com)
 
-    self.resolution = (60, 160)
+    self.resolution = (60, 160) #(y,x)
     self.set_default_parameters()
 
     self.maxDepth = 16000 # pixel code limit for valid data 
