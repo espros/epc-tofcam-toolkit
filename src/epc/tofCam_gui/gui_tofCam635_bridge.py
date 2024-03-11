@@ -74,11 +74,20 @@ class TofCam635Bridge:
         for i in range(5):
             self.cam.cmd.setAmplitudeLimit(i, minAmp)
 
-    def _set_hdrTimesEnabled(self, enabled: bool):
-        self.gui.integrationTimes.setTimeEnabled(1, enabled)
-        # self.gui.integrationTimes.setTimeEnabled(2, enabled)
-        # self.gui.integrationTimes.setTimeEnabled(3, enabled)
-        self.gui.integrationTimes.autoMode.setEnabled(not enabled)
+    def _update_intTimes_enabled(self):
+        hdr_mode = self.gui.hdrModeDropDown.getSelection()
+        auto_int_en = self.gui.integrationTimes.autoMode.isChecked()
+        if auto_int_en:
+            self.gui.integrationTimes.setTimeEnabled(0, False)
+            self.gui.integrationTimes.setTimeEnabled(1, False)
+        elif hdr_mode == 'HDR Off':
+            self.gui.integrationTimes.setTimeEnabled(0, True)
+            self.gui.integrationTimes.setTimeEnabled(1, False)
+        elif hdr_mode == 'HDR Temporal':
+            self.gui.integrationTimes.setTimeEnabled(0, True)
+            self.gui.integrationTimes.setTimeEnabled(1, True)
+        else:
+            raise ValueError(f"Undefined behavior for HDR Mode '{hdr_mode}'")
 
     @pause_streaming
     def __set_roi(self, x: int, y: int, w: int, h: int):
@@ -96,15 +105,13 @@ class TofCam635Bridge:
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
             self.cam.cmd.setHDR('spatial')
-            self._set_hdrTimesEnabled(True)
         elif mode == 'HDR Temporal':
             self.cam.cmd.setHDR('temporal')
-            self._set_hdrTimesEnabled(True)
         elif mode == 'HDR Off':
-            self._set_hdrTimesEnabled(False)
             self.cam.cmd.setHDR('off')
         else:
             raise ValueError(f"HDR Mode '{mode}' not supported")
+        self._update_intTimes_enabled()
 
     @pause_streaming
     def _update_int_time(self, type: str, intTime: int):
@@ -117,10 +124,9 @@ class TofCam635Bridge:
         elif type == 'auto':
             if intTime == 1:
                 self.cam.cmd.setIntTimeDist(0xFF, intTime)
-                self.gui.integrationTimes.set_auto_mode()
             else:
-                self.cam.cmd.setIntTimeDist(0, self.gui.integrationTimes.wFOV[0].value())
-                self.gui.integrationTimes.set_normal_mode()
+                self.cam.cmd.setIntTimeDist(0, self.gui.integrationTimes.getTimeAtIndex(0))
+            self._update_intTimes_enabled()
         else:
             raise ValueError(f"Integration Time Type '{type}' not supported")
 

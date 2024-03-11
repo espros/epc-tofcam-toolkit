@@ -4,7 +4,9 @@
         "**/.git": true,
         "**/.venv": true,
         "**/__pycache__": true,
-        "**/*.egg-info": true
+        "**/*.egg-info": true,
+        ".pytest_cache": true,
+        ".mypy_cache": true
     },
     "python.testing.pytestArgs": [
         "tests",
