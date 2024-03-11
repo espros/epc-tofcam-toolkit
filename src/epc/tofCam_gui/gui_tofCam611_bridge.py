@@ -32,12 +32,10 @@ class TOFcam611_bridge:
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
         gui.modulationFrequency.signal_value_changed.connect(lambda freq: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
+        gui.minAmplitude.signal_value_changed.connect(lambda minAmp: self.cam.setMinAmplitude(minAmp))
         gui.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
 
-        # set default settings
-        self._set_image_type('Distance')
-        self._set_modulation_settings()
-        self._set_integration_times('TOF', 1000)
+        self.gui.setDefaultValues()
 
         self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 

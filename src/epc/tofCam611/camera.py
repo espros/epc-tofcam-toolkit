@@ -13,12 +13,14 @@ from epc.tofCam_lib.crc import Crc, CrcMode
 from epc.tofCam_lib.transformations_3d import Lense_Projection, depth_to_3d
 
 class Camera():
+  MIN_AMP_ERROR = 16001000
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
     self.resolution = (8, 8) #(x,y)
     self.maxDepth = 16000 # pixel code limit for valid data 
     self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
+    self.minAmplitude = 0
 
   def powerOn(self,enable=True):
     self.tofWrite([commandList.COMMAND_SET_POWER, enable])
@@ -43,6 +45,12 @@ class Camera():
     self.tofWrite(commandList.COMMAND_GET_INTEGRATION_TIME_3D)
     tmp = self.getAnswer(communicationType.DATA_INTEGRATION_TIME,10)
     return tmp[0]+tmp[1]*0x100
+  
+  def setMinAmplitude(self, minAmp):
+    """
+    set minimal amplitude for distance estimation
+    """
+    self.minAmplitude = minAmp
 
   def setIntTime_us(self, integrationTime):
     """
@@ -185,15 +193,20 @@ class Camera():
     return dcs
 
   def getDistance(self):
-    self.tofWrite([commandList.COMMAND_GET_DISTANCE])
-    [tmp,length] = self.getData(communicationType.DATA_DISTANCE)
-    if length == 4:
-      distRaw  =np.array((struct.unpack('<'+'I',tmp)))
-      distance=distRaw
-    else:
-      distRaw=np.array((struct.unpack('<'+'I'*int(length/4),tmp)))
-      distance = np.reshape(distRaw,(8,8))
-    return distance/Constants.CONVERT_TO_MM
+    dist, amp =  self.getDistAmpl()
+    dist[amp < self.minAmplitude] = self.MIN_AMP_ERROR
+    return dist
+
+
+    # self.tofWrite([commandList.COMMAND_GET_DISTANCE])
+    # [tmp,length] = self.getData(communicationType.DATA_DISTANCE)
+    # if length == 4:
+    #   distRaw  =np.array((struct.unpack('<'+'I',tmp)))
+    #   distance=distRaw
+    # else:
+    #   distRaw=np.array((struct.unpack('<'+'I'*int(length/4),tmp)))
+    #   distance = np.reshape(distRaw,(8,8))
+    # return distance/Constants.CONVERT_TO_MM
 
   def getAmplitude(self):
     self.tofWrite([commandList.COMMAND_GET_AMPLITUDE])
