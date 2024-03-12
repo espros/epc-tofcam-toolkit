@@ -28,10 +28,10 @@ class Crc:
     def __loadLib(self):
         try:
             if platform == 'linux':
-                binaryPath = pkg_resources.resource_filename('epc-tofcam-toolkit', 'tofCam_lib/bin/CrcCalc_linux.so')
+                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc_linux.so')
                 self.lib = ctypes.cdll.LoadLibrary(binaryPath)
             elif platform == 'win32':
-                binaryPath = pkg_resources.resource_filename('epc-tofcam-toolkit', 'tofCam_lib/bin/CrcCalc.dll')
+                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc.dll')
                 self.lib = ctypes.windll.LoadLibrary(binaryPath)
             return True
         except Exception as e:
