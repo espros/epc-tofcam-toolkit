@@ -154,7 +154,8 @@ class TOFcam660_bridge:
     @pause_streaming
     def _set_image_type(self, image_type: str):
         self.image_type = image_type
-        self.gui.pointCloudSettings.setVisible(False)
+        self.gui.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
+        self.gui.guiFilterGroupBox.setEnabled(image_type != 'Point Cloud')
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.getTofDistance
@@ -172,7 +173,6 @@ class TOFcam660_bridge:
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
             self.gui.hdrModeDropDown.setValue('HDR Off') # firmware actually disables hdr mode when switching to grayscale
         elif image_type == 'Point Cloud':
-            self.gui.pointCloudSettings.setVisible(True)
             self.gui.imageView.setActiveView('pointcloud')
             self.__get_image_cb = self.cam.getPointCloud
 

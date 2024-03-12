@@ -25,6 +25,7 @@ class TofCam635Bridge:
 
         cam.cmd.setOperationMode(0)
 
+        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
         gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
@@ -132,6 +133,7 @@ class TofCam635Bridge:
 
     @pause_streaming
     def _changeImageType(self, imgType: str):
+        self.gui.guiFilterGroupBox.setEnabled(imgType != 'Point Cloud')
         if imgType == 'Distance':
             self.gui.imageView.setActiveView('image')
             self.__get_image_cb = self.cam.get_distance_image

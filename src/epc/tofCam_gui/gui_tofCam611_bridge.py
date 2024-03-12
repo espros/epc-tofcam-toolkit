@@ -27,6 +27,7 @@ class TOFcam611_bridge:
         gui.toolBar.setVersionInfo(f"{fw_version[0]}.{fw_version[1]}")
 
         # connect signals
+        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
