@@ -8,7 +8,7 @@ class ToolBar(QToolBar):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.gui_version = pkg_resources.get_distribution("epc-tofcam-lib").version
+        self.gui_version = pkg_resources.get_distribution("epc-tofcam-toolkit").version
         
         # assemble play button
         self._startIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
