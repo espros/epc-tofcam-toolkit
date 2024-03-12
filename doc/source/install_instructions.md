@@ -24,11 +24,11 @@ After successfully installing the package with the commands above simple type th
 
 ```bash
 # To run the GUI for TOFcam660
-epc-tofcam660
+tofcam660
 
 # To run the GUI for TOFcam635
-epc-tofcam635
+tofcam635
 
 # TO run the GUI for TOFcam611
-epc-tofcam611
+tofcam611
 ```

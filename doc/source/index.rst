@@ -3,11 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-espros TOF Cam Toolkit
+espros TOFcam Toolkit
 =====================================================
 Introduction
 ------------
-| This package provides a python interface to the espros TOF cameras.
+| This package provides a python interface to the espros TOFcam's.
 | It also provides a simple GUI to visualize the data from the camera.
 
 Currently supported camera modules are:  
@@ -16,7 +16,7 @@ Currently supported camera modules are:
    * TOFcam-660
 
 .. image:: images/gui660_pointcloud.png
-   :alt: GUI TOFcam660
+   :alt: GUI-TOFcam660
    :align: center
 
 Compatibility

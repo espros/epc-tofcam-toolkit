@@ -20,7 +20,7 @@ class ROISettings660(RoiSettings):
 
 
 class GUI_TOFcam660(Base_GUI_TOFcam):
-    def __init__(self, title='TOF CAM 660 VIDEO STREAM', parent=None):
+    def __init__(self, title='GUI-TOFcam660', parent=None):
         super(GUI_TOFcam660, self).__init__(title)
 
         # Create the video widget

@@ -38,7 +38,7 @@ class Server:
         self.dut = dut
         self.registerAtExits()
         self.maxDepth = 16000 # pixel code limit for valid data 
-        self.lensProjection = Lense_Projection.from_lense_calibration()
+        self.lensProjection = Lense_Projection.from_lense_calibration('Wide Field')
 
     def recordVideo(self, frames, folder):
         try:

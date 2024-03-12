@@ -2,7 +2,7 @@ import numpy as np
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import getFromMatplotlib, ColorMap
 from pyqtgraph.opengl import GLViewWidget, GLScatterPlotItem, GLGridItem
-from PySide6.QtGui import QVector3D
+from PySide6.QtGui import QVector3D, QQuaternion
 from PySide6.QtWidgets import QStackedWidget
 
 CMAP_DISTANCE = [   (  0,   0,   0),
@@ -30,6 +30,7 @@ class PointCloudWidget(GLViewWidget):
         grid = GLGridItem(size=QVector3D(10, 10, 1))
         grid.rotate(90, 1, 0, 0)
         grid.translate(0, -0.5, 0)
+        self.setCameraPosition(distance=4, pos=QVector3D(0, 0.3, 3), rotation=QQuaternion.fromEulerAngles(180, 0, 180))
         self.addItem(grid)
         self.setMouseTracking(True)
         self.__maxDepth = 6.25 # unambiguity distance in m
@@ -49,7 +50,7 @@ class PointCloudWidget(GLViewWidget):
 
 class VideoWidget(QStackedWidget):
     GRAYSCALE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_GRAYSCALE)
-    DISTANCE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_DISTANCE)
+    DISTANCE_CMAP = getFromMatplotlib('turbo')
     def __init__(self, parent=None):
         super(VideoWidget, self).__init__(parent)
         self.video = ImageView(self)
