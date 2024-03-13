@@ -1,9 +1,10 @@
 import numpy as np
+import pkg_resources
 
 lens_type_map = {
-    'Wide Field': 'src/epc/data/lense_calibration_wide_field.csv',
-    'Narrow Field': 'src/epc/data/lense_calibration_narrow_field.csv',
-    'Standard Field': 'src/epc/data/lense_calibration_standard_field.csv'
+    'Wide Field': pkg_resources.resource_filename('epc', 'data/lense_calibration_wide_field.csv'),
+    'Narrow Field':  pkg_resources.resource_filename('epc', 'data/lense_calibration_narrow_field.csv'),
+    'Standard Field':  pkg_resources.resource_filename('epc', 'data/lense_calibration_standard_field.csv')
 }
 
 def get_camera_matrix(resolution, focalLength):

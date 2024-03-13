@@ -1,2 +1,3 @@
 recursive-include src/epc/tofCam_lib/bin *
-src/epc/data *
+recursive-include src/epc/data *
+recursive-include src/epc/tofCam_gui/icons *
