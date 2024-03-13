@@ -36,7 +36,7 @@ class ToolBar(QToolBar):
         self.fpsInfo.setFont(QFont("monospace"))
 
         # logo
-        esprosLogo = QPixmap('src/epc/tofCam_gui/icons/epc-logo.png')
+        esprosLogo = QPixmap(pkg_resources.resource_filename('epc', 'tofCam_gui/icons/epc-logo.png'))
         esprosLogo = esprosLogo.scaled(100, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.logo = QLabel()
         self.logo.setPixmap(esprosLogo)

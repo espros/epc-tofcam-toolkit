@@ -38,7 +38,8 @@ code-analysis:
 build-job:
   stage: build
   script:
-    - python setup.py sdist bdist_wheel
+    - echo "__version__ = '$(python setup.py --version)-${CI_PIPELINE_IID}'" > src/epc/_version.py
+    - python -m build --sdist --wheel .
   artifacts:
     paths:
       - dist/*
@@ -60,14 +61,20 @@ test-job:
   tags:
     - docker-tag1
 
-deploy-job:
+deploy-test-pypi-job:
   stage: deploy
   script:
-    - devpi use http://10.10.21.222:3141/
-    - devpi login testuser --password=Bacon2Bambi
-    - devpi use testuser/dev
-    - devpi upload
-  rules:
-    - when: never
+    - TWINE_PASSWORD=${CI_TEST_PYPI_TOCKEN} TWINE_USERNAME=espros twine upload --repository testpypi dist/*
+  only:
+    - master
+  tags:
+    - docker-tag1
+
+deploy-pypi-job:
+  stage: deploy
+  script:
+    - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=espros twine upload dist/*
+  only:
+    - tags
   tags:
     - docker-tag1

@@ -1,6 +1,6 @@
 # TOFcam GUI's
 ## General Overview
-While each espros TOFcam implements there own control settings, the gui is structured the same for all of them. 
+While each ESPROS TOFcam implements there own control settings, the gui is structured the same for all of them. 
 
 1. Toolbar for Start/Stop streaming and capture single images
 2. Version information's for GUI, TOFcam and tof chip
@@ -45,7 +45,7 @@ tofcam635 --port COM3
 tofcam635 --port /dev/ttyACM0
 ```
 
-![GUI_TOFcam635](images/gui635_noImage.png)
+![GUI_TOFcam635](images/gui635_pointcloud.png)
 
 ## GUI-TOFcam611
 1. Make sure the camera is running and has a stable serial connection. 
@@ -63,4 +63,4 @@ tofcam611 --port COM3
 tofcam611 --port /dev/ttyACM0
 ```
 
-![GUI_TOFcam611](images/gui611_noImage.png)
+![GUI_TOFcam611](images/gui611_amplitude.png)
