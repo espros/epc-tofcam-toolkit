@@ -39,7 +39,7 @@ build-job:
   stage: build
   script:
     - echo "__version__ = '$(python setup.py --version)-${CI_PIPELINE_IID}'" > src/epc/_version.py
-    - python setup.py sdist bdist_wheel
+    - python -m build --sdist --wheel .
   artifacts:
     paths:
       - dist/*
