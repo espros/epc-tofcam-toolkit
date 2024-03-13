@@ -1,6 +1,6 @@
 # TOFcam GUI's
 ## General Overview
-While each espros TOFcam implements there own control settings, the gui is structured the same for all of them. 
+While each ESPROS TOFcam implements there own control settings, the gui is structured the same for all of them. 
 
 1. Toolbar for Start/Stop streaming and capture single images
 2. Version information's for GUI, TOFcam and tof chip

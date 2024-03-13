@@ -1,7 +1,19 @@
-# EPC TOFCam python package
-This repository contains the python GUI framework for TOF cameras.
+<div align="center">
+<img src="docs/source/images/epc-logo.png" width="300">
+</div>
 
-## Installation for usage
+# ESPROS TOFcam toolkit
+The ESPROS TOFcam toolkit is designed to control and visualize ESPROS TOFcam devices.
+It provides python modules for most TOFcam modules and GUI applications for interactive control and visualization.
+
+Website: https://www.espros.com  
+Documentation: https://epc-tofcam-toolkit.readthedocs.io/en/latest/  
+Source code: https://github.com/espros/epc-tofcam-toolkit
+
+
+<img src="docs/source/images/gui660_pointcloud.png" width="800">
+
+## Quick-start
 install the package using pip
 ```bash
 pip install epc-tofcam-toolkit
@@ -23,48 +35,3 @@ epc-tofcam660 --ip 10.10.31.180
 epc-tofcam635 --port COM3
 epc-tofcam611 --port COM3
 ```
-
-## Installation for development
-
-Clone this repository 
-```bash
-git clone git@gitlab.ch.epc:MOD/02_Applications/EPC-TOFcam-GUI.git
-```
-
-Create a virtual environment and activate it
-```bash
-python -m venv .venv  
-
-# linux
-source .venv/bin/activate
-
-# windows
-.\.venv\Scripts\activate
-```
-
-Install the package in editable mode
-```bash
-pip install -e .
-```
-
-## Repository structure
-
-The repository is structured as follows:
-
-Folder          | Content
-----------------| ---------------------------------
-doc             | Sphinx documentation and data-sheets for this project
-src             | All python packages
-tests           | Tests for packages in src
-
-
-# GUI Main Structure
-The gui structure locks like in the following class diagram.  
-![GUI_Class_diagram](doc/source/images/GUI_Class_diagram.png)
-
-Class Type      | Description
---------------- | ----------------------------------------
-Base GUI        | This is the base class all guis derive from. It defines common widgets, like the task bar and the image view.
-GUI_TOFcamXXX   | These classes implement the guis for each camera. No reference to the camera lib shall be implemented here.
-TOFcamXXX_bridge | The Bridge classes function as bridge between the GUI and the underlying TOFcamXXX library. The are responsible to connect the gui to the camera. No GUI Widgets shall be added here. 
-TOFcamXXX       | These are the actual TOFcamXXX libraries for each camera

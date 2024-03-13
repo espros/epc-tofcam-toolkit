@@ -8,7 +8,7 @@
 
 project = 'EPC TOFcam python package'
 copyright = '2024, Armin Kessler'
-author = 'espros Photonics AG'
+author = 'ESPROS Photonics AG'
 release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
