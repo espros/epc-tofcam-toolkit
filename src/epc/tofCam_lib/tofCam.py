@@ -1,12 +1,9 @@
-
+import atexit
 
 class TOF_Settings_Controller:
     def __init__(self) -> None:
         pass
     
-    def set_integration_time(self, **kwargs):
-        raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'set_integration_time' jet")
-
     def set_modulation_frequency(self, frequency_mhz: int):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'set_modulation_frequency' jet")
 
@@ -42,6 +39,10 @@ class TOFcam:
     def __init__(self, settings_ctrl: TOF_Settings_Controller, info_ctrl: Dev_Infos_Controller) -> None:
         self.settings = settings_ctrl
         self.device = info_ctrl
+        atexit.register(self.__del__)
+
+    def initialize(self):
+        raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'initialize' jet")
 
     def get_distance_image(self):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'get_distance_image' jet")
