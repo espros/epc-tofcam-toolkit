@@ -6,7 +6,7 @@ import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam611.camera import Camera as TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
-from epc.tofCam_gui import GUI_TOFcam611
+from epc.tofCam_gui import GUI_TOFcam611, GUI_TOFrange611
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 
 class TOFcam611_bridge:
@@ -51,12 +51,12 @@ class TOFcam611_bridge:
         temp_factor = 0.0
         temp_threshold = 0
 
-        tempOn = self.gui.builtInFilter.temporalFilter.isChecked()
+        tempOn = self.gui.temporalFilter.isChecked()
         if tempOn:
-            temp_factor = self.gui.builtInFilter.temporalFilter.factor.value()
-            temp_threshold = self.gui.builtInFilter.temporalFilter.threshold.value()
+            temp_factor = self.gui.temporalFilter.factor.value()
+            temp_threshold = self.gui.temporalFilter.threshold.value()
               
-        self.cam.setFilter(temp_threshold, int(temp_factor*1000))
+        self.cam.setFilter(10*temp_threshold, round(temp_factor*1000))
 
     @pause_streaming
     def _set_integration_times(self, type: str, value: int):
@@ -125,7 +125,10 @@ def main():
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')
-    gui = GUI_TOFcam611()
+    if cam.getDeviceType() == "TOFrange":   
+        gui = GUI_TOFrange611()
+    else:
+        gui = GUI_TOFcam611()
     bridge = TOFcam611_bridge(gui, cam)
     gui.show()
     app.exec()
