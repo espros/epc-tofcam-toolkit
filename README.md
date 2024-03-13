@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://github.com/espros/epc-tofcam-toolkit/tree/master/docs/source/images/epc-logo.png" width="300">
+<img src="https://raw.githubusercontent.com/espros/epc-tofcam-toolkit/master/docs/source/images/epc-logo.png" width="300">
 </div>
 
 # ESPROS TOFcam toolkit
@@ -11,7 +11,7 @@ Documentation: https://epc-tofcam-toolkit.readthedocs.io/en/latest/
 Source code: https://github.com/espros/epc-tofcam-toolkit
 
 
-<img src="https://github.com/espros/epc-tofcam-toolkit/blob/master/docs/source/images/gui660_pointcloud.png" width="800">
+<img src="https://raw.githubusercontent.com/espros/epc-tofcam-toolkit/master/docs/source/images/gui660_pointcloud.png" width="800">
 
 ## Quick-start
 install the package using pip
