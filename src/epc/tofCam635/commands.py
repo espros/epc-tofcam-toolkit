@@ -8,13 +8,14 @@ import struct
 import sys
 import time
 import datetime
-import typing
-from threading import Lock
+import logging
 from time import strftime
 from epc.tofCam635.communication import communicationConstants as communication
 from epc.tofCam635.constants import __constants  as Constants
 from epc.tofCam635 import tofcam635Header
 from epc.tofCam_lib.crc import Crc, CrcMode
+
+log = logging.getLogger('TOFcam635')
 
 class Commands():
 
@@ -26,15 +27,7 @@ class Commands():
     self.printWrite=False
     self.printRead=False
     self.header = tofcam635Header.TofCam635Header()
-    self.__lock = Lock()
 
-  def thread_locker(func):
-    def wrapper(self, *args, **kwargs):
-      with self.__lock:
-        return func(self, *args, **kwargs)
-    return wrapper
-
-  @thread_locker
   def setROI(self,x0=0,y0=0,x1=160,y1=60, showNotification=True):
     """
     set ROI
@@ -42,9 +35,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_ROI, x0&0xff, (x0>>8)&0xff,  y0&0xff, (y0>>8)&0xff,  x1&0xff, (x1>>8)&0xff,  y1&0xff, (y1>>8)&0xff])
     self.getAcknowledge()
     if showNotification:
-      print('# x0: {:3d} y0: {:3d} x1: {:3d} y1: {:3d}'.format(x0,y0,x1,y1))
+      log.info('x0: {:3d} y0: {:3d} x1: {:3d} y1: {:3d}'.format(x0,y0,x1,y1))
 
-  @thread_locker
   def setHDR(self, mode='off', showNotification=True):
     hdrMode = 0
     if mode == 'off':
@@ -59,9 +51,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_HDR, hdrMode])
     self.getAcknowledge()
     if showNotification:
-      print('# HDR mode: {}'.format(mode))
+      log.info('HDR mode: {}'.format(mode))
 
-  @thread_locker
   def initCommands(self,index=0, showNotification=True):
     """
     set modulation Freuency 0=10MHz, 1=20MHz
@@ -127,7 +118,6 @@ class Commands():
     #self.tofWrite([0x0f,0,0,0x03,0xe8])   #getCalibration info
     #answer = self.getAnswer(0x01,8)
 
-  @thread_locker
   def setIntTimeDist(self,index, uSec,showNotification=True):
     """
     set integration Time in µSeconds
@@ -137,9 +127,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_INT_TIME_DIST, index , uSec &0xff, (uSec>>8)&0xff])
     self.getAcknowledge()
     if showNotification:
-      print('#  mode {:2d} set integration Time to: {:5d}us'.format(index, uSec))
+      log.info('mode {:2d} set integration Time to: {:5d}us'.format(index, uSec))
   
-  @thread_locker
   def setIntTimeGray(self,index, uSec,showNotification=True):
     """
     set integration Time in µSeconds
@@ -149,9 +138,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_INTEGRATION_TIME_GRAYSCALE, index , uSec &0xff, (uSec>>8)&0xff])
     self.getAcknowledge()
     if showNotification:
-      print('#  mode {:2d} set integration Time to: {:5d}us'.format(index, uSec))
+      log.info('mode {:2d} set integration Time to: {:5d}us'.format(index, uSec))
 
-  @thread_locker
   def setModChannel(self, channel=0, showNotificatin=True):
     if 0 > channel > 15:
       raise Exception(f'Mod Channel must be between 0-15 but was {channel}')
@@ -159,9 +147,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_MOD_CHANNEL, 0, channel])
     self.getAcknowledge()
     if showNotificatin:
-      print(f'# set Modulation Channel: {channel}')
+      log.info(f'set Modulation Channel: {channel}')
 
-  @thread_locker
   def setModFrequency(self,index=0, showNotification=True):
     """
     set modulation Freuency 0=10MHz, 1=20MHz
@@ -170,9 +157,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_MODULATION_FREQUENCY, index])
     self.getAcknowledge()
     if showNotification:
-      print('# set Modulation Frequency: {} '.format(Constants.modFrequency.F_STRINGS[index]))
+      log.info('set Modulation Frequency: {} '.format(Constants.modFrequency.F_STRINGS[index]))
 
-  @thread_locker
   def setBinning(self,enable=False, showNotification=True):
     """
     set binnning
@@ -180,9 +166,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_BINNING, enable])
     self.getAcknowledge()
     if showNotification:
-      print('# binning: {} '.format(enable))
+      log.info('binning: {} '.format(enable))
 
-  @thread_locker
   def setOperationMode(self,index=0, showNotification=True):
     """
     set modulation Freuency 0=10MHz, 1=20MHz
@@ -191,9 +176,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_OPERATION_MODE, index])
     self.getAcknowledge()
     if showNotification:
-      print('# set Operation Mode: {} '.format(Constants.mode.MODE_STRING[index]))
+      log.info('set Operation Mode: {} '.format(Constants.mode.MODE_STRING[index]))
 
-  @thread_locker
   def getChipInfo(self):
     """
     read chip information
@@ -204,10 +188,9 @@ class Commands():
     raw=list(struct.unpack('<'+'H'*2,tmp))
     chipId= raw[0]
     waferId= raw[1]
-    print('# chipID:\t\t%d'%chipId, '\n# WaferID:\t\t%d'%waferId)
+    log.info(f'chipID:\t\t%d{chipId} WaferID:\t\t%d{waferId}')
     return [chipId, waferId]
 
-  @thread_locker
   def getCalibrationInfo(self):
     """
     read calibration data
@@ -216,7 +199,6 @@ class Commands():
     self.tofWrite([0x57])   #getCalibration info
     return self.getAnswer(communication.Type.DATA_CALIBRATION_INFO,22)
 
-  @thread_locker
   def getCalibrationData(self):
     """
     read calibration data
@@ -229,25 +211,21 @@ class Commands():
 
     #answer = self.getAnswer(communication.Type.DATA_CALIBRATION_DATA,180)
 
-  @thread_locker
   def writeRegister(self, register_address, value):
     self.tofWrite([communication.CommandList.COMMAND_WRITE_REGISTER, register_address, value])
     self.getAcknowledge()
     return
 
-  @thread_locker
   def readRegister(self, register_address):
     self.tofWrite([communication.CommandList.COMMAND_READ_REGISTER, register_address])
     answer = self.getAnswer(communication.Type.DATA_REGISTER,9)
     return int(answer[0])
 
-  @thread_locker
   def systemReset(self):
     self.tofWrite([communication.CommandList.COMMAND_SYSTEM_RESET])
     self.getAcknowledge()
     return
 
-  @thread_locker
   def getFwRelease(self):
     """
     get firmware release
@@ -256,10 +234,9 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_GET_FIRMWARE_RELEASE])
     answer = self.getAnswer(communication.Type.DATA_FIRMWARE_RELEASE,12)
     fwRelease=struct.unpack('<'+'I',answer)[0]
-    print('# Firmware Version: {:d}.{:d}'.format(fwRelease>>16,fwRelease&0xffff))
+    log.info('Firmware Version: {:d}.{:d}'.format(fwRelease>>16,fwRelease&0xffff))
     return float(fwRelease>>16) + float(fwRelease&0xffff)/100
 
-  @thread_locker
   def getTemperature(self):
     """
     get temperature
@@ -269,10 +246,9 @@ class Commands():
     answer = self.getAnswer(communication.Type.DATA_TEMPERATURE,10)
     centi_temperature=struct.unpack('<'+'h',answer)[0]
     temperature = centi_temperature/100
-    # print('# Temperature (°C): '+str(temperature))
+    # log.info('Temperature (°C): '+str(temperature))
     return temperature
 
-  @thread_locker
   def getCameraIdentification(self):
     """
     get camera identification number and the mode
@@ -285,10 +261,9 @@ class Commands():
     chipType=((temp&0x00ff0000)>>16)
     deviceType=((temp&0x0000ff00)>>8)
     hwVersion=(temp&0x000000ff)
-    print('# HW version: {:d} device type {:d} chip type {:d} operation mode {:d}'.format(hwVersion,deviceType,chipType,oPmode))
+    log.info('HW version: {:d} device type {:d} chip type {:d} operation mode {:d}'.format(hwVersion,deviceType,chipType,oPmode))
     return [hwVersion, deviceType, chipType, oPmode]
 
-  @thread_locker
   def setAmplitudeLimit(self, index, limit, showNotification=True):
     """
     set amplitude limit
@@ -296,9 +271,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_AMPLITUDE_LIMIT, index, limit & 0xff, (limit>>8) & 0xff])
     self.getAcknowledge()
     if showNotification:
-      print('# Amplitude Limit: {:5d} '.format(limit))
+      log.info('Amplitude Limit: {:5d} '.format(limit))
 
-  @thread_locker
   def setMode(self,mode):
     """
     set operation mode
@@ -307,9 +281,8 @@ class Commands():
     self.actualMode = mode
     self.tofWrite([communication.CommandList.COMMAND_SET_OPERATION_MODE,mode])
     self.getAcknowledge()
-    print("# Mode set to:{}".format(Constants.mode.MODE_STRING[mode]))
+    log.info("# Mode set to:{}".format(Constants.mode.MODE_STRING[mode]))
 
-  @thread_locker
   def setDllStep(self,step=0,showNotification=True):
     """
     set dll step for calibration
@@ -317,9 +290,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_DLL_STEP,step])
     self.getAcknowledge()
     if showNotification:
-      print("dll step set to:{}".format(step))
+      log.info("dll step set to:{}".format(step))
 
-  @thread_locker
   def setMedianFilter(self, enable=False, showNotification=True):
     """
     set median filter
@@ -327,9 +299,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_MEDIAN_FILTER, int(enable)])
     self.getAcknowledge()
     if showNotification:
-      print('# Median Filter: {} '.format(enable))
+      log.info('Median Filter: {} '.format(enable))
 
-  @thread_locker
   def setAverageFilter(self, enable=False, showNotification=True):
     """
     set average filter
@@ -337,9 +308,8 @@ class Commands():
     self.tofWrite([communication.CommandList.COMMAND_SET_AVERAGE_FILTER, int(enable)])
     self.getAcknowledge()
     if showNotification:
-      print('# Average Filter: {} '.format(enable))
+      log.info('Average Filter: {} '.format(enable))
 
-  @thread_locker
   def setTemporalFilter(self, enable, threshold=250, weight=10):
     if enable:
       self.tofWrite([communication.CommandList.COMMAND_SET_TEMPORAL_FILTER_WFOV,threshold & 0xff, (threshold>>8) & 0xff,weight & 0xff, (weight>>8) & 0xff])
@@ -347,20 +317,18 @@ class Commands():
       self.tofWrite([communication.CommandList.COMMAND_SET_TEMPORAL_FILTER_WFOV,0,0,0,0])
     self.getAcknowledge()
     if enable:
-      print('# Exponential Filter set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
+      log.info('Exponential Filter set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
     else:
-      print('# Exponential Filter disabled')
+      log.info('Exponential Filter disabled')
 
-  @thread_locker
   def setExpFilterSpot(self,threshold = 250,weight = 10):
     self.tofWrite([communication.CommandList.COMMAND_SET_FILTER_SINGLE_SPOT,threshold & 0xff, (threshold>>8) & 0xff,weight & 0xff, (weight>>8) & 0xff])
     self.getAcknowledge()
     if threshold == 0:
-      print('# Exponential Filter Spot disabled')
+      log.info('Exponential Filter Spot disabled')
     else:
-      print('# Exponential Filter Spot set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
+      log.info('Exponential Filter Spot set: Threshold: {:5d}, weight: {:5d}'.format(threshold,weight))
 
-  @thread_locker
   def setEdgeFilter(self, enable=False, threshold=0):
     if enable:
       self.tofWrite([communication.CommandList.COMMAND_SET_EDGE_FILTER,threshold & 0xff, (threshold>>8) & 0xff])
@@ -368,27 +336,25 @@ class Commands():
       self.tofWrite([communication.CommandList.COMMAND_SET_EDGE_FILTER,0,0])
     self.getAcknowledge()
     if enable:
-      print('# Edge Filter set: Threshold: {:5d}'.format(threshold))
+      log.info('Edge Filter set: Threshold: {:5d}'.format(threshold))
     else:
-      print('# Edge Filter disabled')
+      log.info('Edge Filter disabled')
 
-  @thread_locker
   def setInterferenceDetection(self, enabled=False, useLastValue=False, limit=500):
     self.tofWrite([communication.CommandList.COMMAND_SET_INTERFERENCE_DETECTION, enabled, useLastValue, (limit & 0xff), (limit>>8) & 0xff])
     self.getAcknowledge()
     if enabled==False:
-      print('# Interference Detection disabled')
+      log.info('Interference Detection disabled')
     else:
-      print('# Interference Detection enabled, useLastValue: {}, Limit: {:5d}'.format(useLastValue, limit))
+      log.info('Interference Detection enabled, useLastValue: {}, Limit: {:5d}'.format(useLastValue, limit))
 
   # def setDefaultOffset(self, offsetMM=0):
   #   offsetMM_LSB=(offsetMM&0x00ff)
   #   offsetMM_MSB=((offsetMM&0x0000ff00)>>8)
   #   self.tofWrite([communication.CommandList.COMMAND_SET_OFFSET, offsetMM_LSB,offsetMM_MSB])
   #   self.getAcknowledge()
-  #   print('# offsetMM: {}'.format(offsetMM))
+  #   log.info('offsetMM: {}'.format(offsetMM))
 
-  @thread_locker
   def getDcs(self, mode=0):
     """
     get dcs
@@ -404,7 +370,6 @@ class Commands():
 
     return dcs
 
-  @thread_locker
   def getGrayscale(self, mode=0):
     """
     get grayscale
@@ -418,7 +383,6 @@ class Commands():
     grayscaleImage = np.frombuffer(tmp, dtype="b")
     return grayscaleImage
 
-  @thread_locker
   def getDistance(self, mode=0):
     """
     get tof distance
@@ -443,7 +407,6 @@ class Commands():
 
     return distance
 
-  @thread_locker
   def getDistanceAndAmplitude(self, mode=0):
     """
     get tof distance
@@ -498,21 +461,21 @@ class Commands():
 
   def printWriteFct(self,data):
     if self.printWrite:
-      print('W:',end='')
+      log.info('W:',end='')
       j=0
       for i in data:
-        print('%02x,'%i,end = '')
+        log.info('%02x,'%i,end = '')
         j+=1
-      print(' - len:',j)
+      log.info(' - len:',j)
 
   def printReadFct(self,data):
     if self.printRead:
-      print('R:',end='')
+      log.info('R:',end='')
       j=0
       for i in data:
-        print('%02x,'%i,end = '')
+        log.info('%02x,'%i,end = '')
         j+=1
-      print(' - len:',j)
+      log.info(' - len:',j)
 
   def getAnswer(self, typeId, length):
     """

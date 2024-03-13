@@ -1,6 +1,6 @@
 import pkg_resources
 from PySide6.QtWidgets import QToolBar, QLabel, QWidget, QSizePolicy, QStyle
-from PySide6.QtGui import QIcon, QAction, QPixmap
+from PySide6.QtGui import QIcon, QAction, QPixmap, QFont
 from PySide6.QtCore import Qt
 
 
@@ -33,6 +33,7 @@ class ToolBar(QToolBar):
         self.chipInfo = QLabel('Chip ID: 000\nWafer ID: 000')
         self.versionInfo = QLabel(f'GUI: {self.gui_version}\nFW: 000')
         self.fpsInfo = QLabel('FPS: 0')
+        self.fpsInfo.setFont(QFont("monospace"))
 
         # logo
         esprosLogo = QPixmap('src/epc/tofCam_gui/icons/epc-logo.png')
@@ -60,7 +61,7 @@ class ToolBar(QToolBar):
         self.addWidget(self.logo)
 
     def setFPS(self, fps):
-        self.fpsInfo.setText(f'FPS: {fps}')
+        self.fpsInfo.setText(f'FPS: {fps:5.1f}')
 
     def __setIcon(self, button: QAction, on: QIcon, off: QIcon):
         if button.isChecked():

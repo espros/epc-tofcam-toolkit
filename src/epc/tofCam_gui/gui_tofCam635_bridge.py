@@ -1,11 +1,14 @@
 import sys
 import getopt
+import logging
 import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam635 import TofCam635
 from epc.tofCam_gui import GUI_TOFcam635
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
+
+log = logging.getLogger('BRIDGE')
 
 class TofCam635Bridge:
     DEFAULT_INT_TIME_GRAY = 100
@@ -169,14 +172,18 @@ def get_port():
             if opt in ('-p', '--port'):
                 port = arg
     except:
-        print('Argument parsing failed')
+        log.error('Argument parsing failed')
     if port == None:
-        print(f'No port specified. Trying to find port automatically')
+        log.info(f'No port specified. Trying to find port automatically')
     return port
 
 def main():
     port = get_port()
-    cam = TofCam635(port)
+    try:
+        cam = TofCam635(port)
+    except Exception as e:
+        log.error(f'Failed to connect to device. Is the device running and connected?')
+        return
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')

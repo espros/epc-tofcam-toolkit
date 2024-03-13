@@ -7,7 +7,9 @@
 import serial as Serial
 import serial.tools.list_ports
 import sys
-from time import sleep
+import logging
+
+log = logging.getLogger('COM')
 
 class SerialInterface():
   def __init__(self, port: None, baudrate = 10000000, timeout = 0.2):
@@ -26,8 +28,8 @@ class SerialInterface():
       raise('No serial port found')
     for port in ports:
       if port.vid == 1155:
-        print(f'Device found at port:')
-        print(f'port: {port.device}, desc: {port.description}, vendor id: {port.vid}')
+        log.info(f'Found serial device:')
+        log.info(f'port: {port.device}, desc: {port.description}, vendor id: {port.vid}')
         result = port.device
     
     if result == None:

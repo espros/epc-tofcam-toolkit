@@ -51,11 +51,14 @@ class TofCam635:
     else:
       raise ValueError(f"Image type '{image_type}' not supported")
 
-  def get_distance_image(self, mode=0):
+  def get_distance_image(self, mode=0, rotate=True):
     for i in range(self.CAPTURE_TRYS_BEFORE_FAIL):
       try:
         image = self.cmd.getDistance(mode)
-        return np.reshape(image, self.resolution)
+        image = np.reshape(image, self.resolution)
+        if rotate:
+          image = np.rot90(image, 1)
+        return image
       except:
         continue
     raise Exception("Failed to get distance image")
@@ -66,7 +69,7 @@ class TofCam635:
         image = self.cmd.getDistanceAndAmplitude(mode)
         amplitude = image[1::2]
         amplitude = np.reshape(image[1::2], self.resolution)
-        return amplitude
+        return np.rot90(amplitude, 1)
       except:
         continue
     raise Exception("Failed to get amplitude image")
@@ -75,14 +78,15 @@ class TofCam635:
     for i in range(self.CAPTURE_TRYS_BEFORE_FAIL):
       try:
         image = self.cmd.getGrayscale(mode)
-        return np.reshape(image, self.resolution).astype(np.uint8)
+        image = np.reshape(image, self.resolution).astype(np.uint8)
+        return np.rot90(image, 1)
       except:
         continue
     raise Exception("Failed to get grayscale image")
   
   def get_point_cloud(self, mode=0):
     # capture depth image & corrections
-    depth = self.get_distance_image(mode)
+    depth = self.get_distance_image(mode, rotate=False)
     depth  = depth.astype(np.float32)
     depth[depth >= self.maxDepth] = np.nan
 
@@ -93,7 +97,8 @@ class TofCam635:
     return points
 
   def __del__(self):
-    self.com.close()
+    if hasattr(self, 'com'):
+      self.com.close()
 
   def __main__(self):
     pass

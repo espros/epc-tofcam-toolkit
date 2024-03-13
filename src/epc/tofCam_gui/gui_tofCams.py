@@ -14,6 +14,7 @@ class Base_GUI_TOFcam(QMainWindow):
         self.setWindowTitle(title)
 
         self.time_last_frame = time.time()
+        self._fps = 0
         self.__filter_cb = None
 
         # create main widgets
@@ -86,7 +87,9 @@ class Base_GUI_TOFcam(QMainWindow):
         time_diff = time.time() - self.time_last_frame
         if time_diff != 0:
             fps = round(1 / time_diff)
-            self.toolBar.setFPS(fps)
+            if fps < 100:
+                self._fps = 0.2 * self._fps + 0.8 * fps # low pass filter fps
+            self.toolBar.setFPS(self._fps)
 
         self.time_last_frame = time.time()
         if self.__filter_cb:
