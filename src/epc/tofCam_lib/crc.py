@@ -33,6 +33,11 @@ class Crc:
             elif platform == 'win32':
                 binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc.dll')
                 self.lib = ctypes.windll.LoadLibrary(binaryPath)
+            elif platform == 'darwin':
+                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc_darwin.a')
+                self.lib = ctypes.cdll.LoadLibrary(binaryPath)
+            else:
+                raise Exception('Platform not supported')
             return True
         except Exception as e:
                 print(e, 'no lib used')
@@ -75,7 +80,7 @@ class Crc:
             case CrcMode.CRC32_UINT8:
                 crc = self.__calcCrc32Uin8_python(data)
             case CrcMode.CRC32_UINT8_LIB:
-                crc = self.__calcCrc32Uint8_lib(data)
+                crc = self.__calcCrc32Uint8_lib(bytearray(data))
             case CrcMode.CRC32_STM32:
                 crc = self.__calcCrc32Uin8_python(data)
         
