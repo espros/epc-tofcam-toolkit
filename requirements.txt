@@ -6,6 +6,3 @@ build
 setuptools
 urllib3==1.26.7
 mypy
-sphinx
-sphinx_rtd_theme
-myst-parser
