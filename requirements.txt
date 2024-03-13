@@ -2,6 +2,8 @@ pytest >= 6.0.0
 pytest-cov
 twine
 wheel
+build
+setuptools
 urllib3==1.26.7
 mypy
 sphinx
