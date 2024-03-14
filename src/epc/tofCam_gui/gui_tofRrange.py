@@ -19,7 +19,7 @@ class GUI_TOFrange611(Base_GUI_TOFcam):
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['10 MHz','20 MHz'])       
         self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency])
         
-        self.temporalFilter = TemporalFilter(threshold=20, factor=0.1)
+        self.temporalFilter = TemporalFilter(threshold=40, factor=0.1)
         self.builtInFilter = SettingsGroup('Built-In Filters', [self.temporalFilter])
 
         #Create Layout for settings
