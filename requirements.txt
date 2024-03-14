@@ -1,10 +1,8 @@
 pytest >= 6.0.0
 pytest-cov
+twine
 wheel
+build
+setuptools
 urllib3==1.26.7
-devpi-client
 mypy
-sphinx
-sphinx_rtd_theme
-myst-parser
-sphinx-pypi-upload

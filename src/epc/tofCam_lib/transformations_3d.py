@@ -1,10 +1,10 @@
 import numpy as np
+import pkg_resources
 
 lens_type_map = {
-    'Wide Field': 'src/epc/data/lense_calibration_wide_field.csv',
-    'Narrow Field': 'src/epc/data/lense_calibration_narrow_field.csv',
-    'Standard Field': 'src/epc/data/lense_calibration_standard_field.csv',
-    '635': 'src/epc/data/lense_calibration_wide_field.csv'
+    'Wide Field': pkg_resources.resource_filename('epc', 'data/lense_calibration_wide_field.csv'),
+    'Narrow Field':  pkg_resources.resource_filename('epc', 'data/lense_calibration_narrow_field.csv'),
+    'Standard Field':  pkg_resources.resource_filename('epc', 'data/lense_calibration_standard_field.csv')
 }
 
 def get_camera_matrix(resolution, focalLength):
@@ -72,12 +72,12 @@ class Lense_Projection():
                 self.lenseMatrix[2, x, y] = np.cos(angle_rad)
 
     @staticmethod
-    def from_lense_calibration(lensType='Wide Field'):
+    def from_lense_calibration(lensType='Wide Field', width=320, height=240, offsetX=0, offsetY=0):
         file_path = lens_type_map.get(lensType)
         if file_path is None:
             raise KeyError(f"Invalid lensType '{lensType}'")
         angle, rp = np.loadtxt(file_path, delimiter=',', skiprows=1).T
-        return Lense_Projection(rp, angle)
+        return Lense_Projection(rp, angle, width, height, offsetX, offsetY)
 
     def transformImage(self, depth: np.ndarray):
         return depth * self.lenseMatrix[:, 0:depth.shape[0], 0:depth.shape[1]]

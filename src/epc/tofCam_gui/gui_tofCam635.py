@@ -6,7 +6,7 @@ from epc.tofCam_gui.widgets import VideoWidget, IntegrationTimes, GroupBoxSelect
 from epc.tofCam_gui.widgets.filter_widgets import SimpleFilter, TemporalFilter, EdgeFilter, InterferenceFilter
 
 class GUI_TOFcam635(Base_GUI_TOFcam):
-    def __init__(self, title='TOF CAM 635 VIDEO STREAM', parent=None):
+    def __init__(self, title='GUI-TOFcam635', parent=None):
         super(GUI_TOFcam635, self).__init__(title)
 
         # Create Widgets

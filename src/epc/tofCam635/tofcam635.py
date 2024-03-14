@@ -18,7 +18,7 @@ class TofCam635:
     self.set_default_parameters()
 
     self.maxDepth = 16000 # pixel code limit for valid data 
-    self.lensProjection = Lense_Projection.from_lense_calibration(lensType='635')
+    self.lensProjection = Lense_Projection.from_lense_calibration(lensType='Wide Field', width=self.resolution[1], height=self.resolution[0])
     
   def set_default_parameters(self):
     self.set_roi(0, 0, self.resolution[1], self.resolution[0])

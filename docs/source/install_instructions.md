@@ -8,12 +8,12 @@ Before you begin, ensure you have met the following requirements:
 
 * You have installed a python version equal or grater to v3.10
 
-## Installing espros TOFcam toolkit
+## Installing ESPROS TOFcam toolkit
 
-To install the espros TOFcam toolkit follow these steps:
+To install the ESPROS TOFcam toolkit follow these steps:
 
 1. Open your terminal.
-2. Use the package manager pip to install espros TOFcam toolkit:
+2. Use the package manager pip to install ESPROS TOFcam toolkit:
 
 ```bash
 pip install epc-tofcam-toolkit
@@ -24,11 +24,11 @@ After successfully installing the package with the commands above simple type th
 
 ```bash
 # To run the GUI for TOFcam660
-epc-tofcam660
+tofcam660
 
 # To run the GUI for TOFcam635
-epc-tofcam635
+tofcam635
 
 # TO run the GUI for TOFcam611
-epc-tofcam611
+tofcam611
 ```

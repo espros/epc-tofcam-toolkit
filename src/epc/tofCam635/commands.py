@@ -21,7 +21,7 @@ class Commands():
   def __init__(self,com,comDll=None):
     self.comDll=comDll
     self.com = com
-    self.crc = Crc(mode=CrcMode.CRC32_UINT8, revout=False)
+    self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
 
     self.printWrite=False
     self.printRead=False

@@ -171,11 +171,11 @@ class TOFcam660_bridge:
             self.__get_image_cb = self.cam.getGrayscaleAmplitude
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
-            self.gui.hdrModeDropDown.setValue('HDR Off') # firmware actually disables hdr mode when switching to grayscale
         elif image_type == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
             self.__get_image_cb = self.cam.getPointCloud
 
+        self._set_hdr_mode(self.gui.hdrModeDropDown.getSelection())
         
         if not self.streamer.is_streaming():
             self.capture()

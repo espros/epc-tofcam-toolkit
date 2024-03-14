@@ -7,7 +7,7 @@ from epc.tofCam_gui import Base_GUI_TOFcam
 
 
 class GUI_TOFcam611(Base_GUI_TOFcam):
-    def __init__(self, title='TOF CAM 611 VIDEO STREAM', parent=None):
+    def __init__(self, title='GUI-TOFcam611', parent=None):
         super(GUI_TOFcam611, self).__init__(title)
 
         # Create the video widget

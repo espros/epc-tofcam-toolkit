@@ -20,7 +20,9 @@ class Camera():
     self.resolution = (8, 8) #(x,y)
     self.maxDepth = 16000 # pixel code limit for valid data 
     self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
-    self.minAmplitude = 0
+    self.minAmplitude = 50
+    self.powerOn()
+    self.setIntTime_us(50)
 
   def powerOn(self,enable=True):
     self.tofWrite([commandList.COMMAND_SET_POWER, enable])
