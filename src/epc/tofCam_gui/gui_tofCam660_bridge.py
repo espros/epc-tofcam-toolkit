@@ -66,11 +66,7 @@ class TOFcam660_bridge:
                 self.gui.setFilter_cb(threshgrad)
 
     def getImage(self):
-        if self.image_type == 'Point Cloud':
-            return self.__get_image_cb()
-        else:
-            image = self.__get_image_cb()
-            return np.rot90(image, 3)
+        return self.__get_image_cb()
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -207,6 +203,7 @@ def main():
     
     ip_address = get_ipAddress()
     cam = TOFcam660(ip_address)
+    cam.initialize()
 
     bridge = TOFcam660_bridge(gui, cam)
     gui.show()

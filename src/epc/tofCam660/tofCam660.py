@@ -1,7 +1,6 @@
 import numpy as np
 import logging
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
-from epc.tofCam660.epc660 import Epc660Ethernet
 from epc.tofCam660.interface import Interface, UdpInterface
 from epc.tofCam660.memory import Memory
 from epc.tofCam660.command import Command
@@ -316,21 +315,29 @@ class TOFcam660(TOFcam):
 
     def initialize(self):
         self.settings.set_modulation(12)
-        pass
+        self.settings.set_roi((0, 0, 320, 240))
+        self.settings.set_hdr(2)
+        self.settings.set_modulation(frequency_mhz=12, channel=0)
+        self.settings.set_integration_hdr([25, 40, 400, 2000])
+        self.settings.set_minimal_amplitude(100)
+        self.settings.disable_filters()
+        self.settings.set_lense_type('Wide Field')
 
     def get_grayscale_image(self) -> np.ndarray:
         """ "Get a grayscale image from the camera as a 2d numpy array"""
         parser = GrayscaleParser()
         get_gray_command = Command.create("getGrayscale", self.settings.captureMode)
         raw_data = self.__get_image_date(get_gray_command)
-        return parser.parse(raw_data).amplitude
+        amplitude =  parser.parse(raw_data).amplitude
+        return np.rot90(amplitude, 3)
 
     def get_distance_image(self) -> np.ndarray:
         """Get a distance image from the camera as a 2d numpy array. The distance is in mm."""
         parser = DistanceParser()
         get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dist_cmd)
-        return parser.parse(raw_data).distance
+        distance =  parser.parse(raw_data).distance
+        return np.rot90(distance, 3)
 
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
@@ -340,7 +347,7 @@ class TOFcam660(TOFcam):
         )
         raw_data = self.__get_image_date(get_dist_amp_cmd)
         frame = parser.parse(raw_data)
-        return frame.distance, frame.amplitude
+        return np.rot90(frame.distance, 3), np.rot90(frame.amplitude, 3)
 
     def get_amplitude_image(self) -> np.ndarray:
         """Get an amplitude image from the camera as a 2d numpy array."""
@@ -357,7 +364,6 @@ class TOFcam660(TOFcam):
         """Get a point cloud from the camera as a 3xN numpy array."""
         # capture depth image & corrections
         depth = self.get_distance_image()
-        depth = np.rot90(depth, 3)
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
 

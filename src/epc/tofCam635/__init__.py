@@ -1,1 +1,1 @@
-from .tofcam635 import TofCam635
+from .tofCam635 import TOFcam635

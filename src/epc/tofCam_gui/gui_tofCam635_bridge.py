@@ -3,7 +3,6 @@ import getopt
 import logging
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-# from epc.tofCam635 import TofCam635
 from epc.tofCam635.tofCam635 import TOFcam635
 from epc.tofCam_gui import GUI_TOFcam635
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
@@ -39,7 +38,7 @@ class TofCam635Bridge:
 
         gui.medianFilter.signal_filter_changed.connect(lambda enable: self.cam.settings.set_median_filter(enable))
         gui.temporalFilter.signal_filter_changed.connect(lambda enable, threshold, factor: self.cam.settings.set_temporal_filter(enable, int(threshold), int(1000*factor)))
-        gui.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.settings.set_averave_filter(enable))
+        gui.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.settings.set_average_filter(enable))
         gui.interferenceFilter.signal_filter_changed.connect(lambda enable, limit, useLast: self.cam.settings.set_interference_detection(enable, useLast, limit))
         gui.edgeFilter.signal_filter_changed.connect(lambda enable, threshold: self.cam.settings.set_edge_filter(enable, threshold))
         gui.roiSettings.signal_roi_changed.connect(self.__set_roi)
@@ -191,6 +190,7 @@ def main():
     except Exception as e:
         log.error(f'Failed to connect to device. Is the device running and connected?')
         return
+    cam.initialize()
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')

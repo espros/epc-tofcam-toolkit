@@ -223,7 +223,7 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
         log.info(f"Setting median filter to {enable}")
         self.interface.transmit(CommandList.COMMAND_SET_MEDIAN_FILTER, [int(enable)])
 
-    def set_averave_filter(self, enable: bool) -> None:
+    def set_average_filter(self, enable: bool) -> None:
         log.info(f"Setting average filter to {enable}")
         self.interface.transmit(CommandList.COMMAND_SET_AVERAGE_FILTER, [int(enable)])
 
@@ -312,6 +312,16 @@ class TOFcam635(TOFcam):
         log.info('Initializing TOFcam635')
         self.settings.set_roi(self.settings.roi)
         self.settings.set_operation_mode(0)
+        self.settings.set_hdr('off')
+        self.settings.set_modulation(frequency_mhz=20, channel=0)
+        self.settings.set_integration_time(125)
+        self.settings.set_integration_time_grayscale(50)
+        self.settings.set_minimal_amplitude(100)
+        self.settings.set_median_filter(False)
+        self.settings.set_average_filter(False)
+        self.settings.set_edge_filter(False, 150)
+        self.settings.set_temporal_filter(False, 150, 10)
+        self.settings.set_interference_detection(False, False, 500)
 
     def get_calibration_data(self):
         pass

@@ -1,7 +1,7 @@
 import pytest
-from epc.tofCam660.tofCam660 import TOFcam660
-from epc.tofCam635.tofCam635 import TOFcam635
-from epc.tofCam611.tofCam611 import TOFcam611
+from epc.tofCam660 import TOFcam660
+from epc.tofCam635 import TOFcam635
+from epc.tofCam611 import TOFcam611
 from epc.tofCam_lib.tofCam import TOFcam
 
 @pytest.fixture(scope='class')
@@ -10,6 +10,7 @@ def tofCam(request):
     tofcam.initialize()
     return tofcam
 
+@pytest.mark.systemTest
 @pytest.mark.parametrize('tofCam', [TOFcam660, TOFcam635, TOFcam611], indirect=True)
 class Test_general_calls:
     def test_has_attributes(self, tofCam: TOFcam):
@@ -28,6 +29,7 @@ class Test_general_calls:
         assert image.shape == (roi[2], roi[3])
 
 
+@pytest.mark.systemTest
 @pytest.mark.parametrize('tofCam', [TOFcam660, TOFcam635, TOFcam611], indirect=True)
 class Test_setting_calls:
     def test_set_roi(self, tofCam: TOFcam):
@@ -37,10 +39,11 @@ class Test_setting_calls:
         test_roi = 0, old_roi[3]//4, old_roi[2]//2, 3*old_roi[3]//4 # tofcam660 needs symetric y values
         test_roi = tofCam.settings.set_roi(test_roi)
         assert tofCam.settings.get_roi() == test_roi
-
-        assert tofCam.get_amplitude_image().shape == (test_roi[3] - test_roi[1], test_roi[2] - test_roi[0])
-        assert tofCam.get_distance_image().shape == (test_roi[3] - test_roi[1], test_roi[2] - test_roi[0])
-        assert tofCam.get_grayscale_image().shape == (test_roi[3] - test_roi[1], test_roi[2] - test_roi[0])
+        
+        resolution = (test_roi[2] - test_roi[0], test_roi[3] - test_roi[1])
+        assert tofCam.get_amplitude_image().shape == (resolution)
+        assert tofCam.get_distance_image().shape == (resolution)
+        assert tofCam.get_grayscale_image().shape == (resolution)
 
         tofCam.settings.set_roi(old_roi)
 
@@ -58,12 +61,17 @@ class Test_setting_calls:
         # test that functions are callable and image can still be received
         if setting_func == 'set_integration_time_grayscale' and isinstance(tofCam, TOFcam611):
             pytest.skip('TOFcam611 does not support grayscale images.')
+        if isinstance(tofCam, TOFcam660):
+            tofCam.settings.set_hdr(0)
         getattr(tofCam.settings, setting_func)(100)
         tofCam.get_distance_image()
         tofCam.get_grayscale_image()
         tofCam.get_amplitude_image()
+        if isinstance(tofCam, TOFcam660):
+            tofCam.settings.set_hdr(2)
 
 
+@pytest.mark.systemTest
 @pytest.mark.parametrize('tofCam', [TOFcam660, TOFcam635, TOFcam611], indirect=True)
 class Test_device_calls:
     def test_get_chip_informations(self, tofCam: TOFcam):

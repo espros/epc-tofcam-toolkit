@@ -1,33 +1,36 @@
 import pytest
 import numpy as np
-from epc.tofCam611.tofCam611 import TOFcam611
+from epc.tofCam611 import TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
 
 @pytest.fixture
 def cam():
     cam = TOFcam611()
+    cam.initialize()
     return cam
 
-def test_getChipInfos(cam):
-    chipId, waferId = cam.device.get_chip_infos()
+@pytest.mark.systemTest
+class Test_TOFrange:
+    def test_getChipInfos(self, cam):
+        chipId, waferId = cam.device.get_chip_infos()
 
-    assert chipId != 0
-    assert waferId != 0
-    assert isinstance(chipId, int)
-    assert isinstance(waferId, int)
+        assert chipId != 0
+        assert waferId != 0
+        assert isinstance(chipId, int)
+        assert isinstance(waferId, int)
 
 
-def test_getDistance(cam):
-    distance = cam.get_distance_image()
-    
-    assert distance.shape == (1,1)
+    def test_getDistance(self, cam):
+        distance = cam.get_distance_image()
+        
+        assert distance.shape == (1,1)
 
-def test_getAmplitude(cam):
-    amplitude = cam.getAmplitude()
+    def test_getAmplitude(self, cam):
+        amplitude = cam.get_amplitude_image()
 
-    assert amplitude.shape == (1,1)
+        assert amplitude.shape == (1,1)
 
-def test_getPointCloud(cam):
-    pc = cam.getPointCloud()
+    def test_getPointCloud(self, cam):
+        pc = cam.get_point_cloud()
 
-    assert pc.shape == (1, 3)
+        assert pc.shape == (1, 3)

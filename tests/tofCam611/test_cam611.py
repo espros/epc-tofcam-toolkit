@@ -8,34 +8,36 @@ def cam():
     cam.powerOn()
     return cam
 
-def test_getChipInfos(cam):
-    chipId, waferId = cam.getChipInfo()
+@pytest.mark.systemTest
+class Test_TOFcam611:
+    def test_getChipInfos(self, cam):
+        chipId, waferId = cam.getChipInfo()
 
-    assert chipId != 0
-    assert waferId != 0
-    assert isinstance(chipId, int)
-    assert isinstance(waferId, int)
-    
+        assert chipId != 0
+        assert waferId != 0
+        assert isinstance(chipId, int)
+        assert isinstance(waferId, int)
+        
 
-def test_getDevice(cam):
-    deviceType = cam.getDeviceType()
+    def test_getDevice(self, cam):
+        deviceType = cam.getDeviceType()
 
-    assert deviceType == "TOFframe"
-
-
-def test_getDistance(cam):
-    distance = cam.getDistance()
-
-    assert distance.shape == (8,8)
+        assert deviceType == "TOFframe"
 
 
-def test_getAmplitude(cam):
-    amplitude = cam.getAmplitude()
+    def test_getDistance(self, cam):
+        distance = cam.getDistance()
 
-    assert amplitude.shape == (8,8)
+        assert distance.shape == (8,8)
 
 
-def test_getPointCloud(cam):
-    pc = cam.getPointCloud()
+    def test_getAmplitude(self, cam):
+        amplitude = cam.getAmplitude()
 
-    assert pc.shape == (8*8, 3)
+        assert amplitude.shape == (8,8)
+
+
+    def test_getPointCloud(self, cam):
+        pc = cam.getPointCloud()
+
+        assert pc.shape == (8*8, 3)
