@@ -2,8 +2,8 @@
 <img src="https://raw.githubusercontent.com/espros/epc-tofcam-toolkit/master/docs/source/images/epc-logo.png" width="300">
 </div>
 
-# ESPROS TOFcam toolkit
-The ESPROS TOFcam toolkit is designed to control and visualize ESPROS TOFcam devices.
+# ESPROS TOFcam Toolkit
+The ESPROS TOFcam Toolkit is designed to control and visualize ESPROS TOFcam devices.
 It provides python modules for most TOFcam modules and GUI applications for interactive control and visualization.
 
 Website: https://www.espros.com  
@@ -21,9 +21,9 @@ pip install epc-tofcam-toolkit
 
 Connect and startup the camera. Then simply run the gui with: 
 ```bash 
-epc-tofcam660
-epc-tofcam635
-epc-tofcam611
+tofcam660
+tofcam635
+tofcam611
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
@@ -31,7 +31,27 @@ epc-tofcam611
 
 You can also manually specify the communication port
 ```bash 
-epc-tofcam660 --ip 10.10.31.180
-epc-tofcam635 --port COM3
-epc-tofcam611 --port COM3
+tofcam660 --ip 10.10.31.180
+tofcam635 --port COM3
+tofcam611 --port COM3
+```
+
+## Installation for development
+
+Clone this repository and cd into it
+
+Create a virtual environment and activate it
+```bash
+python -m venv .venv  
+
+# linux
+source .venv/bin/activate
+
+# windows
+.\.venv\Scripts\activate
+```
+
+Install the package in editable mode
+```bash
+pip install -e .
 ```

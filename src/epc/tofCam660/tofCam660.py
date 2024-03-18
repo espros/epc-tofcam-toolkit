@@ -23,6 +23,8 @@ log = logging.getLogger('TOFcam660')
 
 
 class TOFcam660_Settings(TOF_Settings_Controller):
+    """The TOFcam660_Settings class is used to control the settings of the TOFcam660.
+    """
     def __init__(self, tcp: Interface) -> None:
         super().__init__()
         self.roi = (0, 0, 320, 240)
@@ -218,6 +220,8 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
 
 class TOFcam660_Device(Dev_Infos_Controller):
+    """The TOFcam660_Device class is used to get and set device information's of the TOFcam660.
+    """
     def __init__(self, tcp: Interface) -> None:
         super().__init__()
         self.interface = tcp
@@ -286,6 +290,15 @@ class TOFcam660_Device(Dev_Infos_Controller):
 
 
 class TOFcam660(TOFcam):
+    """Creates a new TOFcam660 object and connects it to the ip address specified.
+
+    If no ip address is specified, the default ip address (10.10.31.180) is used.
+
+    The TOFcam660 object holds two attributes:
+
+    - settings: allows to control the settings of the camera.
+    - device: allows to get device information's of the camera.
+    """
     def __init__(
         self,
         ip_address=DEFAULT_IP_ADDRESS,

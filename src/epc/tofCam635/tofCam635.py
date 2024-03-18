@@ -124,7 +124,9 @@ class InterfaceWrapper:
         return answer
 
 
-class TOFcam635_Settings_Controller(TOF_Settings_Controller):
+class TOFcam635_Settings(TOF_Settings_Controller):
+    """This class is used to control the settings of the TOFcam635 camera.
+    """
     def __init__(self, interface: InterfaceWrapper) -> None:
         super().__init__()
         self.roi = DEFAULT_ROI
@@ -149,12 +151,27 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
         return self.roi
 
     def get_roi(self) -> tuple[int, int, int, int]:
+        """Returns the current region of interest (ROI) of the camera.
+
+        Returns:
+            tuple[int, int, int, int]: x0, y0, x1, y1
+        """
         return self.roi
 
     def set_capture_mode(self, mode: int) -> None:
+        """set the capture mode for next image aquisition
+
+        Args:
+            mode (int): 0: single measurement, 1: pipelined measurement, 2: streaming mode
+        """
         self._capture_mode = mode
 
     def set_minimal_amplitude(self, amplitude: int):
+        """set the minimal amplitude for valid distance calculation
+
+        Args:
+            amplitude (int): minimal amplitude [ADC]
+        """
         log.info(f"Setting minimal amplitude to {amplitude}")
         for i in range(5):
             self.interface.transmit(CommandList.COMMAND_SET_AMPLITUDE_LIMIT, [i, amplitude&0xff, (amplitude>>8)&0xff])
@@ -164,16 +181,22 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
         self.interface.transmit(CommandList.COMMAND_SET_DLL_STEP, [step])
 
     def set_integration_time(self, int_time_us: int):
+        """set integration time for standard mode (e.g. hdr off)
+        """
         log.info(f"Setting integration time to {int_time_us}")
         return self.set_integration_time_hdr(int_time_us, 0)
     
     def set_integration_time_grayscale(self, int_time_us: int):
+        """set integration time for grayscale acquisition
+        """
         log.info(f"Setting grayscale integration time to {int_time_us}")
         if 0 > int_time_us > MAX_DIST_INT_TIME:
             raise ValueError(f"Integration time '{int_time_us}' is too high")
         self.interface.transmit(CommandList.COMMAND_SET_INTEGRATION_TIME_GRAYSCALE, [int_time_us&0xff, (int_time_us>>8)&0xff]) 
 
     def set_integration_time_hdr(self, index: int, int_time_us: int) -> None:
+        """set integration time for HDR mode
+        """
         log.info(f"Setting HDR integration time {index} to {int_time_us}")
         if 0 > int_time_us > MAX_DIST_INT_TIME:
             raise ValueError(f"Integration time '{int_time_us}' is too high")
@@ -206,6 +229,11 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
 
 
     def set_hdr(self, mode='off') -> None:
+        """select hdr mode
+
+        Args:
+            mode (str): 'off', 'spatial' or 'temporal'. Defaults to 'off'.
+        """
         hdr_mode = 0
         if mode == 'off':
             hdr_mode = 0
@@ -247,27 +275,41 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
 
 
 class TOFcam635_Device(Dev_Infos_Controller):
+    """This class is used to control the device information of the TOFcam635 camera.
+    """
     def __init__(self, interface: InterfaceWrapper) -> None:
         super().__init__()
         self.interface = interface
 
     def get_chip_infos(self) -> tuple[int, int]:
+        """returns chip information
+
+        Returns:
+            tuple[int, int]: chipId, waferId
+        """
         data = self.interface.transceive(CommandList.COMMAND_GET_CHIP_INFORMATION, ComType.DATA_CHIP_INFORMATION)
         response=list(struct.unpack('<'+'H'*2,data))
         return (response[0], response[1])
     
     def get_fw_version(self) -> str:
+        """returns firmware version as string"""
         data = self.interface.transceive(CommandList.COMMAND_GET_FIRMWARE_RELEASE, ComType.DATA_FIRMWARE_RELEASE)
         fwRelease = struct.unpack('<'+'I',data)[0]
         return str(float(fwRelease>>16) + float(fwRelease&0xffff)/100)
     
     def get_chip_temperature(self) -> float:
+        """returns chip temperature in degree Celsius"""
         data = self.interface.transceive(CommandList.COMMAND_GET_TEMPERATURE, ComType.DATA_TEMPERATURE)
         centi_temperature=struct.unpack('<'+'h',data)[0]
         temperature = float(centi_temperature)/100
         return temperature
     
     def get_device_ids(self) -> tuple[int, int, int, int]:
+        """return device ids
+        
+        Returns:
+            tuple[int, int, int, int]: hwVersion, deviceType, chipType, oPmode
+        """
         data = self.interface.transceive(CommandList.COMMAND_IDENTIFY, ComType.DATA_IDENTIFICATION)
         response = struct.unpack('<'+'I',data)[0]
         oPmode=((response&0xff000000)>>24)
@@ -281,10 +323,13 @@ class TOFcam635_Device(Dev_Infos_Controller):
         return f'HW Version: {hw_version}, Device Type: {device_type}, Chip Type: {chip_type}, Operation Mode: {op_mode}'
 
     def write_register(self, reg_addr: int, value: int) -> None:
+        """write a register of the epc635 camera chip. 
+        """
         log.info(f"Writing register {reg_addr} with value {value}")
         self.interface.transmit(CommandList.COMMAND_WRITE_REGISTER, [reg_addr&0xff, value])
 
     def read_register(self, reg_addr: int) -> int:
+        """read a register of the epc635 camera chip."""
         log.info(f"Reading register {reg_addr}")
         data = self.interface.transceive(CommandList.COMMAND_READ_REGISTER, ComType.DATA_REGISTER, [reg_addr&0xff])
         return int(data[0])
@@ -298,9 +343,21 @@ class TOFcam635_Device(Dev_Infos_Controller):
 
 
 class TOFcam635(TOFcam):
+    """creates a TOFcam635 object and connects the camera to the given port. 
+
+    If no port is specified, the camera will try to find the correct port automatically.
+
+    The TOFcam635 object holds two attributes for settings and device information.
+
+    - settings: can be used to control the settings of the camera
+    - device: can be used to get information about the camera
+
+    Args:
+        TOFcam (_type_): _description_
+    """
     def __init__(self, port: Optional[str]=None) -> None:
         self.interface = InterfaceWrapper(port)
-        self.settings = TOFcam635_Settings_Controller(self.interface)
+        self.settings = TOFcam635_Settings(self.interface)
         self.device = TOFcam635_Device(self.interface)
         super().__init__(self.settings, self.device)
 
@@ -327,6 +384,8 @@ class TOFcam635(TOFcam):
         pass
 
     def get_grayscale_image(self):
+        """returns a grayscale image as a 2d numpy array
+        """
         data, _ = self.interface.get_image_data(CommandList.COMMAND_GET_GRAYSCALE, ComType.DATA_GRAYSCALE, [self.settings._capture_mode])
         grayscale = np.frombuffer(data, dtype='b')
         grayscale = grayscale.reshape(self.settings.resolution[::-1]).astype('uint8')
@@ -334,6 +393,7 @@ class TOFcam635(TOFcam):
         return grayscale
     
     def get_distance_image(self):
+        """returns a distance image as a 2d numpy array"""
         data, _ = self.interface.get_image_data(CommandList.COMMAND_GET_DISTANCE, ComType.DATA_DISTANCE, [self.settings._capture_mode])
         distance_and_confidence =  np.frombuffer(data, dtype="h")
         distance = []
@@ -351,10 +411,12 @@ class TOFcam635(TOFcam):
         return distance
     
     def get_amplitude_image(self):
+        """returns an amplitude image as a 2d numpy array"""
         _, amplitude = self.get_distance_and_amplitude_image()
         return amplitude
     
     def get_distance_and_amplitude_image(self):
+        """returns a tuple of 2d arrays (distance, amplitude)"""
         data, _ = self.interface.get_image_data(CommandList.COMMAND_GET_DISTANCE_AMPLITUDE, ComType.DATA_DISTANCE_AMPLITUDE, [self.settings._capture_mode])
         distance_and_confidence =  np.frombuffer(data, dtype="h")
         dist_amp = []
@@ -375,6 +437,7 @@ class TOFcam635(TOFcam):
         return distance, amplitude
     
     def get_point_cloud(self):
+        """returns point cloud information as numpy array of shape (n, 3) with x, y, z coordinates"""
         # capture depth image & corrections
         depth = self.get_distance_image()
         depth = np.rot90(depth, 3)

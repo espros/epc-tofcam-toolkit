@@ -6,15 +6,19 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'EPC TOFcam python package'
-copyright = '2024, Armin Kessler'
-author = 'ESPROS Photonics AG'
-release = '0.0.1'
+import sys
+sys.path.insert(0, 'src')
+from epc._version import __version__
+
+project = 'EPC TOFcam Toolkit'
+copyright = 'ESPROS Photonics Corporation'
+author = 'ESPROS Photonics Corporation'
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser']
+extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon']
 source_suffix = {
     '.rst': 'restructuredtext',
     '.txt': 'markdown',
