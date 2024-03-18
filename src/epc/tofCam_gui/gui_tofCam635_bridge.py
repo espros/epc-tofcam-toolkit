@@ -2,6 +2,7 @@ import sys
 import getopt
 import logging
 import qdarktheme
+import numpy as np
 from PySide6.QtWidgets import QApplication
 from epc.tofCam635.tofCam635 import TOFcam635
 from epc.tofCam_gui import GUI_TOFcam635
@@ -52,7 +53,11 @@ class TofCam635Bridge:
         self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 
     def getImage(self):
-        return self.__get_image_cb()
+        if self.gui.imageTypeWidget.getSelection() == 'Point Cloud':
+            return self.__get_image_cb()
+        else:
+            image = self.__get_image_cb()
+            return np.rot90(image, 3)
     
     def __stop_streaming_cb(self):
         self.cam.settings.set_capture_mode(0)
@@ -167,7 +172,7 @@ class TofCam635Bridge:
 
 
     def capture(self, mode=0):
-        image = self.__get_image_cb()
+        image = self.getImage()
         self.gui.updateImage(image)
 
 def get_port():

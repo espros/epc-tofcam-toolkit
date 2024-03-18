@@ -389,7 +389,6 @@ class TOFcam635(TOFcam):
         data, _ = self.interface.get_image_data(CommandList.COMMAND_GET_GRAYSCALE, ComType.DATA_GRAYSCALE, [self.settings._capture_mode])
         grayscale = np.frombuffer(data, dtype='b')
         grayscale = grayscale.reshape(self.settings.resolution[::-1]).astype('uint8')
-        grayscale = np.rot90(grayscale, 1)
         return grayscale
     
     def get_distance_image(self):
@@ -405,9 +404,7 @@ class TOFcam635(TOFcam):
             confidence.append((distance_and_confidence[i] >> 14) & 0x03)
 
         distance = np.reshape(distance, self.settings.resolution[::-1])
-        distance = np.rot90(distance, 1)
         # confidence = np.reshape(confidence, self.settings.resolution[::-1])
-        # confidence = np.rot90(confidence, 1)
         return distance
     
     def get_amplitude_image(self):
@@ -428,11 +425,8 @@ class TOFcam635(TOFcam):
             confidence.append((distance_and_confidence[i] >> 14) & 0x03)
 
         distance = np.reshape(dist_amp[::2], self.settings.resolution[::-1])
-        distance = np.rot90(distance, 1)
         amplitude = np.reshape(dist_amp[1::2], self.settings.resolution[::-1])
-        amplitude = np.rot90(amplitude, 1)
         # confidence = np.reshape(confidence, self.settings.resolution[::-1])
-        # confidence = np.rot90(confidence, 1)
 
         return distance, amplitude
     
@@ -440,7 +434,6 @@ class TOFcam635(TOFcam):
         """returns point cloud information as numpy array of shape (n, 3) with x, y, z coordinates"""
         # capture depth image & corrections
         depth = self.get_distance_image()
-        depth = np.rot90(depth, 3)
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.max_depth] = np.nan
 

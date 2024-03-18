@@ -342,7 +342,7 @@ class TOFcam660(TOFcam):
         get_gray_command = Command.create("getGrayscale", self.settings.captureMode)
         raw_data = self.__get_image_date(get_gray_command)
         amplitude =  parser.parse(raw_data).amplitude
-        return np.rot90(amplitude, 3)
+        return amplitude
 
     def get_distance_image(self) -> np.ndarray:
         """Get a distance image from the camera as a 2d numpy array. The distance is in mm."""
@@ -350,7 +350,7 @@ class TOFcam660(TOFcam):
         get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dist_cmd)
         distance =  parser.parse(raw_data).distance
-        return np.rot90(distance, 3)
+        return distance
 
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
@@ -360,7 +360,7 @@ class TOFcam660(TOFcam):
         )
         raw_data = self.__get_image_date(get_dist_amp_cmd)
         frame = parser.parse(raw_data)
-        return np.rot90(frame.distance, 3), np.rot90(frame.amplitude, 3)
+        return frame.distance, frame.amplitude
 
     def get_amplitude_image(self) -> np.ndarray:
         """Get an amplitude image from the camera as a 2d numpy array."""
@@ -377,6 +377,7 @@ class TOFcam660(TOFcam):
         """Get a point cloud from the camera as a 3xN numpy array."""
         # capture depth image & corrections
         depth = self.get_distance_image()
+        depth = np.rot90(depth, 3)
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
 

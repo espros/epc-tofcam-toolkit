@@ -66,7 +66,11 @@ class TOFcam660_bridge:
                 self.gui.setFilter_cb(threshgrad)
 
     def getImage(self):
-        return self.__get_image_cb()
+        if self.image_type == 'Point Cloud':
+            return self.__get_image_cb()
+        else:
+            image = self.__get_image_cb()
+            return np.rot90(image, 3)
 
     def _set_streaming(self, enable: bool):
         if enable:

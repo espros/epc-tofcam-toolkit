@@ -1,19 +1,20 @@
 import matplotlib.pyplot as plt
-from epc.tofCam660 import Server as TOFCam660
-from epc.tofCam660.epc660 import Epc660Ethernet
+from epc.tofCam660 import TOFcam660
 
 # setup the camera
-epc = Epc660Ethernet(ip_address='10.10.31.180')
-cam = TOFCam660(epc)
+cam = TOFcam660()
+cam.initialize()
 
 # print chip information
-chipId = cam.getChipId()
-waferId = cam.getWaferId()
+chipId, waferId = cam.device.get_chip_infos()
 print(f'Chip ID: {chipId}')
 print(f'Wafer ID: {waferId}')
 
+# change some settings
+cam.settings.set_modulation(frequency_mhz=12)
+
 # get distance image
-distance = cam.getTofDistance()[0]
+distance = cam.get_distance_image()
 
 # add your own code here to process the distance image
 ...

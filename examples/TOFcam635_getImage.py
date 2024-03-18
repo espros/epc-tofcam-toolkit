@@ -1,13 +1,17 @@
 import matplotlib.pyplot as plt
-from epc.tofCam635 import TofCam635
+from epc.tofCam635 import TOFcam635
 
 # setup the camera
-cam = TofCam635()
+cam = TOFcam635()
+cam.initialize()
 
 # print chip information
-chipID, waferID = cam.cmd.getChipInfo()
+chipID, waferID = cam.device.get_chip_infos()
 print(f'Chip ID: {chipID}')
 print(f'Wafer ID: {waferID}')
+
+# change some settings
+cam.settings.set_integration_time(125)
 
 # get distance image
 distance = cam.get_distance_image()
