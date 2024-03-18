@@ -5,7 +5,8 @@ import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
 from epc.tofCam660.epc660 import Epc660Ethernet
-from epc.tofCam660.server import Server as TOFcam660
+# from epc.tofCam660.server import Server as TOFcam660
+from epc.tofCam660.tofCam660 import TOFcam660
 from epc.tofCam_gui import GUI_TOFcam660
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
@@ -17,7 +18,7 @@ class TOFcam660_bridge:
     def __init__(self, gui: GUI_TOFcam660, cam: TOFcam660):
         self.gui = gui
         self.cam = cam
-        self.__get_image_cb = cam.getTofDistance
+        self.__get_image_cb = cam.get_distance_image
         self.image_type = 'Distance'
         self.__distance_resolution = 0.01 # mm/bit
         self.__distance_unambiguity = 6.25 # m 
@@ -25,11 +26,10 @@ class TOFcam660_bridge:
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         
         # update chip information
-        chipID = cam.getChipId()
-        waferId = cam.getWaferId()
+        chipID, waferId = cam.device.get_chip_infos()
         gui.toolBar.setChipInfo(chipID, waferId)
-        fw_version = cam.getFirmwareVersion()
-        gui.toolBar.setVersionInfo(f"{fw_version['major']}.{fw_version['minor']}")
+        fw_version = cam.device.get_fw_version()
+        gui.toolBar.setVersionInfo(fw_version)
 
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
@@ -48,7 +48,7 @@ class TOFcam660_bridge:
         gui.edgeFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.interferenceFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.roiSettings.signal_roi_changed.connect(self._set_roi)
-        gui.lensType.signal_value_changed.connect(lambda value: self.cam.setLensType(value))
+        gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
 
         gui.setDefaultValues()
         
@@ -70,7 +70,7 @@ class TOFcam660_bridge:
             return self.__get_image_cb()
         else:
             image = self.__get_image_cb()
-            return np.rot90(image, 1, (2, 1))[0]
+            return np.rot90(image, 3)
 
     def _set_streaming(self, enable: bool):
         if enable:
@@ -101,7 +101,7 @@ class TOFcam660_bridge:
             interferenceLimit = self.gui.interferenceFilter.limit.value()
             interferenceUseLatest = self.gui.interferenceFilter.useLastValue.isChecked()     
 
-        self.cam.setFilter(int(medianOn), int(averageOn), edgeThreshold, int(temp_factor*1000), temp_threshold, interferenceLimit, int(interferenceUseLatest))
+        self.cam.settings.set_filters(int(medianOn), int(averageOn), edgeThreshold, int(temp_factor*1000), temp_threshold, interferenceLimit, int(interferenceUseLatest))
 
     def __set_hdrTimesEnabled(self, enabled: bool):
         self.gui.integrationTimes.setTimeEnabled(1, enabled)
@@ -110,22 +110,22 @@ class TOFcam660_bridge:
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Off':
-            self.cam.setHdr(0)
+            self.cam.settings.set_hdr(0)
             self.__set_hdrTimesEnabled(False)
         elif mode == 'HDR Spatial':
-            self.cam.setHdr(1)
+            self.cam.settings.set_hdr(1)
             self.__set_hdrTimesEnabled(False)
         elif mode == 'HDR Temporal':
-            self.cam.setHdr(2)
+            self.cam.settings.set_hdr(2)
             self.__set_hdrTimesEnabled(True)
 
     @pause_streaming
     def _set_roi(self, x1, y1, x2, y2):
-        self.cam.setRoi(x1, y1, x2, y2)
+        self.cam.settings.set_roi((x1, y1, x2, y2))
 
     @pause_streaming
     def _set_min_amplitudes(self, minAmp: int):
-        self.cam.setMinAmplitude(minAmp)
+        self.cam.settings.set_minimal_amplitude(minAmp)
 
     @pause_streaming
     def _set_integration_times(self, type: str, value: int):
@@ -133,7 +133,7 @@ class TOFcam660_bridge:
         mid = self.gui.integrationTimes.getTimeAtIndex(1)
         high = self.gui.integrationTimes.getTimeAtIndex(2)
         gray = self.gui.integrationTimes.getTimeAtIndex(3)
-        self.cam.setIntTimesus(gray, low, mid, high)
+        self.cam.settings.set_integration_hdr([gray, low, mid, high])
         self.capture()
 
     @pause_streaming
@@ -148,7 +148,7 @@ class TOFcam660_bridge:
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-        self.cam.setModulationFrequencyMHz(frequency, channel)
+        self.cam.settings.set_modulation(frequency, channel)
         self.capture()
 
     @pause_streaming
@@ -158,22 +158,22 @@ class TOFcam660_bridge:
         self.gui.guiFilterGroupBox.setEnabled(image_type != 'Point Cloud')
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.getTofDistance
+            self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.getTofAmplitude
+            self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
             self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.getGrayscaleAmplitude
+            self.__get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         elif image_type == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
-            self.__get_image_cb = self.cam.getPointCloud
+            self.__get_image_cb = self.cam.get_point_cloud
 
         self._set_hdr_mode(self.gui.hdrModeDropDown.getSelection())
         
@@ -206,8 +206,7 @@ def main():
     gui = GUI_TOFcam660()
     
     ip_address = get_ipAddress()
-    epc660 = Epc660Ethernet(ip_address)
-    cam = TOFcam660(epc660)
+    cam = TOFcam660(ip_address)
 
     bridge = TOFcam660_bridge(gui, cam)
     gui.show()

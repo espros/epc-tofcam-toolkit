@@ -1,10 +1,12 @@
 
+import time
 import sys
 import getopt
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-from epc.tofCam611.camera import Camera as TOFcam611
+# from epc.tofCam611.camera import Camera as TOFcam611
+from epc.tofCam611.tofCam611 import TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
 from epc.tofCam_gui import GUI_TOFcam611
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
@@ -15,16 +17,17 @@ class TOFcam611_bridge:
     def __init__(self, gui: GUI_TOFcam611, cam: TOFcam611):
         self.gui = gui
         self.cam = cam
-        self.__get_image_cb = cam.getDistance
+        self.__get_image_cb = cam.get_distance_image
         self.__distance_unambiguity = 7.5 # m 
         self.streamer = Streamer(self.get_image)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
         
         # update chip information
-        chipID, waferId = cam.getChipInfo()
+        chipID, waferId = cam.device.get_chip_infos()
         gui.toolBar.setChipInfo(chipID, waferId)
-        fw_version = cam.getFwRelease()
-        gui.toolBar.setVersionInfo(f"{fw_version[0]}.{fw_version[1]}")
+        time.sleep(1) # Don't know why but it needs some time to get the firmware version
+        fw_version = cam.device.get_fw_version()
+        gui.toolBar.setVersionInfo(fw_version)
 
         # connect signals
         gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
@@ -33,7 +36,7 @@ class TOFcam611_bridge:
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
         gui.modulationFrequency.signal_value_changed.connect(lambda freq: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
-        gui.minAmplitude.signal_value_changed.connect(lambda minAmp: self.cam.setMinAmplitude(minAmp))
+        gui.minAmplitude.signal_value_changed.connect(lambda minAmp: self.cam.settings.set_minimal_amplitude(minAmp))
         gui.temporalFilter.signal_filter_changed.connect(lambda: self.__set_filter_settings())
 
         self.gui.setDefaultValues()
@@ -51,48 +54,44 @@ class TOFcam611_bridge:
         temp_factor = 0.0
         temp_threshold = 0
 
-        tempOn = self.gui.builtInFilter.temporalFilter.isChecked()
+        tempOn = self.gui.temporalFilter.isChecked()
         if tempOn:
-            temp_factor = self.gui.builtInFilter.temporalFilter.factor.value()
-            temp_threshold = self.gui.builtInFilter.temporalFilter.threshold.value()
+            temp_factor = self.gui.temporalFilter.factor.value()
+            temp_threshold = self.gui.temporalFilter.threshold.value()
               
-        self.cam.setFilter(temp_threshold, int(temp_factor*1000))
+        self.cam.settings.set_temporal_filter(temp_threshold, int(temp_factor*1000))
 
     @pause_streaming
     def _set_integration_times(self, type: str, value: int):
         tof = self.gui.integrationTimes.getTimeAtIndex(0)
-        self.cam.setIntTime_us(tof)
+        self.cam.settings.set_integration_time(tof)
         self.capture()
 
     @pause_streaming
     def _set_modulation_settings(self):
         frequency = float(self.gui.modulationFrequency.getSelection().split(' ')[0])
         self.__distance_unambiguity = self.C / (2 * frequency * 1e6)
-        if(frequency == 20.0):
-            freqIndex = 1
-        else:
-            freqIndex = 0 # for 10MHz
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-        self.cam.setModFrequency(freqIndex)
+        self.cam.settings.set_modulation(frequency)
         self.capture()
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
         if image_type == 'Distance':
             self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.getDistance
+            self.__get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.getAmplitude
+            self.__get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
-            self.__get_image_cb = self.cam.getPointCloud
+            self.__get_image_cb = self.cam.get_point_cloud
         
         if not self.streamer.is_streaming():
             self.capture()
@@ -119,9 +118,9 @@ def get_port():
 
 def main():
     comPort = get_port()
-    com = SerialInterface(comPort) 
-    cam = TOFcam611(com)
-    cam.powerOn()
+    # com = SerialInterface(comPort) 
+    cam = TOFcam611(comPort)
+    cam.initialize()
 
     app = QApplication([])
     qdarktheme.setup_theme('auto', default_theme='dark')

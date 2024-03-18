@@ -1,11 +1,14 @@
 import struct
 import logging
+import time
+from threading import Lock
 import numpy as np
 from typing import Optional
 from epc.tofCam_lib.tofCam import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.crc import Crc, CrcMode
 from epc.tofCam635.communication import Type as ComType
 from epc.tofCam635.communication import Data as Data_Type
+from epc.tofCam_lib.transformations_3d import Lense_Projection
 
 from epc.tofCam635.communication import SerialInterface
 from epc.tofCam635.communication import CommandList
@@ -13,6 +16,7 @@ from epc.tofCam635.tofcam635Header import TofCam635Header
 
 DEFAULT_ROI = (0, 0, 160, 60)
 MAX_DIST_INT_TIME = 2**16-1
+DEFAULT_MAX_DEPTH = 16000
 
 log = logging.getLogger('TOFcam635')
 
@@ -22,7 +26,7 @@ class InterfaceWrapper:
         self.com = SerialInterface(port)
         self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
         self.header = TofCam635Header()
-        self.__capture_mode = 0
+        self.__lock = Lock()
         self.__answer_table = {
             ComType.DATA_CHIP_INFORMATION: 12,
             ComType.DATA_CALIBRATION_INFO: 22,
@@ -84,12 +88,14 @@ class InterfaceWrapper:
         return tmp[4:4+length]
     
     def get_image_data(self, cmd_id: int, type_id: int, arg=[]):
+        self.__lock.acquire()
         arg.insert(0, cmd_id)
         self.tofWrite(arg)
         tmp=self.com.read(Data_Type.SIZE_HEADER)
         total = bytes(tmp)
         length = struct.unpack('<'+'H',tmp[Data_Type.INDEX_LENGTH:Data_Type.INDEX_LENGTH + Data_Type.SIZE_LENGTH])[0]
         tmp = self.com.read(length+4)
+        self.__lock.release()
         total+=bytes(tmp)
         if not self.crc.verify(bytearray(total[:-4]), bytearray(total[-4:])):
             raise Exception("CRC not valid!!")
@@ -102,15 +108,20 @@ class InterfaceWrapper:
         return [tmp[self.header.getHeaderSize():-4],length]
 
     def transmit(self, cmd_id: int, arg=[]):
+        self.__lock.acquire()
         arg.insert(0, cmd_id)
         self.tofWrite(arg)
         self.getAcknowledge()
+        self.__lock.release()
 
     def transceive(self, cmd_id: int, response_id: int, arg=[]):
+        self.__lock.acquire()
         arg.insert(0, cmd_id)
         self.tofWrite(arg)
         len = self.__get_answer_len(response_id)
-        return self.getAnswer(response_id, len)
+        answer = self.getAnswer(response_id, len)
+        self.__lock.release()
+        return answer
 
 
 class TOFcam635_Settings_Controller(TOF_Settings_Controller):
@@ -120,6 +131,9 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
         self.resolution = (self.roi[2] - self.roi[0], self.roi[3] - self.roi[1])
         self.interface = interface
         self._capture_mode = 0
+        self.max_depth = DEFAULT_MAX_DEPTH
+        self.lensProjection = Lense_Projection.from_lense_calibration(lensType='Wide Field', width=self.resolution[0], height=self.resolution[1])
+
 
     def set_roi(self, roi: tuple[int, int, int, int]) -> None:
         """ Set the region of interest (ROI) for the camera.
@@ -130,15 +144,15 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
         x0, y0, x1, y1 = roi
         log.info(f"Setting ROI to {x0}, {y0}, {x1}, {y1}")
         self.interface.transmit(CommandList.COMMAND_SET_ROI, [x0&0xff, (x0>>8)&0xff,  y0&0xff, (y0>>8)&0xff,  x1&0xff, (x1>>8)&0xff,  y1&0xff, (y1>>8)&0xff])
-        self.resolution = (x1 - x0, y1 - y0)
+        self.resolution = (x1-x0, y1-y0)
         self.roi = roi
         return self.roi
 
     def get_roi(self) -> tuple[int, int, int, int]:
         return self.roi
 
-    def get_roi_width_height(self) -> tuple[int, int]:
-        return self.roi[2] - self.roi[0], self.roi[3] - self.roi[1]
+    def set_capture_mode(self, mode: int) -> None:
+        self._capture_mode = mode
 
     def set_minimal_amplitude(self, amplitude: int):
         log.info(f"Setting minimal amplitude to {amplitude}")
@@ -159,7 +173,7 @@ class TOFcam635_Settings_Controller(TOF_Settings_Controller):
             raise ValueError(f"Integration time '{int_time_us}' is too high")
         self.interface.transmit(CommandList.COMMAND_SET_INTEGRATION_TIME_GRAYSCALE, [int_time_us&0xff, (int_time_us>>8)&0xff]) 
 
-    def set_integration_time_hdr(self, int_time_us: int, index: int) -> None:
+    def set_integration_time_hdr(self, index: int, int_time_us: int) -> None:
         log.info(f"Setting HDR integration time {index} to {int_time_us}")
         if 0 > int_time_us > MAX_DIST_INT_TIME:
             raise ValueError(f"Integration time '{int_time_us}' is too high")
@@ -291,8 +305,13 @@ class TOFcam635(TOFcam):
         super().__init__(self.settings, self.device)
 
     def __del__(self):
-        if self.interface.com:
+        if hasattr(self, 'interface'):
             self.interface.com.close()
+
+    def initialize(self):
+        log.info('Initializing TOFcam635')
+        self.settings.set_roi(self.settings.roi)
+        self.settings.set_operation_mode(0)
 
     def get_calibration_data(self):
         pass
@@ -300,7 +319,7 @@ class TOFcam635(TOFcam):
     def get_grayscale_image(self):
         data, _ = self.interface.get_image_data(CommandList.COMMAND_GET_GRAYSCALE, ComType.DATA_GRAYSCALE, [self.settings._capture_mode])
         grayscale = np.frombuffer(data, dtype='b')
-        grayscale = grayscale.reshape(self.settings.resolution).astype('uint8')
+        grayscale = grayscale.reshape(self.settings.resolution[::-1]).astype('uint8')
         grayscale = np.rot90(grayscale, 1)
         return grayscale
     
@@ -315,10 +334,9 @@ class TOFcam635(TOFcam):
             distance.append(distance_and_confidence[i] & 0x3FFF)
             confidence.append((distance_and_confidence[i] >> 14) & 0x03)
 
-        width, height = self.settings.resolution
-        distance = np.reshape(distance, self.settings.resolution)
+        distance = np.reshape(distance, self.settings.resolution[::-1])
         distance = np.rot90(distance, 1)
-        # confidence = np.reshape(confidence, self.settings.resolution)
+        # confidence = np.reshape(confidence, self.settings.resolution[::-1])
         # confidence = np.rot90(confidence, 1)
         return distance
     
@@ -337,12 +355,25 @@ class TOFcam635(TOFcam):
             dist_amp.append(distance_and_confidence[i] & 0x3FFF)
             confidence.append((distance_and_confidence[i] >> 14) & 0x03)
 
-        distance = np.reshape(dist_amp[::2], self.settings.resolution)
+        distance = np.reshape(dist_amp[::2], self.settings.resolution[::-1])
         distance = np.rot90(distance, 1)
-        amplitude = np.reshape(dist_amp[1::2], self.settings.resolution)
+        amplitude = np.reshape(dist_amp[1::2], self.settings.resolution[::-1])
         amplitude = np.rot90(amplitude, 1)
-        # confidence = np.reshape(confidence, self.settings.resolution)
+        # confidence = np.reshape(confidence, self.settings.resolution[::-1])
         # confidence = np.rot90(confidence, 1)
 
         return distance, amplitude
+    
+    def get_point_cloud(self):
+        # capture depth image & corrections
+        depth = self.get_distance_image()
+        depth = np.rot90(depth, 3)
+        depth  = depth.astype(np.float32)
+        depth[depth >= self.settings.max_depth] = np.nan
+
+        # calculate point cloud from the depth image
+        points = 1E-3 * self.settings.lensProjection.transformImage(np.fliplr(depth.T))
+        points = np.transpose(points, (2, 1, 0))
+        points = points.reshape(-1, 3)
+        return points
     

@@ -3,7 +3,8 @@ import getopt
 import logging
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-from epc.tofCam635 import TofCam635
+# from epc.tofCam635 import TofCam635
+from epc.tofCam635.tofCam635 import TOFcam635
 from epc.tofCam_gui import GUI_TOFcam635
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
@@ -17,16 +18,15 @@ class TofCam635Bridge:
     MAX_AMPLITUDE = 2896
     MAX_GRAYSCALE = 0xFF
 
-    def __init__(self, gui: GUI_TOFcam635, cam: TofCam635) -> None:
+    def __init__(self, gui: GUI_TOFcam635, cam: TOFcam635) -> None:
         self.gui = gui
         self.cam = cam
         self.__get_image_cb = self.cam.get_distance_image
-        self.streamer = Streamer(self.getImage)
+        self.streamer = Streamer(self.getImage, post_stop_cb=self.__stop_streaming_cb)
         self.streamer.signal_new_frame.connect(self.gui.updateImage)
-        self.captureMode = 0
         self.__distance_unambiguity = 7.5 # m 
 
-        cam.cmd.setOperationMode(0)
+        cam.settings.set_operation_mode(0)
 
         gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
         gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
@@ -37,24 +37,29 @@ class TofCam635Bridge:
         gui.hdrModeDropDown.signal_value_changed.connect(self._set_hdr_mode)
         gui.minAmplitude.signal_value_changed.connect(lambda value: self._set_min_amplitudes(value))
 
-        gui.medianFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setMedianFilter(enable))
-        gui.temporalFilter.signal_filter_changed.connect(lambda enable, threshold, factor: self.cam.cmd.setTemporalFilter(enable, int(threshold), int(1000*factor)))
-        gui.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.cmd.setAverageFilter(enable))
-        gui.interferenceFilter.signal_filter_changed.connect(lambda enable, limit, useLast: self.cam.cmd.setInterferenceDetection(enable, useLast, limit))
-        gui.edgeFilter.signal_filter_changed.connect(lambda enable, threshold: self.cam.cmd.setEdgeFilter(enable, threshold))
+        gui.medianFilter.signal_filter_changed.connect(lambda enable: self.cam.settings.set_median_filter(enable))
+        gui.temporalFilter.signal_filter_changed.connect(lambda enable, threshold, factor: self.cam.settings.set_temporal_filter(enable, int(threshold), int(1000*factor)))
+        gui.averageFilter.signal_filter_changed.connect(lambda enable: self.cam.settings.set_averave_filter(enable))
+        gui.interferenceFilter.signal_filter_changed.connect(lambda enable, limit, useLast: self.cam.settings.set_interference_detection(enable, useLast, limit))
+        gui.edgeFilter.signal_filter_changed.connect(lambda enable, threshold: self.cam.settings.set_edge_filter(enable, threshold))
         gui.roiSettings.signal_roi_changed.connect(self.__set_roi)
-        gui.modulationChannel.signal_value_changed.connect(lambda channel: self.cam.cmd.setModChannel(int(channel)))
+        gui.modulationChannel.signal_value_changed.connect(self._set_mod_freq)
         gui.modulationFrequency.signal_value_changed.connect(self._set_mod_freq)
 
-        self.gui.toolBar.setChipInfo(*self.cam.cmd.getChipInfo())
-        self.gui.toolBar.setVersionInfo(self.cam.cmd.getFwRelease())
+        self.gui.toolBar.setChipInfo(*self.cam.device.get_chip_infos())
+        self.gui.toolBar.setVersionInfo(self.cam.device.get_fw_version())
         self.gui.setDefaultValues()
 
         self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 
     def getImage(self):
-        return self.__get_image_cb(self.captureMode)
+        return self.__get_image_cb()
+    
+    def __stop_streaming_cb(self):
+        self.cam.settings.set_capture_mode(0)
+        self.getImage() # trow away image in pipeline
 
+    @pause_streaming
     def _setGuiFilter(self, filter: str):
         match filter:
             case 'None':
@@ -68,15 +73,15 @@ class TofCam635Bridge:
 
     def _set_streaming(self, enable: bool):
         if enable:
-            self.captureMode = 1
+            self.cam.settings.set_capture_mode(1)
             self.streamer.start_stream()
         else:
-            self.captureMode = 0
             self.streamer.stop_stream()
+            self.cam.settings.set_capture_mode(0)
 
+    @pause_streaming
     def _set_min_amplitudes(self, minAmp: int):
-        for i in range(5):
-            self.cam.cmd.setAmplitudeLimit(i, minAmp)
+        self.cam.settings.set_minimal_amplitude(minAmp)
 
     def _update_intTimes_enabled(self):
         hdr_mode = self.gui.hdrModeDropDown.getSelection()
@@ -86,7 +91,7 @@ class TofCam635Bridge:
             self.gui.integrationTimes.setTimeEnabled(1, False)
         elif hdr_mode == 'HDR Off':
             self.gui.integrationTimes.setTimeEnabled(0, True)
-            self.gui.integrationTimes.setTimeEnabled(1, False)
+            self.gui.integrationTimes.setTimeEnabled(1, True)
         elif hdr_mode == 'HDR Temporal':
             self.gui.integrationTimes.setTimeEnabled(0, True)
             self.gui.integrationTimes.setTimeEnabled(1, True)
@@ -94,25 +99,27 @@ class TofCam635Bridge:
             raise ValueError(f"Undefined behavior for HDR Mode '{hdr_mode}'")
 
     @pause_streaming
-    def __set_roi(self, x: int, y: int, w: int, h: int):
-        self.cam.set_roi(x, y, w, h)
+    def __set_roi(self, x1: int, y1: int, x2: int, y2: int):
+        self.cam.settings.set_roi((x1, y1, x2, y2))
+        try:
+            self.getImage() # trow away next image since it has wrong roi
+        except:
+            pass
 
-    def _set_mod_freq(self, freq: str):
-        if freq == '10 MHz':
-            self.cam.cmd.setModFrequency(0)
-        elif freq == '20 MHz':
-            self.cam.cmd.setModFrequency(1)
-        else:
-            raise ValueError(f"Modulation Frequency '{freq}' not supported")
+    @pause_streaming
+    def _set_mod_freq(self, freq: str, channel=0):
+        freq = self.gui.modulationFrequency.getSelection().split(' ')[0]
+        channel = self.gui.modulationChannel.getSelection()
+        self.cam.settings.set_modulation(float(freq), int(channel))
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
-            self.cam.cmd.setHDR('spatial')
+            self.cam.settings.set_hdr('spatial')
         elif mode == 'HDR Temporal':
-            self.cam.cmd.setHDR('temporal')
+            self.cam.settings.set_hdr('temporal')
         elif mode == 'HDR Off':
-            self.cam.cmd.setHDR('off')
+            self.cam.settings.set_hdr('off')
         else:
             raise ValueError(f"HDR Mode '{mode}' not supported")
         self._update_intTimes_enabled()
@@ -120,16 +127,16 @@ class TofCam635Bridge:
     @pause_streaming
     def _update_int_time(self, type: str, intTime: int):
         if   type == 'Integration Time 1':
-            self.cam.cmd.setIntTimeDist(0, intTime)
+            self.cam.settings.set_integration_time_hdr(0, intTime)
         elif type == 'Integration Time 2':
-            self.cam.cmd.setIntTimeDist(1, intTime)
+            self.cam.settings.set_integration_time_hdr(1, intTime)
         elif type == 'Gray':
-            self.cam.cmd.setIntTimeGray(0, intTime)
+            self.cam.settings.set_integration_time_grayscale(intTime)
         elif type == 'auto':
             if intTime == 1:
-                self.cam.cmd.setIntTimeDist(0xFF, intTime)
+                self.cam.settings.set_integration_time_hdr(0xFF, intTime)
             else:
-                self.cam.cmd.setIntTimeDist(0, self.gui.integrationTimes.getTimeAtIndex(0))
+                self.cam.settings.set_integration_time_hdr(0, self.gui.integrationTimes.getTimeAtIndex(0))
             self._update_intTimes_enabled()
         else:
             raise ValueError(f"Integration Time Type '{type}' not supported")
@@ -161,7 +168,7 @@ class TofCam635Bridge:
 
 
     def capture(self, mode=0):
-        image = self.__get_image_cb(self.captureMode)
+        image = self.__get_image_cb()
         self.gui.updateImage(image)
 
 def get_port():
@@ -180,7 +187,7 @@ def get_port():
 def main():
     port = get_port()
     try:
-        cam = TofCam635(port)
+        cam = TOFcam635(port)
     except Exception as e:
         log.error(f'Failed to connect to device. Is the device running and connected?')
         return

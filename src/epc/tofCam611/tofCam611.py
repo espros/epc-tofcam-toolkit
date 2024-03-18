@@ -1,9 +1,11 @@
+import time
 import struct
 import logging
 import numpy as np
 from typing import Optional
 from epc.tofCam_lib.tofCam import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.crc import Crc, CrcMode
+from epc.tofCam_lib.transformations_3d import depth_to_3d
 from epc.tofCam611.communicationType import communicationType as ComType
 from epc.tofCam611.commandList import commandList as CommandList
 from epc.tofCam611.serialInterface import SerialInterface
@@ -13,13 +15,14 @@ EPC911_PAGE_SIZE = 0x20
 ERROR_MIN_AMPLITUDE = 16001000
 DEVICE_TOFFRAME = 1
 DEVICE_TOFRANGE = 0
+DEFAULT_MAX_DEPTH = 16000
 
 log = logging.getLogger('TOFcam611')
 
 # THIS IS A TEMPORARY WRAPPER AND IS INTENDEN TO BE REPLACED AT SOME POINT BY A STANDARD INTERFACE FOR ALL TOF CAMERAS
 class InterfaceWrapper:
     def __init__(self, port: Optional[str]=None) -> None:
-        self.com = SerialInterface(port)
+        self.com = SerialInterface(port, timeout=2)
         self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
         self.__capture_mode = 0
         self.__answer_table = {
@@ -113,7 +116,9 @@ class TOFcam611_Settings(TOF_Settings_Controller):
         self.interface = interface
         self._min_amplitude = 0
         self.__mod_freq = 0
+        self._mod_channel = 0
         self._device_type = 0
+        self.maxDepth = DEFAULT_MAX_DEPTH
 
     def get_roi(self):
         if self._device_type == DEVICE_TOFFRAME:
@@ -147,7 +152,7 @@ class TOFcam611_Settings(TOF_Settings_Controller):
         else:
             raise ValueError(f"frequency {frequency_mhz} not supported")
         log.info(f"set modulation frequency to {frequency_mhz} MHz")
-        self.interface.transmit(CommandList.COMMAND_SET_MODULATION_FREQUENCY, [self.__mod_freq, self.__mod_channel])
+        self.interface.transmit(CommandList.COMMAND_SET_MODULATION_FREQUENCY, [self.__mod_freq, self._mod_channel])
 
     def get_modulation_frequencies(self) -> list[float]:
         if self._device_type == DEVICE_TOFFRAME:
@@ -230,7 +235,7 @@ class TOFcam611_Device(Dev_Infos_Controller):
     def get_error(self):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'get_error' jet")
 
-    def set_power(self, enable: bool):
+    def set_power(self, enable=True):
         log.info(f"set power to {enable}")
         self.interface.transmit(CommandList.COMMAND_SET_POWER, [int(enable)])
 
@@ -250,6 +255,7 @@ class TOFcam611(TOFcam):
         """initialize the camera with default values and set power to on"""
         log.info("initialize TOFcam611")
         self.device.set_power(True)
+        self.settings.set_integration_time(50)
 
     def get_grayscale_image(self):
         """!!! ATTENTION !!!\n
@@ -304,3 +310,16 @@ class TOFcam611(TOFcam):
             amplRaw   = np.array((struct.unpack('<'+'I'*(lengt//8),data[lengt//2:])))
             amplitude = np.reshape(amplRaw,(8,8))
         return distance/10, amplitude
+
+
+    def get_point_cloud(self):
+        depth = self.get_distance_image()
+        depth  = depth.astype(np.float32)
+        depth[depth >= self.settings.maxDepth] = np.nan
+
+        # calculate point cloud from the depth image
+        roi = self.settings.get_roi()
+        points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=(roi[2]-roi[0], roi[3]-roi[1]), focalLengh=40) # focul lengh in px (0.8 mm)
+        points = np.transpose(points, (1, 2, 0))
+        points = points.reshape(-1, 3)
+        return points

@@ -5,6 +5,7 @@ from epc.tofCam660.epc660 import Epc660Ethernet
 from epc.tofCam660.interface import Interface, UdpInterface
 from epc.tofCam660.memory import Memory
 from epc.tofCam660.command import Command
+from epc.tofCam_lib.transformations_3d import Lense_Projection
 from epc.tofCam660.parser import (
     GrayscaleParser,
     DistanceParser,
@@ -17,6 +18,7 @@ DEFAULT_SUBNET_MASK = "255.255.255.0"
 DEFAULT_GATEWAY = "0.0.0.0"
 DEFAULT_TCP_PORT = 50660
 DEFAULT_UDP_PORT = 45454
+DEFAULT_MAX_DEPTH = 16000
 
 log = logging.getLogger('TOFcam660')
 
@@ -30,6 +32,8 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         self.__int_time_grayscale = 50
         self.__int_time_low = 150
         self.__hdr_mode = 0
+        self.lense_projection = Lense_Projection.from_lense_calibration('Wide Field')
+        self.maxDepth = DEFAULT_MAX_DEPTH
 
     def set_integration_time(self, int_time_us: int):
         """Set the integration time for standard mode in us."""
@@ -207,6 +211,11 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     def get_modulation_channels(self) -> list[int]:
         """Returns a list of available modulation channels."""
         return list(range(0, 15))
+    
+    def set_lense_type(self, lense_type: int):
+        """Set the lense type for the camera."""
+        log.info(f"Setting lense type: {lense_type}")
+        self.lense_projection = Lense_Projection.from_lense_calibration(lense_type)
 
 
 class TOFcam660_Device(Dev_Infos_Controller):
@@ -343,3 +352,17 @@ class TOFcam660(TOFcam):
         get_dcs_cmd = Command.create("getDcs", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dcs_cmd)
         return parser.parse(raw_data).dcs
+    
+    def get_point_cloud(self) -> np.ndarray:
+        """Get a point cloud from the camera as a 3xN numpy array."""
+        # capture depth image & corrections
+        depth = self.get_distance_image()
+        depth = np.rot90(depth, 3)
+        depth  = depth.astype(np.float32)
+        depth[depth >= self.settings.maxDepth] = np.nan
+
+        # calculate point cloud from the depth image
+        points = 1E-3 * self.settings.lense_projection.transformImage(np.fliplr(depth))
+        points = np.transpose(points, (1, 2, 0))
+        points = points.reshape(-1, 3)
+        return points
