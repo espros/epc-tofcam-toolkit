@@ -22,7 +22,7 @@ log = logging.getLogger('TOFcam611')
 # THIS IS A TEMPORARY WRAPPER AND IS INTENDEN TO BE REPLACED AT SOME POINT BY A STANDARD INTERFACE FOR ALL TOF CAMERAS
 class InterfaceWrapper:
     def __init__(self, port: Optional[str]=None) -> None:
-        self.com = SerialInterface(port, timeout=2)
+        self.com = SerialInterface(port, timeout=1)
         self.crc = Crc(mode=CrcMode.CRC32_STM32, revout=False)
         self.__capture_mode = 0
         self.__answer_table = {
@@ -64,25 +64,25 @@ class InterfaceWrapper:
         """
         LEN_BYTES = 8
         tmp=self.com.read(LEN_BYTES)
+        if len(tmp) != LEN_BYTES:
+            raise Exception(f"Wrong number of bytes received! expected {LEN_BYTES}, got {len(tmp)}")
         if not self.crc.verify(tmp[:-4], tmp[-4:]):
             raise Exception("CRC not valid!!")
         if tmp[1] != ComType.DATA_ACK:
             raise Exception("Got wrong type!:{:02x}".format(tmp[1]))
-        if len(tmp) != LEN_BYTES:
-            raise Exception("Not enought bytes!")
         return True
     
     def getAnswer(self, typeId, length):
         tmp=self.com.read(length)
         
+        if len(tmp) != length:
+            raise Exception("Wrong number of bytes received!!, expected {:02d}, got {:02d}".format(length, len(tmp)))
         if not self.crc.verify(tmp[:-4], tmp[-4:]):
             raise Exception("CRC not valid!!")
         if tmp[1] == ComType.DATA_NACK:
             raise Exception("received NACK")
         if typeId != tmp[1]:
             raise Exception("Wrong Type! Expected 0x{:02x}, got 0x{:02x}".format(typeId,tmp[1]))
-        if len(tmp) != length:
-            raise Exception("Not enough bytes!!, expected {:02d}, got {:02d}".format(length, len(tmp)))
         length= struct.unpack('<'+'H',tmp[2:4])[0]
         return tmp[4:4+length]
        
@@ -112,13 +112,15 @@ class InterfaceWrapper:
 
 
 class TOFcam611_Settings(TOF_Settings_Controller):
-    def __init__(self, interface: InterfaceWrapper) -> None:
+    def __init__(self, interface: InterfaceWrapper, device_type: int) -> None:
         self.interface = interface
         self._min_amplitude = 0
         self.__mod_freq = 0
         self._mod_channel = 0
-        self._device_type = 0
+        self._device_type = device_type
         self.maxDepth = DEFAULT_MAX_DEPTH
+        self.roi = self.get_roi()
+        self.resolution = (self.roi[2], self.roi[3])
 
     def get_roi(self):
         if self._device_type == DEVICE_TOFFRAME:
@@ -237,15 +239,18 @@ class TOFcam611_Device(Dev_Infos_Controller):
 
     def set_power(self, enable=True):
         log.info(f"set power to {enable}")
-        self.interface.transmit(CommandList.COMMAND_SET_POWER, [int(enable)])
+        # self.interface.transmit(CommandList.COMMAND_SET_POWER, [int(enable)])
+        self.interface.tofWrite([CommandList.COMMAND_SET_POWER, int(enable)])
+        time.sleep(1)
+        self.interface.getAcknowledge()
 
 class TOFcam611(TOFcam):
     def __init__(self, port: Optional[str]=None) -> None:
         self.interface = InterfaceWrapper(port)
-        self.settings = TOFcam611_Settings(self.interface)
         self.device = TOFcam611_Device(self.interface)
+        device_type = self.device.get_device_ids()[1]
+        self.settings = TOFcam611_Settings(self.interface, device_type)
         super().__init__(self.settings, self.device)
-        _, self.settings._device_type, _ = self.device.get_device_ids()
 
     def __del__(self):
         if self.interface.com is not None:
@@ -270,10 +275,9 @@ class TOFcam611(TOFcam):
         data, length = self.interface.get_image_data(CommandList.COMMAND_GET_AMPLITUDE, ComType.DATA_AMPLITUDE)
         if length == 4:
             amplRaw =np.array((struct.unpack('<'+'I',data)))
-            amplitude=amplRaw
         else:
             amplRaw=np.array((struct.unpack('<'+'I'*int(length/4),data)))
-            amplitude = np.reshape(amplRaw,(8,8))
+        amplitude = np.reshape(amplRaw, self.settings.resolution)
         return amplitude
 
     def get_distance_image(self):
@@ -293,7 +297,7 @@ class TOFcam611(TOFcam):
             dcs=dcsRaw
         else:
             dcsRaw=np.array((struct.unpack('<'+'h'*int(length/2),data)))
-            dcs = np.reshape(dcsRaw,(4,8,8))
+            dcs = np.reshape(dcsRaw,(4,*self.settings.resolution))
         return dcs
 
     def get_distance_and_amplitude_image(self):
@@ -301,14 +305,12 @@ class TOFcam611(TOFcam):
         data, lengt = self.interface.get_image_data(CommandList.COMMAND_GET_DISTANCE_AMPLITUDE, ComType.DATA_DISTANCE_AMPLITUDE)
         if lengt == 8:
             distRaw =np.array((struct.unpack('<'+'I',data[:-4])))
-            distance=distRaw
             amplRaw =np.array((struct.unpack('<'+'I',data[4:])))
-            amplitude=amplRaw
         else:
             distRaw   = np.array((struct.unpack('<'+'I'*(lengt//8),data[:lengt//2])))
-            distance  = np.reshape(distRaw,(8,8))
             amplRaw   = np.array((struct.unpack('<'+'I'*(lengt//8),data[lengt//2:])))
-            amplitude = np.reshape(amplRaw,(8,8))
+        distance  = np.reshape(distRaw, self.settings.resolution)
+        amplitude = np.reshape(amplRaw, self.settings.resolution)
         return distance/10, amplitude
 
 
@@ -319,7 +321,7 @@ class TOFcam611(TOFcam):
 
         # calculate point cloud from the depth image
         roi = self.settings.get_roi()
-        points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=(roi[2]-roi[0], roi[3]-roi[1]), focalLengh=40) # focul lengh in px (0.8 mm)
+        points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=(self.settings.resolution), focalLengh=40) # focul lengh in px (0.8 mm)
         points = np.transpose(points, (1, 2, 0))
         points = points.reshape(-1, 3)
         return points

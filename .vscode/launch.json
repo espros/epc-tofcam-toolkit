@@ -11,6 +11,19 @@
             "program": "${file}",
         },
         {
+            "name": "TOFrange_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam611_bridge.py",
+        },
+        {
+            "name": "TOFrange_Standalone_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofrange611.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "TOFcam611_GUI",
             "type": "debugpy",
             "request": "launch",

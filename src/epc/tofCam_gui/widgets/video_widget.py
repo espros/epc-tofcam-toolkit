@@ -45,7 +45,7 @@ class PointCloudWidget(GLViewWidget):
         norm_depths = np.nan_to_num(norm_depths)
         cmap = getFromMatplotlib('turbo')
         colors = cmap.map(norm_depths, 'float')
-        self.pcd.setData(pos=points, color=colors, size=3)
+        self.pcd.setData(pos=np.nan_to_num(points), color=colors, size=3)
         
 
 class VideoWidget(QStackedWidget):
@@ -70,10 +70,6 @@ class VideoWidget(QStackedWidget):
         else:
             depth = args[0]
             self.pc.set_pc_from_depth(depth)
-            
-
-    def setPointCloud(self, points: np.ndarray):
-        self.pc.update_ake(points)
 
     def setColorMap(self, cmap):
          self.video.setColorMap(cmap)

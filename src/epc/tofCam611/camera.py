@@ -195,10 +195,15 @@ class Camera():
     return dcs
 
   def getDistance(self):
-    dist, amp =  self.getDistAmpl()
-    dist[amp < self.minAmplitude] = self.MIN_AMP_ERROR
+    if(self.getDeviceType() == "TOFframe"):
+      dist, amp =  self.getDistAmpl()
+      dist[amp < self.minAmplitude] = self.MIN_AMP_ERROR
+    elif(self.getDeviceType() == "TOFrange"):
+      dist, amp =  self.getDistAmpl()
+      dist = dist.reshape(-1, 1)
+      amp = amp.reshape(-1, 1)
+      dist[amp < self.minAmplitude] = self.MIN_AMP_ERROR
     return dist
-
 
     # self.tofWrite([commandList.COMMAND_GET_DISTANCE])
     # [tmp,length] = self.getData(communicationType.DATA_DISTANCE)
@@ -210,15 +215,34 @@ class Camera():
     #   distance = np.reshape(distRaw,(8,8))
     # return distance/Constants.CONVERT_TO_MM
 
+  def getDeviceType(self,device=None):
+    if device == None:
+      deviceIdentification = self.getIdentification()
+      deviceType = deviceIdentification[1]
+
+    if deviceType == Constants.DEVICE_TOFRANGE:
+      device = "TOFrange"
+    if deviceType == Constants.DEVICE_TOFFRAME:
+      device = "TOFframe"
+
+    return device
+
+
   def getAmplitude(self):
-    self.tofWrite([commandList.COMMAND_GET_AMPLITUDE])
-    [tmp,length] = self.getData(communicationType.DATA_AMPLITUDE)
-    if length == 4:
+    if(self.getDeviceType() == "TOFframe"):
+      self.tofWrite([commandList.COMMAND_GET_AMPLITUDE])
+      [tmp,length] = self.getData(communicationType.DATA_AMPLITUDE)
+      if length == 4:
+        amplRaw =np.array((struct.unpack('<'+'I',tmp)))
+        amplitude=amplRaw
+      else:
+        amplRaw=np.array((struct.unpack('<'+'I'*int(length/4),tmp)))
+        amplitude = np.reshape(amplRaw,(8,8))
+    elif(self.getDeviceType() == "TOFrange"):
+      self.tofWrite([commandList.COMMAND_GET_AMPLITUDE])
+      [tmp,length] = self.getData(communicationType.DATA_AMPLITUDE)
       amplRaw =np.array((struct.unpack('<'+'I',tmp)))
-      amplitude=amplRaw
-    else:
-      amplRaw=np.array((struct.unpack('<'+'I'*int(length/4),tmp)))
-      amplitude = np.reshape(amplRaw,(8,8))
+      amplitude=amplRaw.reshape(-1, 1)
     return amplitude
 
   def getDistAmpl(self):
@@ -238,7 +262,7 @@ class Camera():
   
   def getPointCloud(self):
       # capture depth image & corrections
-      depth = self.getDistance()
+      depth = self.getDistance().reshape(-1, 1)
       depth  = depth.astype(np.float32)
       depth[depth >= self.maxDepth] = np.nan
 
@@ -246,7 +270,7 @@ class Camera():
       points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=self.resolution, focalLengh=40) # focul lengh in px (0.8 mm)
       points = np.transpose(points, (1, 2, 0))
       points = points.reshape(-1, 3)
-      return points
+      return points   
 
   def getCalibrationData(self,device=None):
     if device == None:
