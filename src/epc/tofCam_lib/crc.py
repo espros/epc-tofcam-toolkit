@@ -74,7 +74,7 @@ class Crc:
 
         return self.lib.calcCrc32_32(carray,len(data),ctypes.c_uint32(self.polynom))
 
-    def calculate(self, data: bytearray):
+    def calculate(self, data: bytearray) -> bytearray:
         crc = bytearray([])
         match self.mode:
             case CrcMode.CRC32_UINT8:
