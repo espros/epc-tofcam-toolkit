@@ -1,5 +1,5 @@
-TOFcam modules
-==============
+TOFcam modules examples
+========================
 
 You can use the TOFcam modules to run your own scripts. 
 Here are three examples for how you could start. 
