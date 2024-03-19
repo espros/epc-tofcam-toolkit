@@ -65,18 +65,18 @@ tofcam611 --port /dev/ttyACM0
 
 ![GUI_TOFcam611](images/gui611_amplitude.png)
 
-## GUI-TOFrange
-1. Make sure the TOFrange is running and has a stable serial connection.
+## GUI-TOFrange611
+1. Make sure the TOFrange611 is running and has a stable serial connection.
 2. Run the following command in your terminal
 ```bash
-tofrange
+tofrange611
 ```
 
 This will open the GUI application for TOFcam611. By default the camera tries to find the serial port automatically.  
 You can also specify the serial port. 
 ```bash
 # e.g. windows connected on COM3
-tofrange --port COM3
+tofrange611 --port COM3
 # e.g. linux/mac connected on ACM0
-tofrange --port /dev/ttyACM0
+tofrange611 --port /dev/ttyACM0
 ```

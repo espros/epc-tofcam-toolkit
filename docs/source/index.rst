@@ -19,10 +19,11 @@ Compatibility
 -------------
 This package is compatible with python 3.10 and above.
 Currently supported camera modules are:  
-* TOFcam-660
-* TOFcam-635
-* TOFcam-611
-* TOFrange
+
+   * TOFcam660
+   * TOFcam635
+   * TOFcam611
+   * TOFrange611
 
 .. toctree::
    :maxdepth: 2
@@ -33,10 +34,10 @@ Currently supported camera modules are:
    tofCam_modules.rst
    api.rst
 
-.. include:: install_instructions.md
-.. include:: gui_instructions.md
-.. include:: tofCam_modules.rst
-.. include:: api.rst
+.. .. include:: install_instructions.md
+.. .. include:: gui_instructions.md
+.. .. include:: tofCam_modules.rst
+.. .. include:: api.rst
 
 Indices and tables
 ==================
