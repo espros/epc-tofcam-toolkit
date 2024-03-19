@@ -3,11 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-espros TOFcam Toolkit
+ESPROS TOFcam Toolkit
 =====================================================
+| Website: https://www.espros.com/
+| Products: https://www.digikey.com/en/supplier-centers/espros  
+| Source: https://github.com/espros/epc-tofcam-toolkit
+
 Introduction
 ------------
-| This package provides a python interface to the espros TOFcam's.
+| This package provides a python interface to the ESPROS TOFcam's.
 | It also provides a simple GUI to visualize the data from the camera.
 
 
@@ -15,15 +19,21 @@ Introduction
    :alt: GUI-TOFcam660
    :align: center
 
+
 Compatibility
 -------------
-This package is compatible with python 3.10 and above.
-Currently supported camera modules are:  
+| This package is compatible with python 3.10 and above.
+| Currently supported camera modules are:  
 
-   * TOFcam660
-   * TOFcam635
-   * TOFcam611
-   * TOFrange611
+* `TOFcam660 - purchase on digikey <https://www.digikey.com/en/products/filter/optical-sensors/camera-modules/1003?s=N4IgTCBcDaICoHsBmBjAhgWwAQDYcAYQBdAXyA>`_ 
+* `TOFcam635 - purchase on digikey <https://www.digikey.com/en/product-highlight/e/espros/tof-cam-635-miniaturized-3d-camera>`_
+* `TOFcam611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-FRAME-611/10516851>`_
+* `TOFrange611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-RANGE-611/10516871>`_
+
+Datasheets
+----------
+| Additional information about the camera modules can be found in the datasheets:
+| https://www.espros.com/downloads/02_Cameras_and_Modules/
 
 .. toctree::
    :maxdepth: 2
@@ -33,11 +43,6 @@ Currently supported camera modules are:
    gui_instructions.md
    tofCam_modules.rst
    api.rst
-
-.. .. include:: install_instructions.md
-.. .. include:: gui_instructions.md
-.. .. include:: tofCam_modules.rst
-.. .. include:: api.rst
 
 Indices and tables
 ==================

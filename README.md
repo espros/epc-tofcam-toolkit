@@ -7,6 +7,7 @@ The ESPROS TOFcam Toolkit is designed to control and visualize ESPROS TOFcam dev
 It provides python modules for most TOFcam modules and GUI applications for interactive control and visualization.
 
 Website: https://www.espros.com  
+Products: https://www.digikey.com/en/supplier-centers/espros  
 Documentation: https://epc-tofcam-toolkit.readthedocs.io/en/latest/  
 Source code: https://github.com/espros/epc-tofcam-toolkit
 
@@ -24,7 +25,7 @@ Connect and startup the camera. Then simply run the gui with:
 tofcam660
 tofcam635
 tofcam611
-tofrange
+tofrange611
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
@@ -35,7 +36,7 @@ You can also manually specify the communication port
 tofcam660 --ip 10.10.31.180
 tofcam635 --port COM3
 tofcam611 --port COM3
-tofrange --port COM3
+tofrange611 --port COM3
 ```
 
 ## Installation for development
