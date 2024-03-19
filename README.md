@@ -24,6 +24,7 @@ Connect and startup the camera. Then simply run the gui with:
 tofcam660
 tofcam635
 tofcam611
+tofrange
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
@@ -34,6 +35,7 @@ You can also manually specify the communication port
 tofcam660 --ip 10.10.31.180
 tofcam635 --port COM3
 tofcam611 --port COM3
+tofrange --port COM3
 ```
 
 ## Installation for development

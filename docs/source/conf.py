@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import sys
-sys.path.insert(0, 'src')
+sys.path.insert(0, '../../src')
 from epc._version import __version__
 
 project = 'EPC TOFcam Toolkit'
@@ -24,6 +24,7 @@ source_suffix = {
     '.txt': 'markdown',
     '.md': 'markdown',
 }
+autodoc_mock_imports = ["numpy", "matplotlib", "serial", "PIL"]
 
 templates_path = ['_templates']
 exclude_patterns = []
