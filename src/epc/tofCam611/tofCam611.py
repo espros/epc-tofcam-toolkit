@@ -245,6 +245,16 @@ class TOFcam611_Device(Dev_Infos_Controller):
         self.interface.getAcknowledge()
 
 class TOFcam611(TOFcam):
+    """creates a TOFcam611 object and connects the camera to the given port. 
+    This class can also be used for the TOFrange since they share the same communication protocol.
+
+    If no port is specified, the TOFcam611 object will try to find the correct port automatically.
+
+    The TOFcam611 object holds two attributes for settings and device information.
+
+    - settings: can be used to control the settings of the camera
+    - device: can be used to get information about the camera
+    """
     def __init__(self, port: Optional[str]=None) -> None:
         self.interface = InterfaceWrapper(port)
         self.device = TOFcam611_Device(self.interface)

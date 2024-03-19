@@ -351,9 +351,6 @@ class TOFcam635(TOFcam):
 
     - settings: can be used to control the settings of the camera
     - device: can be used to get information about the camera
-
-    Args:
-        TOFcam (_type_): _description_
     """
     def __init__(self, port: Optional[str]=None) -> None:
         self.interface = InterfaceWrapper(port)
