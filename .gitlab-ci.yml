@@ -39,7 +39,7 @@ build-job:
   stage: build
   script:
     # build number is added to the version number if it is not a tag
-    - if [ -z "$CI_COMMIT_TAG" ]; echo "__version__ = '$(python setup.py --version)-${CI_PIPELINE_IID}'" > src/epc/_version.py; fi
+    - if [ -z "$CI_COMMIT_TAG" ]; then echo "__version__ = '$(python setup.py --version)-${CI_PIPELINE_IID}'" > src/epc/_version.py; fi
     - python -m build --sdist --wheel .
   artifacts:
     paths:
