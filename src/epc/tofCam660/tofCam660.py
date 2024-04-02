@@ -19,6 +19,9 @@ DEFAULT_TCP_PORT = 50660
 DEFAULT_UDP_PORT = 45454
 DEFAULT_MAX_DEPTH = 16000
 
+MAX_DATA_BUFFER_SIZE = 1022
+MAX_DATA_CHUNK_SIZE = 1017
+
 log = logging.getLogger('TOFcam660')
 
 
@@ -217,6 +220,73 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         """Set the lense type for the camera."""
         log.info(f"Setting lense type: {lense_type}")
         self.lense_projection = Lense_Projection.from_lense_calibration(lense_type)
+
+    def write_lens_data(self) -> None:
+        """Write lens data to the camera flash.
+           Split lens data into 1017 byte segments and transfer according to a standard protocol(steps 1-3) 
+        """
+        log.info(f"Store lensdata in the camera flash")
+        
+        # define the sample string
+        sample_string = "a" * 2064
+
+        # data segment buffer
+        dataSegmentBuffer = bytearray(MAX_DATA_BUFFER_SIZE)
+
+        # split the lens data into segments
+        chunks = [sample_string[i:i+MAX_DATA_CHUNK_SIZE] for i in range(0, len(sample_string), MAX_DATA_CHUNK_SIZE)]
+
+        # step 1 : send transfer start action which describes total lens data size to be received by the camera
+
+        # set the control byte to describe the action (index 0)  
+        dataSegmentBuffer[0] = 0  # action : start
+
+        # set the total lens data size in little indian (indices 1-4)
+        lensDataSize = len(sample_string)
+        dataSegmentBuffer[4] = (lensDataSize >> 24) & 0xFF
+        dataSegmentBuffer[3] = (lensDataSize >> 16) & 0xFF
+        dataSegmentBuffer[2] = (lensDataSize >> 8) & 0xFF
+        dataSegmentBuffer[1] = lensDataSize & 0xFF        
+
+        self.interface.transceive(
+            Command.create("writeLensData", {'data': dataSegmentBuffer, 'dataSize': 5})
+        )
+
+        # step 2: assign each lens data segment to the buffer and transfer
+        for i, chunk in enumerate(chunks):
+
+            # set the control byte to describe the action (index 0)
+            dataSegmentBuffer[0] = 1    # action : write 
+
+            # set the data chunk size in little indian (indices 1-4)
+            dataChunkSize = len(chunk)
+            dataSegmentBuffer[4] = (dataChunkSize >> 24) & 0xFF
+            dataSegmentBuffer[3] = (dataChunkSize >> 16) & 0xFF
+            dataSegmentBuffer[2] = (dataChunkSize>> 8) & 0xFF
+            dataSegmentBuffer[1] = dataChunkSize & 0xFF
+            
+            # encode the chunk as bytes and assign to buffer(starting from index 5)
+            dataSegmentBuffer[5:5+len(chunk)] = chunk.encode('utf-8') 
+
+            self.interface.transceive(
+                Command.create("writeLensData",  {'data': dataSegmentBuffer, 'dataSize': dataChunkSize}))
+
+        # step 3: send transfer end action to the camera indicating the lens data transfer is completed
+        dataSegmentBuffer[0] = 2  # action : end   
+
+        self.interface.transceive(
+            Command.create("writeLensData", {'data': dataSegmentBuffer, 'dataSize': 1})
+        )
+
+        print("done")
+
+    def read_lens_data(self) -> None:
+        """Read lends data from the camera flash."""
+        #log.info(f"Reading from register 0x{reg_addr:02x}")
+        self.interface.transceive(
+            Command.create("readLensData")
+        )
+        #return int(reg_value)
 
 
 class TOFcam660_Device(Dev_Infos_Controller):

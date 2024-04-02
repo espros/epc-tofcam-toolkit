@@ -16,6 +16,7 @@ class Command:
         self.data = data
 
     def toBytes(self):
+        """overwrite me to implement different byte arrangement of data"""
         payload = struct.pack('!H', self.commandId) + self.dataToBytes()
         payload += bytes(34 - len(payload))
         return payload
@@ -206,7 +207,18 @@ class SetCompensation(Command):
                             self.data['setAmbientLightCompensationEnabled'],
                             self.data['setGrayscaleCompensationEnabled'])
 
+class WriteLensData(Command):
+    commandId = 8
 
+    def dataToBytes(self):
+        return self.data['data'][0:self.data['dataSize']]
+    
+    def toBytes(self):
+        payload = struct.pack('!H', self.commandId) + self.dataToBytes()
+        return payload
+
+class ReadLensData(Command):
+    commandId = 9
 
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
@@ -235,4 +247,6 @@ commands = {'setRoi': SetRoi,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
+            'writeLensData' : WriteLensData,
+            'readLensData' : ReadLensData,
             }
