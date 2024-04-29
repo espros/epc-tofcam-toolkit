@@ -111,6 +111,7 @@ class UdpInterface:
         self.data = bytearray()
         self.index = 0
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udpSocket.bind(('', self.port))
         self.udpSocket.settimeout(1)
 
