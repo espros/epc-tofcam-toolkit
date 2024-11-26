@@ -10,6 +10,7 @@ from epc.tofCam660.parser import (
     DistanceParser,
     DistanceAndAmplitudeParser,
     DcsParser,
+    Frame,
 )
 
 DEFAULT_IP_ADDRESS = "10.10.31.180"
@@ -334,6 +335,10 @@ class TOFcam660(TOFcam):
         self.settings.set_integration_hdr([25, 40, 400, 2000])
         self.settings.set_minimal_amplitude(100)
         self.settings.disable_filters()
+        self.settings.set_compensations(setDrnuCompensation=True,
+                                        setTemperatureCompensation=True,
+                                        setAmbientLightCompensation=True,
+                                        setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
 
     def get_grayscale_image(self) -> np.ndarray:
@@ -352,14 +357,18 @@ class TOFcam660(TOFcam):
         distance =  parser.parse(raw_data).distance
         return distance
 
-    def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
-        """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
+    def get_distance_and_amplitude_frame(self) -> Frame:
+        """Get a full frame (header, distance image and amplitude image as 2d numpy arrays). The distance is in mm."""
         parser = DistanceAndAmplitudeParser()
         get_dist_amp_cmd = Command.create(
             "getDistanceAndAmplitude", self.settings.captureMode
         )
         raw_data = self.__get_image_date(get_dist_amp_cmd)
-        frame = parser.parse(raw_data)
+        return parser.parse(raw_data)
+
+    def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
+        frame = self.get_distance_and_amplitude_frame()
         return frame.distance, frame.amplitude
 
     def get_amplitude_image(self) -> np.ndarray:
