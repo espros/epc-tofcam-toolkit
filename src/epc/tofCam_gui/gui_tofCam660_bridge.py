@@ -38,6 +38,7 @@ class TOFcam660_bridge:
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
         gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
         gui.modulationFrequency.signal_value_changed.connect(lambda: self._set_modulation_settings())
+        gui.flexModFrequency.signal_value_changed.connect(self._set_flex_mod_freq)
         gui.modulationChannel.signal_value_changed.connect(lambda: self._set_modulation_settings())
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
         gui.hdrModeDropDown.signal_value_changed.connect(self._set_hdr_mode)
@@ -134,6 +135,12 @@ class TOFcam660_bridge:
         high = self.gui.integrationTimes.getTimeAtIndex(2)
         gray = self.gui.integrationTimes.getTimeAtIndex(3)
         self.cam.settings.set_integration_hdr([gray, low, mid, high])
+        self.capture()
+
+    @pause_streaming
+    def _set_flex_mod_freq(self, frequency: float):
+
+        self.cam.settings.set_flex_mod_freq(frequency)
         self.capture()
 
     @pause_streaming
