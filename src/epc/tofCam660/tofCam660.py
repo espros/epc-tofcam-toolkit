@@ -228,7 +228,7 @@ class TOFcam660_Device(Dev_Infos_Controller):
 
     def write_register(self, reg_addr: int, value: int) -> None:
         """Write a value to a register on the epc660."""
-        log.info(f"Writing to register 0x{reg_addr:02x}: {value.hex()}")
+        log.info(f"Writing to register 0x{reg_addr:02x}: 0x{value:02x}")
         self.interface.transceive(
             Command.create("writeRegister", {"address": reg_addr, "value": value})
         )
@@ -238,7 +238,7 @@ class TOFcam660_Device(Dev_Infos_Controller):
         log.info(f"Reading from register 0x{reg_addr:02x}")
         reg_value = self.interface.transceive(
             Command.create("readRegister", {"address": reg_addr})
-        )
+        ).data
         return int(reg_value)
 
     def get_chip_infos(self) -> tuple[int, int]:

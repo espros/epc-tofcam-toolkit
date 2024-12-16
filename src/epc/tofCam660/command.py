@@ -157,6 +157,9 @@ class WriteRegister(Command):
 class ReadRegister(Command):
     commandId = 43
 
+    def dataToBytes(self):
+        return struct.pack('!B', self.data['address'])
+
 
 class GetTemperature(Command):
     commandId = 74
