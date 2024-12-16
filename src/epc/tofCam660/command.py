@@ -115,7 +115,7 @@ class SetFilter(Command):
                            self.data['interferenceDetectionLimit'])
 
 class SetFlexModFrequency(Command):
-    commandId = 51
+    commandId = 52
 
     def dataToBytes(self):
         return struct.pack('!L', self.data)
