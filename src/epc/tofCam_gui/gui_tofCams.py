@@ -56,12 +56,12 @@ class Base_GUI_TOFcam(QMainWindow):
 
     def _save_raw(self):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.raw')
-        test = self.imageView.getImageItem().image
+        test = self.imageView.video.getImageItem().image
         np.savetxt(filePath + '.csv', test, delimiter=',')
 
     def _save_png(self):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.png')
-        self.imageView.getImageItem().save(filePath + '.png')
+        self.imageView.video.getImageItem().save(filePath + '.png')
 
     def _show_splash_screen(self, image_path=pkg_resources.resource_filename('epc', 'tofCam_gui/icons/epc-logo.png')):
         splash_pix = QPixmap(image_path)
