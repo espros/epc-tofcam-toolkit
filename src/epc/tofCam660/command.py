@@ -114,6 +114,11 @@ class SetFilter(Command):
                            self.data['interferenceDetectionUseLastValue'],
                            self.data['interferenceDetectionLimit'])
 
+class SetFlexModFrequency(Command):
+    commandId = 51
+
+    def dataToBytes(self):
+        return struct.pack('!L', self.data)
 
 class SetModulationFrequency(Command):
     commandId = 23
@@ -224,6 +229,7 @@ commands = {'setRoi': SetRoi,
             'setMinAmplitude': SetMinAmplitude,
             'setFilter': SetFilter,
             'setModulationFrequency': SetModulationFrequency,
+            'setFlexModFreq': SetFlexModFrequency,
             'setBinning': SetBinning,
             'setHdr': SetHdr,
             'readChipInformation': ReadChipInformation,

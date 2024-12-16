@@ -181,6 +181,11 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info('Disabling filters')
         self.set_filters(False, False, 0, 0, 0, 0, False)
 
+    def set_flex_mod_freq(self, frequency_mhz: int|float):
+        cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
+        log.info(f"Setting flex modulation frequency: {frequency_mhz} Hz")
+        self.interface.transceive(cmd)
+
     def set_modulation(self, frequency_mhz: float, channel=0):
         """Set the modulation frequency and channel for the TOFcam."""
         freq_table = {
