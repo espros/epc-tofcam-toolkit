@@ -1,6 +1,6 @@
 import time
 import numpy as np
-import pkg_resources
+import importlib.resources
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget, QSplashScreen, QApplication, QFileDialog
 from epc.tofCam_gui.widgets import VideoWidget, ToolBar, MenuBar
@@ -63,7 +63,7 @@ class Base_GUI_TOFcam(QMainWindow):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
 
-    def _show_splash_screen(self, image_path=pkg_resources.resource_filename('epc', 'tofCam_gui/icons/epc-logo.png')):
+    def _show_splash_screen(self, image_path=importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')):
         splash_pix = QPixmap(image_path)
         self.splash = QSplashScreen(splash_pix)
         self.splash.show()
