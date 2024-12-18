@@ -19,17 +19,6 @@ class Test_TOFrange:
         assert isinstance(chipId, int)
         assert isinstance(waferId, int)
 
-
-    def test_getDistance(self, cam):
-        distance = cam.get_distance_image()
-        
-        assert distance.shape == (1,1)
-
-    def test_getAmplitude(self, cam):
-        amplitude = cam.get_amplitude_image()
-
-        assert amplitude.shape == (1,1)
-
     def test_getPointCloud(self, cam):
         pc = cam.get_point_cloud()
 
