@@ -70,7 +70,7 @@ test-tox:
 deploy-test-pypi-job:
   stage: deploy
   script:
-    - TWINE_PASSWORD=${CI_TEST_PYPI_TOCKEN} TWINE_USERNAME=__tocken__ twine upload --repository testpypi dist/*
+    - TWINE_PASSWORD=${CI_TEST_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload --repository testpypi dist/*
   only:
     - master
   tags: 
@@ -79,7 +79,7 @@ deploy-test-pypi-job:
 deploy-pypi-job:
   stage: deploy
   script:
-    - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=__tocken__ twine upload dist/*
+    - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload dist/*
   only:
     - tags
   tags: 
