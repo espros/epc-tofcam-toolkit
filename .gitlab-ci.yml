@@ -60,6 +60,13 @@ test-job:
   tags: 
     - shell-executor
 
+test-tox:
+  stage: test
+  script:
+    - tox
+  tags:
+    - shell-executor
+
 deploy-test-pypi-job:
   stage: deploy
   script:
