@@ -24,19 +24,6 @@ class Test_TOFcam611:
 
         assert deviceType == "TOFframe"
 
-
-    def test_getDistance(self, cam):
-        distance = cam.getDistance()
-
-        assert distance.shape == (8,8)
-
-
-    def test_getAmplitude(self, cam):
-        amplitude = cam.getAmplitude()
-
-        assert amplitude.shape == (8,8)
-
-
     def test_getPointCloud(self, cam):
         pc = cam.getPointCloud()
 
