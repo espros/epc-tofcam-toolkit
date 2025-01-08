@@ -115,7 +115,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting binning: {binning_type}")
         self.interface.transceive(Command.create("setBinning", np.byte(binning_type)))
 
-    def set_dll_steps(self, step: int = 0):
+    def set_dll_step(self, step: int = 0):
         log.info(f"Setting DLL step: {step}")
         self.interface.transceive(Command.create("setDllStep", step))
 
@@ -252,7 +252,11 @@ class TOFcam660_Device(Dev_Infos_Controller):
         return str(f"{fw_version['major']}.{fw_version['minor']}")
 
     def get_chip_temperature(self) -> float:
-        """Returns the temperature of the epc660 chip in °C."""
+        """
+        Returns the temperature of the epc660 chip in °C.
+
+        WARNING: The temperature is only updated when a new frame is captured.
+        """
         temp = self.interface.transceive(Command.create("getTemperature")).data
         return float(temp)
 
@@ -366,7 +370,7 @@ class TOFcam660(TOFcam):
         """Get an amplitude image from the camera as a 2d numpy array."""
         return self.get_distance_and_amplitude()[1]
 
-    def get_dcs_images(self) -> np.ndarray:
+    def get_raw_dcs_images(self) -> np.ndarray:
         """Get a DCS image from the camera as a 2d numpy array."""
         parser = DcsParser()
         get_dcs_cmd = Command.create("getDcs", self.settings.captureMode)

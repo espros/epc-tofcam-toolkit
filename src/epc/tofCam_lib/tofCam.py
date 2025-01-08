@@ -27,6 +27,9 @@ class TOF_Settings_Controller:
 
     def set_integration_time_grayscale(self, int_time_us: int):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'set_integration_time_grayscale' jet")
+    
+    def set_dll_step(self, step: int):
+        raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'set_dll_step' jet")
 
 class Dev_Infos_Controller:
     def __init__(self) -> None:
@@ -67,3 +70,6 @@ class TOFcam:
 
     def get_grayscale_image(self):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'get_grayscale_image' jet")
+    
+    def get_raw_dcs_images(self):
+        raise NotImplementedError(f"{self.__class__.__name__} has not implemented 'get_raw_dcs_image' jet")
