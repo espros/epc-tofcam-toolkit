@@ -30,7 +30,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.hdrModeDropDown = DropDownSetting('HDR Mode', ['HDR Off', 'HDR Spatial', 'HDR Temporal'], default='HDR Temporal')
         self.modulationChannel = DropDownSetting('Modulation Channel', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'])
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['24 MHz', '12 MHz', '6 MHz', '3 MHz', '1.5 MHz', '0.75 MHz'], default='12 MHz')
-        self.flexModFrequency = FloatInput('Modulation Frequency MHz', 0.01, 25.0, default=12.0)
+        self.flexModFrequency = FloatInput('Modulation Frequency MHz', 0.0, 25.0, default=12.0)
         self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.modulationChannel, self.hdrModeDropDown, self.flexModFrequency])
         self.lensType = DropDownSetting('Lens Type', ['Wide Field', 'Narrow Field', 'Standard Field'])
         self.pointCloudSettings = SettingsGroup('Point Cloud Settings', [self.lensType])
