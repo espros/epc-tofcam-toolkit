@@ -18,6 +18,7 @@ DEFAULT_GATEWAY = "0.0.0.0"
 DEFAULT_TCP_PORT = 50660
 DEFAULT_UDP_PORT = 45454
 DEFAULT_MAX_DEPTH = 16000
+DEFAULT_MAX_AMP = 2894
 
 log = logging.getLogger('TOFcam660')
 
@@ -321,11 +322,15 @@ class TOFcam660(TOFcam):
         self.udpInterface.close()
 
     def __get_image_date(self, command: Command):
-        self.tcpInterface.transceive(command)
-        try:
-            frame_data, nBytes = self.udpInterface.receiveFrame()
-        except Exception as e:
-            raise Exception(f"Failed to receive image data: {e}")
+        nBytes = 0
+        for i in range(5):
+            try:
+                self.tcpInterface.transceive(command)
+                frame_data, nBytes = self.udpInterface.receiveFrame()
+                break
+            except Exception as e:
+                log.error(f"Failed to receive image data: {e}")
+                continue
         if nBytes <= 0:
             raise RuntimeError("Failed to receive image data")
         return frame_data
@@ -378,15 +383,16 @@ class TOFcam660(TOFcam):
         return parser.parse(raw_data).dcs
     
     def get_point_cloud(self) -> np.ndarray:
-        """Get a point cloud from the camera as a 3xN numpy array."""
+        """Returns a tuple holding point cloud from the camera as a 3xN numpy array and the corresponding amplitude values."""
         # capture depth image & corrections
-        depth = self.get_distance_image()
+        depth, amplitude = self.get_distance_and_amplitude()
         depth = np.rot90(depth, 3)
+        amplitude = np.rot90(amplitude)
+        amplitude[amplitude>DEFAULT_MAX_AMP] = 0 # remove error codes
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.settings.lense_projection.transformImage(np.fliplr(depth))
-        points = np.transpose(points, (1, 2, 0))
-        points = points.reshape(-1, 3)
-        return points
+        points = 1E-3 * self.settings.lense_projection.transformImage(np.flipud(np.fliplr(depth)))
+        points = points.reshape(3, -1)
+        return points, amplitude.flatten()
