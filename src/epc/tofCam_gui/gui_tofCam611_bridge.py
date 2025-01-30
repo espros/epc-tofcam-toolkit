@@ -41,8 +41,6 @@ class TOFcam611_bridge:
 
         self.gui.setDefaultValues()
 
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-
     def _set_streaming(self, enable: bool):
         if enable:
             self.streamer.start_stream()
@@ -73,7 +71,6 @@ class TOFcam611_bridge:
         self.__distance_unambiguity = self.C / (2 * frequency * 1e6)
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
         self.cam.settings.set_modulation(frequency)
         self.capture()
 

@@ -16,6 +16,7 @@ ERROR_MIN_AMPLITUDE = 16001000
 DEVICE_TOFFRAME = 1
 DEVICE_TOFRANGE = 0
 DEFAULT_MAX_DEPTH = 16000
+DEFAULT_MAX_AMPLITUDE = 2896
 
 log = logging.getLogger('TOFcam611')
 
@@ -323,15 +324,13 @@ class TOFcam611(TOFcam):
         amplitude = np.reshape(amplRaw, self.settings.resolution)
         return distance/10, amplitude
 
-
     def get_point_cloud(self):
-        depth = self.get_distance_image()
+        depth, amplitude = self.get_distance_and_amplitude_image()
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
+        amplitude[amplitude > DEFAULT_MAX_AMPLITUDE] = 0 # remove error values
 
         # calculate point cloud from the depth image
-        roi = self.settings.get_roi()
         points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=(self.settings.resolution), focalLengh=40) # focul lengh in px (0.8 mm)
-        points = np.transpose(points, (1, 2, 0))
-        points = points.reshape(-1, 3)
-        return points
+        points = points.reshape(3, -1)
+        return points, amplitude.flatten()
