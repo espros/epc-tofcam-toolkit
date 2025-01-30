@@ -50,8 +50,6 @@ class TofCam635Bridge:
         self.gui.toolBar.setVersionInfo(self.cam.device.get_fw_version())
         self.gui.setDefaultValues()
 
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-
     def getImage(self):
         if self.gui.imageTypeWidget.getSelection() == 'Point Cloud':
             return self.__get_image_cb()

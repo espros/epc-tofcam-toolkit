@@ -17,6 +17,7 @@ from epc.tofCam635.tofcam635Header import TofCam635Header
 DEFAULT_ROI = (0, 0, 160, 60)
 MAX_DIST_INT_TIME = 2**16-1
 DEFAULT_MAX_DEPTH = 16000
+DEFAULT_MAX_AMPLITUDE = 2896
 
 log = logging.getLogger('TOFcam635')
 
@@ -24,7 +25,8 @@ log = logging.getLogger('TOFcam635')
 class InterfaceWrapper:
     def __init__(self, port: Optional[str]=None) -> None:
         self.com = SerialInterface(port)
-        self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
+        # old self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
+        self.crc = Crc(mode=CrcMode.CRC32_UINT8, revout=False)
         self.header = TofCam635Header()
         self.__lock = Lock()
         self.__answer_table = {
@@ -430,13 +432,15 @@ class TOFcam635(TOFcam):
     def get_point_cloud(self):
         """returns point cloud information as numpy array of shape (n, 3) with x, y, z coordinates"""
         # capture depth image & corrections
-        depth = self.get_distance_image()
+        depth, amplitude = self.get_distance_and_amplitude_image()
+        depth = np.rot90(depth)
+        amplitude = np.rot90(amplitude)
+        amplitude[amplitude>DEFAULT_MAX_AMPLITUDE] = 0 # remove error codes
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.max_depth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.settings.lensProjection.transformImage(np.fliplr(depth.T))
-        points = np.transpose(points, (2, 1, 0))
-        points = points.reshape(-1, 3)
-        return points
+        points = 1E-3 * self.settings.lensProjection.transformImage(depth)
+        points = points.reshape(3, -1)
+        return points, amplitude.flatten()
     
