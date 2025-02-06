@@ -21,10 +21,11 @@ class Interface:
     markerEnd = 0xffff55aa
     markerEndBytes = struct.pack('!I', markerEnd)
 
-    def __init__(self, ipAddress='10.10.31.180', port=50660):
+    def __init__(self, ipAddress='10.10.31.180', port=50660, timeout_sec: float = 20.0):
         self.lock = Lock()
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM | socket.SOCK_NONBLOCK)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.socket.settimeout(timeout_sec)
         try: 
             self.socket.connect((ipAddress, port))
         except Exception as e:
