@@ -1,23 +1,26 @@
 import numpy as np
+from PySide6.QtCore import Qt
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_gui import Base_GUI_TOFcam
-from epc.tofCam_gui.streamer import Streamer
+from epc.tofCam_gui.streamer import Streamer, pause_streaming
+
 
 class Base_TOFcam_Bridge():
-    MAX_AMPLITUDE = 0 # needs to be overwritten by the derived class
-    MAX_GRAYSCALE = 0 # needs to be overwritten by the derived class
+    MAX_AMPLITUDE = 0  # needs to be overwritten by the derived class
+    MAX_GRAYSCALE = 0  # needs to be overwritten by the derived class
     MIN_DCS = -2048
     MAX_DCS = 2047
+
     def __init__(self, cam: TOFcam, gui: Base_GUI_TOFcam):
         self.cam = cam
         self.gui = gui
 
         self.image_type = 'Distance'
-        self._distance_unambiguity = None # needs to be overwritten by the derived class
+        self._distance_unambiguity = None  # needs to be overwritten by the derived class
         self._get_image_cb = cam.get_distance_image
 
         self.streamer = Streamer(self.getImage)
-        self.streamer.signal_new_frame.connect(self.gui.updateImage)
+        self.streamer.signal_new_frame.connect(self.updateImage)
 
         # update chip information
         chipID, waferId = cam.device.get_chip_infos()
@@ -30,14 +33,17 @@ class Base_TOFcam_Bridge():
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
         gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
 
-
     def capture(self, mode=0):
         image = self.getImage()
         self.gui.updateImage(image)
 
+    def updateImage(self, image):
+        if self.streamer.is_streaming():
+            self.gui.updateImage(image)
+
     def getImage(self):
         return self._get_image_cb()
-    
+
     def get_combined_dcs(self):
         dcs = self.cam.get_raw_dcs_images()
         resolution = np.array(dcs.shape[1:])
@@ -47,7 +53,7 @@ class Base_TOFcam_Bridge():
         image[resolution[0]:, 0:resolution[1]] = dcs[2]
         image[resolution[0]:, resolution[1]:] = dcs[3]
         return image
-    
+
     def _set_streaming(self, enable: bool):
         if enable:
             self.streamer.start_stream()

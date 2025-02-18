@@ -162,7 +162,7 @@ def get_ipAddress():
 
 def main():
     app = QApplication([])
-    qdarktheme.setup_theme('auto', default_theme='dark')
+    #qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()
     
     ip_address = get_ipAddress()

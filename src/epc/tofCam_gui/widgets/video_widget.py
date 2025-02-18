@@ -6,20 +6,21 @@ from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtGui import QVector3D, QQuaternion
 from PySide6.QtWidgets import QStackedWidget
 
-CMAP_DISTANCE = [   (  0,   0,   0),
-                    (255,   0,   0),
-                    (255, 255,   0),
-                    (  0, 255,   0),
-                    (  0, 240, 240),
-                    (  0,   0, 255),
-                    (255,   0, 255)]
+CMAP_DISTANCE = [(0,   0,   0),
+                 (255,   0,   0),
+                 (255, 255,   0),
+                 (0, 255,   0),
+                 (0, 240, 240),
+                 (0,   0, 255),
+                 (255,   0, 255)]
 
-CMAP_GRAYSCALE =  [ (0, 0, 0),
-                    (51, 51, 51),
-                    (102, 102, 102),
-                    (153, 153, 153),
-                    (204, 204, 204),
-                    (255, 255, 255)]
+CMAP_GRAYSCALE = [(0, 0, 0),
+                  (51, 51, 51),
+                  (102, 102, 102),
+                  (153, 153, 153),
+                  (204, 204, 204),
+                  (255, 255, 255)]
+
 
 class Gizmo(GLGraphicsItem):
     def __init__(self, arrow_length=0.5, parent=None):
@@ -34,6 +35,7 @@ class Gizmo(GLGraphicsItem):
         self.y_line = GLLinePlotItem(pos=np.array([origin, y_axis]), glOptions='opaque', color=(0, 1, 0, 1), width=6, antialias=True, parentItem=self)
         self.z_line = GLLinePlotItem(pos=np.array([origin, z_axis]), glOptions='opaque', color=(0, 0, 1, 1), width=6, antialias=True, parentItem=self)
 
+
 class Camera(GLGraphicsItem):
     def __init__(self, offset=np.zeros(3), rotation=np.zeros(3), parent=None):
         super(Camera, self).__init__()
@@ -41,7 +43,7 @@ class Camera(GLGraphicsItem):
         self.rotation = rotation
         self._gizmo = Gizmo(parent=self)
         self._pcd = GLScatterPlotItem(parentItem=self)
-        self._pcd.setGLOptions('translucent')
+        self._pcd.setGLOptions('opaque')
         self._pcd.initialize()
 
     def update_position(self, offset=np.zeros(3), rotation=np.zeros(3)):
@@ -57,9 +59,11 @@ class Camera(GLGraphicsItem):
         norm_amp = amplitudes / np.max(amplitudes)
         cmap = getFromMatplotlib('turbo')
         colors = cmap.map(norm_amp, 'float')
-        
+
         self._pcd.setData(pos=points.T, color=colors, size=3)
+        # print('latest step', points.shape)
         self.view().update()
+
 
 class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
@@ -76,11 +80,12 @@ class PointCloudWidget(GLViewWidget):
 
     def update_point_cloud(self, points: np.ndarray):
         self.camera.update_point_cloud(points[0], points[1])
-        
+
 
 class VideoWidget(QStackedWidget):
     GRAYSCALE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
+
     def __init__(self, parent=None):
         super(VideoWidget, self).__init__(parent)
         self.video = ImageView(self)
@@ -95,14 +100,14 @@ class VideoWidget(QStackedWidget):
             self.setCurrentWidget(self.pc)
 
     def setImage(self, *args, **kwargs):
+        data = args[0]
         if self.currentWidget() == self.video:
             self.video.setImage(*args, **kwargs)
         else:
-            depth = args[0]
-            self.pc.update_point_cloud(depth)
+            self.pc.update_point_cloud(data)
 
     def setColorMap(self, cmap):
-         self.video.setColorMap(cmap)
+        self.video.setColorMap(cmap)
 
     def setLevels(self, min, max):
         self.video.setLevels(min, max)
