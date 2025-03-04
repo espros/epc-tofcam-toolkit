@@ -223,6 +223,11 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting lense type: {lense_type}")
         self.lense_projection = Lense_Projection.from_lense_calibration(lense_type)
 
+    def get_calibration_data(self, ):
+        """Get the calibration data(calibrated modulation freq., temperature, atan offset) from the camera."""
+        log.info(f"Reading calibration data")
+        calibration_data = self.interface.transceive(Command.create("getCalibrationData")).data
+        return calibration_data
 
 class TOFcam660_Device(Dev_Infos_Controller):
     """The TOFcam660_Device class is used to get and set device information's of the TOFcam660.

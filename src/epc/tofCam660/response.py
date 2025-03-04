@@ -76,6 +76,42 @@ class ReadRegister(Response):
 class Calibrating(Response):
     pass
 
+class CalibrationData(Response):
+    def parseDataFromBytes(self, data):
+
+        entry_size = 5  # Each calibration data entry is 5 bytes
+        num_entries = len(data) // entry_size 
+
+        # for mapping modulation index to the value
+        freq_table = {
+            0: 12,
+            1: 24,
+            2: 6,
+            3: 3,
+            4: 1.5,
+            5: 0.75,
+        }
+
+        offset = 0
+        calibration_data = []
+        for _ in range(num_entries):
+            modulation_index = struct.unpack('!B', data[offset:offset+1])[0]  # uint8_t
+            modulation = freq_table.get(modulation_index, "Unknown") 
+            offset += 1
+            
+            calibrated_temp = struct.unpack('!H', data[offset:offset+2])[0]  # uint16_t
+            offset += 2
+
+            atan_offset = struct.unpack('!H', data[offset:offset+2])[0]  # uint16_t
+            offset += 2
+
+            calibration_data.append({
+                'modulation(MHz)': modulation,
+                'calibrated_temperature(mDeg)': calibrated_temp,
+                'atan_offset': atan_offset
+            })
+
+        self.data = calibration_data
 
 class NotAcknowledge(Response):
     def isError(self):
@@ -88,5 +124,6 @@ responses = {0: Acknowledge,
              3: ChipInformation,
              4: Temperature,
              6: ReadRegister,
+             9: CalibrationData,
              254: Calibrating,
              255: NotAcknowledge, }

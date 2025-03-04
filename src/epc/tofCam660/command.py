@@ -214,8 +214,9 @@ class SetCompensation(Command):
                             self.data['setAmbientLightCompensationEnabled'],
                             self.data['setGrayscaleCompensationEnabled'])
 
-
-
+class GetCalibrationData(Command):
+    commandId = 53
+    
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
             'getDistanceAndAmplitude': GetDistanceAndAmplitude,
@@ -244,4 +245,5 @@ commands = {'setRoi': SetRoi,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
+            'getCalibrationData' : GetCalibrationData,
             }
