@@ -1,7 +1,7 @@
 import struct 
 from sys import platform
 import ctypes
-import pkg_resources
+import importlib.resources
 import numpy as np
 from enum import Enum
 
@@ -28,14 +28,14 @@ class Crc:
     def __loadLib(self):
         try:
             if platform == 'linux':
-                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc_linux.so')
-                self.lib = ctypes.cdll.LoadLibrary(binaryPath)
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_linux.so')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             elif platform == 'win32':
-                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc.dll')
-                self.lib = ctypes.windll.LoadLibrary(binaryPath)
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc.dll')
+                self.lib = ctypes.windll.LoadLibrary(str(binaryPath))
             elif platform == 'darwin':
-                binaryPath = pkg_resources.resource_filename('epc', 'tofCam_lib/bin/CrcCalc_darwin.a')
-                self.lib = ctypes.cdll.LoadLibrary(binaryPath)
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_darwin.a')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             else:
                 raise Exception('Platform not supported')
             return True

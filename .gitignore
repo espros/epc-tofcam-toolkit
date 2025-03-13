@@ -1,3 +1,4 @@
+.tox
 .venv
 .venv37
 build
