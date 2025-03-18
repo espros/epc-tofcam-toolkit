@@ -219,12 +219,18 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting lense type: {lense_type}")
         self.lense_projection = Lense_Projection.from_lense_calibration(lense_type)
 
+    def set_flex_mod_frequences(self, frequency):
+        """Set the flexible modulation frequency"""
+        log.info(f'Setting flexible modulation frequency to {frequency}')
+        flex_mod_command = Command.create("setFlexModFrequency", frequency)
+        self.interface.transceive(flex_mod_command)
+
     def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True, segment_4_on: bool = True, segment_2_to_4: bool = True):
         """Set the illuminator segments for the camera."""
         log.info(f"Setting illuminator segments: ("
                  f"1:{'ON' if segment_1_on else 'OFF'}, 2:{'ON' if segment_2_on else 'OFF'}, "
                  f"3:{'ON' if segment_3_on else 'OFF'}, 4:{'ON' if segment_4_on else 'OFF'}, "
-		 f"2-4:{'ON' if segment_2_to_4 else 'OFF'})")
+                 f"2-4:{'ON' if segment_2_to_4 else 'OFF'})")
         set_illuminator_cmd = Command.create(
             "setIlluminatorSegments",
             {
@@ -232,8 +238,8 @@ class TOFcam660_Settings(TOF_Settings_Controller):
                 "segment2": segment_2_on,
                 "segment3": segment_3_on,
                 "segment4": segment_4_on,
-		# Control segments 2, 3, and 4 (R100=0R needs to be assembled)
-		"segment_2_to_4": segment_2_to_4,
+                # Control segments 2, 3, and 4 (R100=0R needs to be assembled)
+                "segment_2_to_4": segment_2_to_4,
             },
         )
         log.info(f"Command data: {set_illuminator_cmd.dataToBytes()}")

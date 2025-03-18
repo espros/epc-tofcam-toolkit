@@ -174,6 +174,13 @@ class SetIlluminatorSegments(Command):
         return struct.pack('!B', dataByte)
 
 
+class SetFlexModFrequency(Command):
+    commandId = 52
+
+    def dataToBytes(self):
+        return struct.pack('!f', self.data)
+
+
 class GetTemperature(Command):
     commandId = 74
 
@@ -251,5 +258,6 @@ commands = {'setRoi': SetRoi,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
-            'setIlluminatorSegments': SetIlluminatorSegments
+            'setIlluminatorSegments': SetIlluminatorSegments,
+            'setFlexModFrequency': SetFlexModFrequency
             }
