@@ -219,6 +219,11 @@ class SetGrayscaleIllumination(Command):
 class CalibrateProduction(Command):
     commandId = 31
 
+
+class GetCalibrationData(Command):
+    commandId = 53
+
+
 class SetCompensation(Command):
     commandId = 28
 
@@ -257,6 +262,7 @@ commands = {'setRoi': SetRoi,
             'setCameraMacAddress': SetCameraMacAddress,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
+            'getCalibrationData': GetCalibrationData,
             'setCompensation' : SetCompensation,
             'setIlluminatorSegments': SetIlluminatorSegments,
             'setFlexModFrequency': SetFlexModFrequency

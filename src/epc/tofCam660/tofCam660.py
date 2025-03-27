@@ -151,6 +151,9 @@ class TOFcam660_Settings(TOF_Settings_Controller):
             )
         )
 
+    def get_calibration_data(self):
+        return self.interface.transceive(Command.create('getCalibrationData'))
+
     def set_filters(
         self,
         enableMedianFilter: bool,
