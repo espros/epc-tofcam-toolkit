@@ -178,7 +178,7 @@ class SetFlexModFrequency(Command):
     commandId = 52
 
     def dataToBytes(self):
-        return struct.pack('!f', self.data)
+        return struct.pack('!L', self.data)
 
 
 class GetTemperature(Command):
