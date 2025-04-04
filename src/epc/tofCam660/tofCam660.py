@@ -222,7 +222,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting lense type: {lense_type}")
         self.lense_projection = Lense_Projection.from_lense_calibration(lense_type)
 
-    def set_flex_mod_frequences(self, frequency):
+    def set_flex_mod_frequency(self, frequency):
         """Set the flexible modulation frequency"""
         log.info(f'Setting flexible modulation frequency to {frequency}')
         flex_mod_command = Command.create("setFlexModFrequency", frequency)
