@@ -1,8 +1,11 @@
-import importlib.resources
 import importlib.metadata
-from PySide6.QtWidgets import QToolBar, QLabel, QWidget, QSizePolicy, QStyle
-from PySide6.QtGui import QIcon, QAction, QPixmap, QFont
+
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
+from PySide6.QtWidgets import QLabel, QSizePolicy, QStyle, QToolBar, QWidget
+
+from epc.tofCam_gui.config import EPC_LOGO
 
 
 class ToolBar(QToolBar):
@@ -10,7 +13,7 @@ class ToolBar(QToolBar):
         super().__init__(parent)
 
         self.gui_version = importlib.metadata.version("epc-tofcam-toolkit")
-        
+
         # assemble play button
         self._startIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         self._stopIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop)
@@ -29,7 +32,7 @@ class ToolBar(QToolBar):
         # self._consoleIcon = parent.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
         # self.consoleButton = QAction(self._consoleIcon, "Console", self)
         # self.consoleButton.setStatusTip('Open interactive ipython console')
-        
+
         # assemble chip info and fps info
         self.chipInfo = QLabel('Chip ID: 000\nWafer ID: 000')
         self.versionInfo = QLabel(f'GUI: {self.gui_version}\nFW: 000')
@@ -37,7 +40,7 @@ class ToolBar(QToolBar):
         self.fpsInfo.setFont(QFont("monospace"))
 
         # logo
-        esprosLogo = QPixmap(importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png'))
+        esprosLogo = QPixmap(str(EPC_LOGO))
         esprosLogo = esprosLogo.scaled(100, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.logo = QLabel()
         self.logo.setPixmap(esprosLogo)
@@ -49,7 +52,6 @@ class ToolBar(QToolBar):
         left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         right_spacer = QWidget()
         right_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
 
         self.addAction(self.playButton)
         self.addAction(self.captureButton)
