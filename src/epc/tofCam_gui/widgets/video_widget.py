@@ -1,9 +1,10 @@
 import numpy as np
 from pyqtgraph import ImageView
-from pyqtgraph.colormap import getFromMatplotlib, ColorMap
-from pyqtgraph.opengl import GLViewWidget, GLScatterPlotItem, GLGridItem, GLLinePlotItem
+from pyqtgraph.colormap import ColorMap, getFromMatplotlib
+from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
+                              GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
-from PySide6.QtGui import QVector3D, QQuaternion
+from PySide6.QtGui import QQuaternion, QVector3D
 from PySide6.QtWidgets import QStackedWidget
 
 CMAP_DISTANCE = [(0,   0,   0),
@@ -44,7 +45,6 @@ class Camera(GLGraphicsItem):
         self._gizmo = Gizmo(parent=self)
         self._pcd = GLScatterPlotItem(parentItem=self)
         self._pcd.setGLOptions('opaque')
-        self._pcd.initialize()
 
     def update_position(self, offset=np.zeros(3), rotation=np.zeros(3)):
         self.offset = offset
