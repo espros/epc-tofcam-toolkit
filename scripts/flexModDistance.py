@@ -9,7 +9,7 @@ TOF_COS_DISTANCE_CHIP_TO_FRONT = 28.0
 TOF_COS_CALIBRATION_BOX_LENGTH = 330.0
 TOF_COS_TEMPERATURE_COEFFICIENT = 12.9 + 4.6
 
-CONST_OFFSET_CORRECTION = TOF_COS_CALIBRATION_BOX_LENGTH-TOF_COS_DISTANCE_CHIP_TO_FRONT - 1/4*12500
+CONST_OFFSET_CORRECTION = TOF_COS_CALIBRATION_BOX_LENGTH-TOF_COS_DISTANCE_CHIP_TO_FRONT - 7/8*12500
 
 DEFAULT_MOD_FREQ = 24
 DEFAULT_MOD_CHANNEL = 0
@@ -66,6 +66,8 @@ def get_distance_amplitude_dcs(cam: TOFcam660, calibData: dict, modFreq_MHz: int
     # compensate offsets
     temp_offset = (calibData['calibrated_temperature(mDeg)']/1000 - temp) * TOF_COS_TEMPERATURE_COEFFICIENT
     distance = distance + (6250 - calibData['atan_offset']) + temp_offset + CONST_OFFSET_CORRECTION
+    
+    distance[distance < 0] += unambiguity_mm    # wrap around negative values handling
 
     return (distance, amplitude, dcs)
 
@@ -94,7 +96,7 @@ def main():
     distance_norm, amplitude_norm = cam.get_distance_and_amplitude()
 
     # get flexmod distance, amplitude and dcs
-    distance, amplitude, dcs = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=12, int_time_us=300)
+    distance, amplitude, dcs = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=24, int_time_us=300)
 
 
     plt.figure(figsize=(10, 5))
