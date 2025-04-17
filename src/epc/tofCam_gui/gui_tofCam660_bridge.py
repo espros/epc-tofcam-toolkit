@@ -4,37 +4,23 @@ import getopt
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-from epc.tofCam660.epc660 import Epc660Ethernet
-# from epc.tofCam660.server import Server as TOFcam660
 from epc.tofCam660.tofCam660 import TOFcam660
-from epc.tofCam_gui import GUI_TOFcam660
-from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_gui import GUI_TOFcam660, Base_TOFcam_Bridge
+from epc.tofCam_gui.streamer import pause_streaming
 from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
 
-class TOFcam660_bridge:
+class TOFcam660_bridge(Base_TOFcam_Bridge):
     C = 299792458 # m/s
     MAX_AMPLITUDE = 2800
     MAX_GRAYSCALE = 2**10
+    MIN_DCS = -2048
+    MAX_DCS = 2047
     def __init__(self, gui: GUI_TOFcam660, cam: TOFcam660):
-        self.gui = gui
-        self.cam = cam
-        self.__get_image_cb = cam.get_distance_image
-        self.image_type = 'Distance'
+        super(TOFcam660_bridge, self).__init__(cam, gui)
+        self._distance_unambiguity = 6.25 # m 
         self.__distance_resolution = 0.01 # mm/bit
-        self.__distance_unambiguity = 6.25 # m 
-        self.streamer = Streamer(self.getImage)
-        self.streamer.signal_new_frame.connect(self.gui.updateImage)
         
-        # update chip information
-        chipID, waferId = cam.device.get_chip_infos()
-        gui.toolBar.setChipInfo(chipID, waferId)
-        fw_version = cam.device.get_fw_version()
-        gui.toolBar.setVersionInfo(fw_version)
-
         # connect signals
-        gui.toolBar.captureButton.triggered.connect(self.capture)
-        gui.toolBar.playButton.triggered.connect(self._set_streaming)
-        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
         gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
         gui.modulationFrequency.signal_value_changed.connect(lambda: self._set_modulation_settings())
@@ -53,8 +39,6 @@ class TOFcam660_bridge:
 
         gui.setDefaultValues()
         
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-
     def _setGuiFilter(self, filter: str):
         match filter:
             case 'None':
@@ -68,16 +52,10 @@ class TOFcam660_bridge:
 
     def getImage(self):
         if self.image_type == 'Point Cloud':
-            return self.__get_image_cb()
+            return self._get_image_cb()
         else:
-            image = self.__get_image_cb()
+            image = self._get_image_cb()
             return np.rot90(image, 3)
-
-    def _set_streaming(self, enable: bool):
-        if enable:
-            self.streamer.start_stream()
-        else:
-            self.streamer.stop_stream()
 
     @pause_streaming
     def _set_filter_settings(self):
@@ -147,14 +125,13 @@ class TOFcam660_bridge:
     def _set_modulation_settings(self):
         frequency = float(self.gui.modulationFrequency.getSelection().split(' ')[0])
         channel = int(self.gui.modulationChannel.getSelection())
-        self.__distance_unambiguity = self.C / (2 * frequency * 1e6)
+        self._distance_unambiguity = self.C / (2 * frequency * 1e6)
         if frequency >= 3:
             self.__distance_resolution = 0.01 # m/bit
         else:
             self.__distance_resolution = 0.1 # m/bit
 
-        self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
+        self.gui.imageView.setLevels(0, self._distance_unambiguity*1000)
         self.cam.settings.set_modulation(frequency, channel)
         self.capture()
 
@@ -163,33 +140,16 @@ class TOFcam660_bridge:
         self.image_type = image_type
         self.gui.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
         self.gui.guiFilterGroupBox.setEnabled(image_type != 'Point Cloud')
-        if image_type == 'Distance':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_distance_image
-            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        elif image_type == 'Amplitude':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_amplitude_image
-            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
-        elif image_type == 'Grayscale':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_grayscale_image
-            self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
-        elif image_type == 'Point Cloud':
+        if image_type == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
-            self.__get_image_cb = self.cam.get_point_cloud
+            self._get_image_cb = self.cam.get_point_cloud
+        else:
+            self._set_standard_image_type(image_type)
 
         self._set_hdr_mode(self.gui.hdrModeDropDown.getSelection())
         
         if not self.streamer.is_streaming():
             self.capture()
-
-    def capture(self, mode=0):
-        image = self.getImage()
-        self.gui.updateImage(image)
 
 def get_ipAddress():
     ip_address = None
@@ -209,7 +169,7 @@ def get_ipAddress():
 
 def main():
     app = QApplication([])
-    qdarktheme.setup_theme('auto', default_theme='dark')
+    #qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam660()
     
     ip_address = get_ipAddress()

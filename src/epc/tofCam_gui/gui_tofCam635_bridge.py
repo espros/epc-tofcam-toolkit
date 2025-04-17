@@ -5,13 +5,14 @@ import qdarktheme
 import numpy as np
 from PySide6.QtWidgets import QApplication
 from epc.tofCam635.tofCam635 import TOFcam635
-from epc.tofCam_gui import GUI_TOFcam635
-from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_gui import GUI_TOFcam635, Base_TOFcam_Bridge
+from epc.tofCam_gui.streamer import pause_streaming
 from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
 
 log = logging.getLogger('BRIDGE')
 
-class TofCam635Bridge:
+
+class TofCam635Bridge(Base_TOFcam_Bridge):
     DEFAULT_INT_TIME_GRAY = 100
     DEFAULT_INT_TIME_DIST = 1000
     MAX_DISTANCE = 15000
@@ -19,18 +20,20 @@ class TofCam635Bridge:
     MAX_GRAYSCALE = 0xFF
 
     def __init__(self, gui: GUI_TOFcam635, cam: TOFcam635) -> None:
-        self.gui = gui
-        self.cam = cam
-        self.__get_image_cb = self.cam.get_distance_image
-        self.streamer = Streamer(self.getImage, post_stop_cb=self.__stop_streaming_cb)
-        self.streamer.signal_new_frame.connect(self.gui.updateImage)
-        self.__distance_unambiguity = 7.5 # m 
+        # self.gui = gui
+        # self.cam = cam
+        # self.__get_image_cb = self.cam.get_distance_image
+        # self.streamer = Streamer(self.getImage, post_stop_cb=self.__stop_streaming_cb)
+        # self.streamer.signal_new_frame.connect(self.gui.updateImage)
+        super(TofCam635Bridge, self).__init__(cam, gui)
+        self._distance_unambiguity = 7.5  # m
 
-        cam.settings.set_operation_mode(0)
+        self.cam.settings.set_operation_mode(0)
+        self.streamer.post_stop_cb = self.__stop_streaming_cb
 
-        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
-        gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
-        gui.toolBar.captureButton.triggered.connect(self.capture)
+        # gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
+        # gui.toolBar.playButton.triggered.connect(lambda: self._set_streaming(gui.toolBar.playButton.isChecked()))
+        # gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.guiFilterGroupBox.signal_value_changed.connect(self._setGuiFilter)
         gui.integrationTimes.signal_value_changed.connect(self._update_int_time)
         gui.imageTypeWidget.signal_value_changed.connect(self._changeImageType)
@@ -46,22 +49,20 @@ class TofCam635Bridge:
         gui.modulationChannel.signal_value_changed.connect(self._set_mod_freq)
         gui.modulationFrequency.signal_value_changed.connect(self._set_mod_freq)
 
-        self.gui.toolBar.setChipInfo(*self.cam.device.get_chip_infos())
-        self.gui.toolBar.setVersionInfo(self.cam.device.get_fw_version())
+        # self.gui.toolBar.setChipInfo(*self.cam.device.get_chip_infos())
+        # self.gui.toolBar.setVersionInfo(self.cam.device.get_fw_version())
         self.gui.setDefaultValues()
-
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
 
     def getImage(self):
         if self.gui.imageTypeWidget.getSelection() == 'Point Cloud':
-            return self.__get_image_cb()
+            return self._get_image_cb()
         else:
-            image = self.__get_image_cb()
+            image = self._get_image_cb()
             return np.rot90(image, 3)
-    
+
     def __stop_streaming_cb(self):
         self.cam.settings.set_capture_mode(0)
-        self.getImage() # trow away image in pipeline
+        # self.getImage()  # trow away image in pipeline
 
     @pause_streaming
     def _setGuiFilter(self, filter: str):
@@ -77,9 +78,11 @@ class TofCam635Bridge:
 
     def _set_streaming(self, enable: bool):
         if enable:
+            log.info('Starting streaming')
             self.cam.settings.set_capture_mode(1)
             self.streamer.start_stream()
         else:
+            log.info('Stopping streaming')
             self.streamer.stop_stream()
             self.cam.settings.set_capture_mode(0)
 
@@ -106,7 +109,7 @@ class TofCam635Bridge:
     def __set_roi(self, x1: int, y1: int, x2: int, y2: int):
         self.cam.settings.set_roi((x1, y1, x2, y2))
         try:
-            self.getImage() # trow away next image since it has wrong roi
+            self.getImage()  # trow away next image since it has wrong roi
         except:
             pass
 
@@ -119,18 +122,18 @@ class TofCam635Bridge:
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
         if mode == 'HDR Spatial':
-            self.cam.settings.set_hdr('spatial')
+            self.cam.settings.set_hdr(2)
         elif mode == 'HDR Temporal':
-            self.cam.settings.set_hdr('temporal')
+            self.cam.settings.set_hdr(1)
         elif mode == 'HDR Off':
-            self.cam.settings.set_hdr('off')
+            self.cam.settings.set_hdr(0)
         else:
             raise ValueError(f"HDR Mode '{mode}' not supported")
         self._update_intTimes_enabled()
 
     @pause_streaming
     def _update_int_time(self, type: str, intTime: int):
-        if   type == 'Integration Time 1':
+        if type == 'Integration Time 1':
             self.cam.settings.set_integration_time_hdr(0, intTime)
         elif type == 'Integration Time 2':
             self.cam.settings.set_integration_time_hdr(1, intTime)
@@ -148,32 +151,17 @@ class TofCam635Bridge:
     @pause_streaming
     def _changeImageType(self, imgType: str):
         self.gui.guiFilterGroupBox.setEnabled(imgType != 'Point Cloud')
-        if imgType == 'Distance':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_distance_image
-            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        elif imgType == 'Amplitude':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_amplitude_image
-            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
-        elif imgType == 'Grayscale':
-            self.gui.imageView.setActiveView('image')
-            self.__get_image_cb = self.cam.get_grayscale_image
-            self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
-            self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
-        elif imgType == 'Point Cloud':
+        if imgType == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
-            self.__get_image_cb = self.cam.get_point_cloud
+            self._get_image_cb = self.cam.get_point_cloud
         else:
-            raise ValueError(f"Image Type '{imgType}' not supported")
+            self._set_standard_image_type(imgType)
         self.capture()
-
 
     def capture(self, mode=0):
         image = self.getImage()
         self.gui.updateImage(image)
+
 
 def get_port():
     port = None
@@ -188,6 +176,7 @@ def get_port():
         log.info(f'No port specified. Trying to find port automatically')
     return port
 
+
 def main():
     port = get_port()
     try:
@@ -198,12 +187,13 @@ def main():
     cam.initialize()
 
     app = QApplication([])
-    qdarktheme.setup_theme('auto', default_theme='dark')
+    # qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam635()
     gui.centralWidget().releaseKeyboard()
     bridge = TofCam635Bridge(gui, cam)
     gui.show()
     app.exec()
+
 
 if __name__ == "__main__":
     main()
