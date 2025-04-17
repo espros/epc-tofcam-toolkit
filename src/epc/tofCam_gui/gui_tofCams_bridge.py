@@ -1,8 +1,7 @@
 import numpy as np
-from PySide6.QtCore import Qt
-from epc.tofCam_lib import TOFcam
+from epc.tofCam_lib.tofCam import TOFcam
 from epc.tofCam_gui import Base_GUI_TOFcam
-from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_gui.streamer import Streamer
 
 
 class Base_TOFcam_Bridge():
