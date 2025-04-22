@@ -82,16 +82,16 @@ def main():
     calibData24Mhz = next((item for item in calibData if item['modulation(MHz)'] == 24), None)
     assert calibData24Mhz is not None, "Calibration data for 24 MHz not found"
 
-    # get normal distance and amplitude image
-    cam.settings.set_modulation(24, 0)
-    cam.settings.set_integration_time(300)
-    distance_norm, amplitude_norm = cam.get_distance_and_amplitude()
-
     # get flexmod distance, amplitude and dcs
     distance = {}
     amplitude = {}
     for freq in [16, 18, 20]:
         distance[freq], amplitude[freq], _ = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=freq, int_time_us=300)
+
+    # get normal distance and amplitude image to compare with flexmod images
+    cam.settings.set_modulation(24, 0)
+    cam.settings.set_integration_time(300)
+    distance_norm, amplitude_norm = cam.get_distance_and_amplitude()
 
     plt.figure(figsize=(10, 5))
 
