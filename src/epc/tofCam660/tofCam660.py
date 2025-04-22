@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+import time
+import atexit
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam660.interface import Interface, UdpInterface
 from epc.tofCam660.memory import Memory
@@ -36,6 +38,28 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         self.__hdr_mode = 0
         self.lense_projection = Lense_Projection.from_lense_calibration('Wide Field')
         self.maxDepth = DEFAULT_MAX_DEPTH
+        self.dllRegisterSettings = {
+            0x71: 0x00,
+            0x72: 0x00,
+            0x73: 0x00,
+            0x8b: 0x00,
+            0x93: 0x00        }
+    
+    def _clear_dll_settings(self):
+        """Clear the DLL settings in the camera."""
+        for reg, value in self.dllRegisterSettings.items():
+            self.interface.transceive(Command.create("writeRegister", {"address": reg, "value": 0x00}))
+
+    def _store_dll_settings(self):
+        """Store the current DLL settings in the camera."""
+        for reg in self.dllRegisterSettings.keys():
+            regValue = self.interface.transceive(Command.create("readRegister", {"address": reg})).data
+            self.dllRegisterSettings[reg] = int(regValue)
+    
+    def _restore_dll_settings(self):
+        """Restore the DLL settings in the camera."""
+        for reg, value in self.dllRegisterSettings.items():
+            self.interface.transceive(Command.create("writeRegister", {"address": reg, "value": value}))
 
     def set_integration_time(self, int_time_us: int):
         """Set the integration time for standard mode in us."""
@@ -182,13 +206,17 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info('Disabling filters')
         self.set_filters(False, False, 0, 0, 0, 0, False)
 
-    def set_flex_mod_freq(self, frequency_mhz: int|float):
+    def set_flex_mod_freq(self, frequency_mhz: int|float, delay = 0.1):
+        self._clear_dll_settings() # Will be implemented in fw in the next release
         cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
         log.info(f"Setting flex modulation frequency: {frequency_mhz} Hz")
         self.interface.transceive(cmd)
+        time.sleep(delay)
 
     def set_modulation(self, frequency_mhz: float, channel=0):
         """Set the modulation frequency and channel for the TOFcam."""
+        self._restore_dll_settings()
+        
         freq_table = {
             12: 0,
             24: 1,
@@ -329,8 +357,10 @@ class TOFcam660(TOFcam):
         self.memory = Memory.create(0)
 
     def __del__(self):
-        self.tcpInterface.close()
-        self.udpInterface.close()
+        if self.tcpInterface.open:
+            self.settings._restore_dll_settings()
+            self.tcpInterface.close()
+            self.udpInterface.close()
 
     def __get_image_date(self, command: Command):
         nBytes = 0
@@ -347,6 +377,7 @@ class TOFcam660(TOFcam):
         return frame_data
 
     def initialize(self):
+        self.settings._store_dll_settings()
         self.settings.set_modulation(12)
         self.settings.set_roi((0, 0, 320, 240))
         self.settings.set_hdr(2)
@@ -355,6 +386,8 @@ class TOFcam660(TOFcam):
         self.settings.set_minimal_amplitude(100)
         self.settings.disable_filters()
         self.settings.set_lense_type('Wide Field')
+        self.get_raw_dcs_images()
+
 
     def get_grayscale_image(self) -> np.ndarray:
         """ "Get a grayscale image from the camera as a 2d numpy array"""

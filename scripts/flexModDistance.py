@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from epc.tofCam660 import TOFcam660
 import logging
+import time
 
 MAX_DCS_VALUE = 64000
 C = 299792458
@@ -22,28 +23,21 @@ DEFAULT_FLEX_MOD_FREQ = 16E6
 def get_distance_amplitude_dcs(cam: TOFcam660, calibData: dict, modFreq_MHz: int, int_time_us):
     logging.info(f"get image with modulation frequency {modFreq_MHz} MHz and integration time {int_time_us} us")
 
-    # get normal 24Mhz distance and amplitude image
-    cam.settings.set_modulation(24, 0)
+    # prepare camera settings to calibrated temperature
+    # Could be handled in the camera firmware but for now we do it here
     cam.settings.set_integration_time(0)
-    cam.get_raw_dcs_images()
-
-    # clear offset stages
-    cam.device.write_register(0xae, 0x04)    #set DLL manual control
-    cam.device.write_register(0x71, 0x00)    #set DLL fine step to 0
-    cam.device.write_register(0x72, 0x00)    #set DLL fine step to 0
-    cam.device.write_register(0x73, 0x00)    #set DLL coarse step to 0
-    cam.device.write_register(0x8b, 0x00)    #set demodulation delay to 0, because that delay is modulation frequency dependent
-    cam.device.write_register(0x93, 0x00)    #set demodulation delay to 0, because that delay is modulation frequency dependent 
-
+    cam.settings.set_modulation(calibData['modulation(MHz)'], 0)
+    cam.get_distance_and_amplitude()
 
     # adjust integration time relative to calibrated modulation frequency
+    # Could be handled in the camera firmware but for now we do it here
     adjusted_int_time_us = int_time_us * (modFreq_MHz / calibData['modulation(MHz)'])
     cam.settings.set_integration_time(int(adjusted_int_time_us))
 
     # get dcs at frequency
-    cam.get_raw_dcs_images()
-    cam.settings.set_flex_mod_freq(modFreq_MHz)
+    cam.settings.set_flex_mod_freq(modFreq_MHz, delay=0.01)
     dcs = cam.get_raw_dcs_images()
+    # dcs = cam.get_raw_dcs_images()
     temp = cam.device.get_chip_temperature()
 
     # filter invalid values
@@ -67,7 +61,7 @@ def get_distance_amplitude_dcs(cam: TOFcam660, calibData: dict, modFreq_MHz: int
     temp_offset = (calibData['calibrated_temperature(mDeg)']/1000 - temp) * TOF_COS_TEMPERATURE_COEFFICIENT
     distance = distance + (6250 - calibData['atan_offset']) + temp_offset + CONST_OFFSET_CORRECTION
     
-    distance[distance < 0] += unambiguity_mm    # wrap around negative values handling
+    distance %= unambiguity_mm    # handle unambiguity steps
 
     return (distance, amplitude, dcs)
 
@@ -81,9 +75,7 @@ def main():
     cam.settings.set_modulation(DEFAULT_MOD_FREQ, DEFAULT_MOD_CHANNEL)
     cam.settings.set_binning(0)
     cam.settings.set_hdr(0)
-    cam.settings.set_compensations(False, False, False, False)
     cam.settings.set_integration_time(DEFAULT_INT_TIME)
-    cam.get_raw_dcs_images() # throw away the first image
 
     # get calibration data
     calibData = cam.device.get_calibration_data()
@@ -96,8 +88,7 @@ def main():
     distance_norm, amplitude_norm = cam.get_distance_and_amplitude()
 
     # get flexmod distance, amplitude and dcs
-    distance, amplitude, dcs = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=24, int_time_us=300)
-
+    distance, amplitude, dcs = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=18, int_time_us=300)
 
     plt.figure(figsize=(10, 5))
     plt.subplot(2, 2, 1)
