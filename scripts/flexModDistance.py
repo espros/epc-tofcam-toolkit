@@ -88,29 +88,33 @@ def main():
     distance_norm, amplitude_norm = cam.get_distance_and_amplitude()
 
     # get flexmod distance, amplitude and dcs
-    distance, amplitude, dcs = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=18, int_time_us=300)
+    distance = {}
+    amplitude = {}
+    for freq in [16, 18, 20]:
+        distance[freq], amplitude[freq], _ = get_distance_amplitude_dcs(cam, calibData24Mhz, modFreq_MHz=freq, int_time_us=300)
 
     plt.figure(figsize=(10, 5))
-    plt.subplot(2, 2, 1)
-    plt.title('Amplitude flexMod')
-    plt.imshow(amplitude , cmap='turbo', vmin=0, vmax=3200)
-    plt.colorbar(label='Amplitude (DN)')
 
-    plt.subplot(2, 2, 2)
-    plt.title('Amplitude normal')
+    # plot flexMod distance and amplitude
+    for i, freq in enumerate([16, 18, 20]):
+        plt.subplot(2, 4, i+1)
+        plt.title(f'Amplitude FlexMod {freq} MHz')
+        plt.imshow(amplitude[freq], cmap='turbo', vmin=0, vmax=3200)
+        plt.subplot(2, 4, i+5)
+        plt.title(f'Distance FlexMod {freq} MHz')
+        plt.imshow(distance[freq], cmap='turbo', vmin=0, vmax=5000)
+
+    plt.subplot(2, 4, 4)
+    plt.title('Amplitude normal 24Mhz')
     plt.imshow(amplitude_norm, cmap='turbo', vmin=0, vmax=3200)
     plt.colorbar(label='Amplitude (DN)')
 
-    plt.subplot(2, 2, 3)
-    plt.title('Distance flexMod')
-    plt.imshow(distance, cmap='turbo', vmin=0, vmax=5000)
-    plt.colorbar(label='Distance (mm)')
-
-    plt.subplot(2, 2, 4)
-    plt.title('Distance normal')
+    plt.subplot(2, 4, 8)
+    plt.title('Distance normal 24Mhz')
     plt.imshow(distance_norm, cmap='turbo', vmin=0, vmax=5000)
     plt.colorbar(label='Distance (mm)')
 
+    plt.tight_layout()
     plt.show()
 
 
