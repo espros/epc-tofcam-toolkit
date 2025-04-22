@@ -38,6 +38,7 @@ class TOFcam660_bridge(Base_TOFcam_Bridge):
         gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
 
         gui.setDefaultValues()
+        gui.hdrModeDropDown.setEnabled(False)
         
     def _setGuiFilter(self, filter: str):
         match filter:
