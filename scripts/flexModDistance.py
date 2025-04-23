@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 from epc.tofCam660 import TOFcam660
 
-TEST_FREQUENCIES = [16, 18, 20]  # MHz
+TEST_FREQUENCIES = [4, 17, 28]  # MHz
 MIN_AMPLITUDE = 100
-INTEGRATION_TIME = 500  # ms
+INTEGRATION_TIME = 400  # ms
 
 def main():
     # initialization sequence

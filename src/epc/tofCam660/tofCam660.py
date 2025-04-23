@@ -418,10 +418,9 @@ class TOFcam660(TOFcam):
         self.settings.intTime_us = actIntTime
 
         # get dcs at frequency
-        self.settings.set_flex_mod_freq(modFreq_MHz, delay=0.0)
+        self.settings.set_flex_mod_freq(modFreq_MHz, delay=0.01)
         dcs = self.get_raw_dcs_images()
-        dcs = self.get_raw_dcs_images()
-        # dcs = self.get_raw_dcs_images()
+
         temp = self.device.get_chip_temperature()
 
         # filter invalid values
