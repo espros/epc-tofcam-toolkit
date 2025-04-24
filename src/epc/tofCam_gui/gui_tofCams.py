@@ -92,7 +92,7 @@ class Base_GUI_TOFcam(QMainWindow):
                 break
 
         if width > 0 and height > 0:
-            self.data_logger = HDF5Logger("recording.h5", width, height)
+            self.data_logger = HDF5Logger(width, height)
 
             metadata = self._set_recording_metadata()
             if metadata:
