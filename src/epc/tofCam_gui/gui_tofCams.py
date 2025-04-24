@@ -1,17 +1,22 @@
 import time
 
 import numpy as np
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGridLayout,
                                QMainWindow, QSplashScreen, QVBoxLayout,
                                QWidget)
 
 from epc.tofCam_gui.config import EPC_LOGO
-from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget
+from epc.tofCam_gui.data_logger import HDF5Logger
+from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget, RoiSettings
 from epc.tofCam_gui.widgets.console_widget import Console_Widget
 
 
 class Base_GUI_TOFcam(QMainWindow):
+
+    frame_ready = Signal(np.ndarray, float)
+
     def __init__(self, title: str, parent=None):
         super(Base_GUI_TOFcam, self).__init__()
         self._show_splash_screen()
@@ -38,6 +43,11 @@ class Base_GUI_TOFcam(QMainWindow):
         self.topMenuBar.savePngAction.triggered.connect(self._save_png)
         self.topMenuBar.setDefaultValuesAction.triggered.connect(
             self.setDefaultValues)
+
+        self.topMenuBar.startRecordingAction.triggered.connect(
+            self._start_recording)
+        self.topMenuBar.stopRecordingAction.triggered.connect(
+            self._stop_recording)
 
     def complete_setup(self):
         """ ! needs to be called at the end of the __init__ method of the derived class !
@@ -70,6 +80,44 @@ class Base_GUI_TOFcam(QMainWindow):
         filePath, _ = QFileDialog.getSaveFileName(
             self, 'Save raw', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
+
+    def _start_recording(self):
+        width = 0
+        height = 0
+        for i in range(self.settingsLayout.count()):
+            widget = self.settingsLayout.itemAt(i).widget()
+            if isinstance(widget, RoiSettings):
+                width = widget.x2.value() - widget.x1.value()
+                height = widget.y2.value() - widget.y1.value()
+                break
+
+        if width > 0 and height > 0:
+            self.data_logger = HDF5Logger("recording.h5", width, height)
+
+            metadata = self._set_recording_metadata()
+            if metadata:
+                self.data_logger.set_metadata(**metadata)
+
+            self.frame_ready.connect(self.data_logger.add_frame)
+            self.data_logger.start()
+            self.topMenuBar.startRecordingAction.setEnabled(False)
+            self.topMenuBar.stopRecordingAction.setEnabled(True)
+        else:
+            print("Invalid ROI dimensions. Recording not started.")
+
+    def _stop_recording(self):
+        self.frame_ready.disconnect(self.data_logger.add_frame)
+        self.data_logger.stop_logging()
+        self.data_logger.wait()
+        self.topMenuBar.startRecordingAction.setEnabled(True)
+        self.topMenuBar.stopRecordingAction.setEnabled(False)
+
+    def _set_recording_metadata(self) -> dict[str, object]:
+        """
+        override by subclasses to supply recording metadata.
+        returns a dict of {metadata_name: value}. Default is empty.
+        """
+        return {}
 
     def _show_splash_screen(self, image_path=EPC_LOGO):
         splash_pix = QPixmap(str(image_path))
@@ -110,3 +158,5 @@ class Base_GUI_TOFcam(QMainWindow):
             image = self.__filter_cb(image)
         self.imageView.setImage(image, autoRange=False,
                                 autoHistogramRange=False, autoLevels=False)
+
+        self.frame_ready.emit(image.copy(), time.time())

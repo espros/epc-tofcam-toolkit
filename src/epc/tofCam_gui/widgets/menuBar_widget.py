@@ -13,6 +13,13 @@ class MenuBar(QMenuBar):
         self.fileMenu.addAction(self.savePngAction)
         self.saveRawAction = QAction("Save raw", self)
         self.fileMenu.addAction(self.saveRawAction)
+
+        # data recording 
+        self.startRecordingAction = QAction("Start Recording", self)
+        self.stopRecordingAction  = QAction("Stop Recording", self)
+        self.stopRecordingAction.setEnabled(False)  
+        self.fileMenu.addAction(self.startRecordingAction)
+        self.fileMenu.addAction(self.stopRecordingAction)
         
         self.viewMenu = QMenu("View", self)
         self.openConsoleAction = QAction("Show console", self)
