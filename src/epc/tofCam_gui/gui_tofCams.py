@@ -1,13 +1,9 @@
 import time
-
 import numpy as np
+import importlib.resources
 from PySide6.QtGui import QCloseEvent, QPixmap
-from PySide6.QtWidgets import (QApplication, QFileDialog, QGridLayout,
-                               QMainWindow, QSplashScreen, QVBoxLayout,
-                               QWidget)
-
-from epc.tofCam_gui.config import EPC_LOGO
-from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget
+from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QWidget, QSplashScreen, QApplication, QFileDialog
+from epc.tofCam_gui.widgets import VideoWidget, ToolBar, MenuBar
 from epc.tofCam_gui.widgets.console_widget import Console_Widget
 
 
@@ -36,8 +32,7 @@ class Base_GUI_TOFcam(QMainWindow):
 
         self.topMenuBar.saveRawAction.triggered.connect(self._save_raw)
         self.topMenuBar.savePngAction.triggered.connect(self._save_png)
-        self.topMenuBar.setDefaultValuesAction.triggered.connect(
-            self.setDefaultValues)
+        self.topMenuBar.setDefaultValuesAction.triggered.connect(self.setDefaultValues)
 
     def complete_setup(self):
         """ ! needs to be called at the end of the __init__ method of the derived class !
@@ -61,18 +56,16 @@ class Base_GUI_TOFcam(QMainWindow):
                 widget.setDefaultValue()
 
     def _save_raw(self):
-        filePath, _ = QFileDialog.getSaveFileName(
-            self, 'Save raw', filter='*.raw')
+        filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.raw')
         test = self.imageView.video.getImageItem().image
         np.savetxt(filePath + '.csv', test, delimiter=',')
 
     def _save_png(self):
-        filePath, _ = QFileDialog.getSaveFileName(
-            self, 'Save raw', filter='*.png')
+        filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
 
-    def _show_splash_screen(self, image_path=EPC_LOGO):
-        splash_pix = QPixmap(str(image_path))
+    def _show_splash_screen(self, image_path=importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')):
+        splash_pix = QPixmap(image_path)
         self.splash = QSplashScreen(splash_pix)
         self.splash.show()
         self.splash.raise_()
@@ -108,5 +101,4 @@ class Base_GUI_TOFcam(QMainWindow):
 
         if self.__filter_cb:
             image = self.__filter_cb(image)
-        self.imageView.setImage(image, autoRange=False,
-                                autoHistogramRange=False, autoLevels=False)
+        self.imageView.setImage(image, autoRange=False, autoHistogramRange=False, autoLevels=False)
