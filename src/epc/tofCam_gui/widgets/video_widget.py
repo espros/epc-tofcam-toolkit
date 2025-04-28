@@ -6,6 +6,7 @@ from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtGui import QQuaternion, QVector3D
 from PySide6.QtWidgets import QStackedWidget
+from PySide6.QtCore import QTimer
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -32,9 +33,12 @@ class Gizmo(GLGraphicsItem):
         z_axis = np.array([0, 0, arrow_length])
 
         # Create the lines for the axes
-        self.x_line = GLLinePlotItem(pos=np.array([origin, x_axis]), glOptions='opaque', color=(1, 0, 0, 1), width=6, antialias=True, parentItem=self)
-        self.y_line = GLLinePlotItem(pos=np.array([origin, y_axis]), glOptions='opaque', color=(0, 1, 0, 1), width=6, antialias=True, parentItem=self)
-        self.z_line = GLLinePlotItem(pos=np.array([origin, z_axis]), glOptions='opaque', color=(0, 0, 1, 1), width=6, antialias=True, parentItem=self)
+        self.x_line = GLLinePlotItem(pos=np.array([origin, x_axis]), glOptions='opaque', color=(
+            1, 0, 0, 1), width=6, antialias=True, parentItem=self)
+        self.y_line = GLLinePlotItem(pos=np.array([origin, y_axis]), glOptions='opaque', color=(
+            0, 1, 0, 1), width=6, antialias=True, parentItem=self)
+        self.z_line = GLLinePlotItem(pos=np.array([origin, z_axis]), glOptions='opaque', color=(
+            0, 0, 1, 1), width=6, antialias=True, parentItem=self)
 
 
 class Camera(GLGraphicsItem):
@@ -43,9 +47,13 @@ class Camera(GLGraphicsItem):
         self.offset = offset
         self.rotation = rotation
         self._gizmo = Gizmo(parent=self)
-        self._pcd = GLScatterPlotItem(parentItem=self)
-        self._pcd.initialize()
-        self._pcd.setGLOptions('opaque')
+        self._pcd = GLScatterPlotItem(parentItem=self, glOptions='opaque')
+        QTimer.singleShot(0, self.safe_init)
+
+    def safe_init(self) -> None:
+        """Delay the initialization until the OpenGL context is ready"""
+        if hasattr(self._pcd, "initialize"):
+            self._pcd.initialize()
 
     def update_position(self, offset=np.zeros(3), rotation=np.zeros(3)):
         self.offset = offset
@@ -68,7 +76,8 @@ class Camera(GLGraphicsItem):
 
 class PointCloudWidget(GLViewWidget):
     def __init__(self, parent=None):
-        super(PointCloudWidget, self).__init__(parent, rotationMethod='quaternion')
+        super(PointCloudWidget, self).__init__(
+            parent, rotationMethod='quaternion')
         self.camera = Camera(np.zeros(3), np.zeros(3))
         self.addItem(self.camera)
         self.grid = GLGridItem(size=QVector3D(10, 10, 1))
@@ -76,7 +85,8 @@ class PointCloudWidget(GLViewWidget):
         self.grid.translate(0, -0.5, 0)
         self.addItem(self.grid)
 
-        self.setCameraPosition(distance=4, pos=QVector3D(0, 1, 1), rotation=QQuaternion.fromEulerAngles(0, 180, 0))
+        self.setCameraPosition(distance=4, pos=QVector3D(
+            0, 1, 1), rotation=QQuaternion.fromEulerAngles(0, 180, 0))
         self.setMouseTracking(True)
 
     def update_point_cloud(self, points: np.ndarray):
@@ -84,7 +94,8 @@ class PointCloudWidget(GLViewWidget):
 
 
 class VideoWidget(QStackedWidget):
-    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_GRAYSCALE)
+    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(
+        0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
 
     def __init__(self, parent=None):
