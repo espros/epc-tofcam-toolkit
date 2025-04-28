@@ -44,6 +44,7 @@ class Camera(GLGraphicsItem):
         self.rotation = rotation
         self._gizmo = Gizmo(parent=self)
         self._pcd = GLScatterPlotItem(parentItem=self)
+        self._pcd.initialize()
         self._pcd.setGLOptions('opaque')
 
     def update_position(self, offset=np.zeros(3), rotation=np.zeros(3)):
