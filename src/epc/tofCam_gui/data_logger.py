@@ -9,14 +9,12 @@ from PySide6.QtCore import QThread, Slot
 
 class HDF5Logger(QThread):
 
-    def __init__(self, width, height, image_type, parent=None):
+    def __init__(self, image_type, parent=None):
         super().__init__(parent)
         self._meta_data: dict[str, object] = {}
         self._queue: queue.Queue[Union[Tuple[np.ndarray,
                                              float], None]] = queue.Queue()
         self._running = False
-        self.width = width
-        self.height = height
         if image_type == 'DCS':
             self._preprocess = self.recreate_dcs_from_image_grid
         else:
@@ -92,10 +90,13 @@ class HDF5Logger(QThread):
         reconstruct the 4DCS from the 2x2 image grid view.
         returns reconstructed DCS with shape (4, width, height)
         """
-        dcs = np.zeros((4, self.height, self.width), dtype=image.dtype)
+        width = image.shape[0]//2
+        height = image.shape[1]//2
+        dcs = np.zeros((4, height, width), dtype=image.dtype)
+
         image = image.T
-        dcs[0] = image[0:self.height, 0:self.width]
-        dcs[1] = image[0:self.height, self.width:2*self.width]
-        dcs[2] = image[self.height:2*self.height, 0:self.width]
-        dcs[3] = image[self.height:2*self.height, self.width:2*self.width]
+        dcs[0] = image[0:height, 0:width]
+        dcs[1] = image[0:height, width:2*width]
+        dcs[2] = image[height:2*height, 0:width]
+        dcs[3] = image[height:2*height, width:2*width]
         return dcs.transpose((0, 2, 1))

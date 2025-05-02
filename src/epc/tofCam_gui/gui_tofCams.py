@@ -83,31 +83,22 @@ class Base_GUI_TOFcam(QMainWindow):
 
     def _start_recording(self):
 
-        #  find current roi size & image type from the GUI widgets
-        width = 0
-        height = 0
+        #  find current image type from the GUI widgets
         image_type = ""
         for i in range(self.settingsLayout.count()):
             widget = self.settingsLayout.itemAt(i).widget()
-            if isinstance(widget, RoiSettings):
-                width = widget.x2.value() - widget.x1.value()
-                height = widget.y2.value() - widget.y1.value()
-            elif isinstance(widget, GroupBoxSelection):
+            if isinstance(widget, GroupBoxSelection):
                 image_type = widget.getSelection()
 
         # initialize the logger
-        if width > 0 and height > 0:
-            self.data_logger = HDF5Logger(width, height, image_type)
-
-            metadata = self._set_recording_metadata()
-            if metadata:
-                self.data_logger.set_metadata(**metadata)
-            self.frame_ready.connect(self.data_logger.add_frame)
-            self.data_logger.start()
-            self.topMenuBar.startRecordingAction.setEnabled(False)
-            self.topMenuBar.stopRecordingAction.setEnabled(True)
-        else:
-            raise ValueError(f"Invalid ROI dimensions. Recording not started.")
+        self.data_logger = HDF5Logger(image_type)
+        metadata = self._set_recording_metadata()
+        if metadata:
+            self.data_logger.set_metadata(**metadata)
+        self.frame_ready.connect(self.data_logger.add_frame)
+        self.data_logger.start()
+        self.topMenuBar.startRecordingAction.setEnabled(False)
+        self.topMenuBar.stopRecordingAction.setEnabled(True)
 
     def _stop_recording(self):
         self.frame_ready.disconnect(self.data_logger.add_frame)
