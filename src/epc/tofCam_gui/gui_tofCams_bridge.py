@@ -41,6 +41,17 @@ class Base_TOFcam_Bridge():
         gui.topMenuBar.stopRecordingAction.triggered.connect(
             self._stop_recording)
 
+        # connect signals between play & record logics
+        gui.topMenuBar.startRecordingAction.triggered.connect(
+            lambda _: (None if self.streamer.is_streaming()
+                       else gui.toolBar.playButton.trigger())
+        )
+        gui.topMenuBar.stopRecordingAction.triggered.connect(
+            lambda _: gui.toolBar.playButton.trigger()
+        )
+        gui.toolBar.playButton.triggered.connect(
+            lambda enabled: self._stop_recording() if not enabled else None)
+
     def capture(self, mode=0):
         image = self.getImage()
         self.gui.updateImage(image)
@@ -103,11 +114,15 @@ class Base_TOFcam_Bridge():
         if metadata:
             self.data_logger.set_metadata(**metadata)
         self.data_logger.start()
+        self.gui.setSettingsEnabled(False)
         self.gui.topMenuBar.startRecordingAction.setEnabled(False)
         self.gui.topMenuBar.stopRecordingAction.setEnabled(True)
 
     def _stop_recording(self):
+        if self.data_logger is None:
+            return
         self.data_logger.stop_logging()
         self.data_logger.wait()
+        self.gui.setSettingsEnabled(True)
         self.gui.topMenuBar.startRecordingAction.setEnabled(True)
         self.gui.topMenuBar.stopRecordingAction.setEnabled(False)

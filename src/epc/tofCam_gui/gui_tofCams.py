@@ -61,6 +61,12 @@ class Base_GUI_TOFcam(QMainWindow):
             if widget and hasattr(widget, 'setDefaultValue'):
                 widget.setDefaultValue()
 
+    def setSettingsEnabled(self, enabled: bool):
+        for i in range(self.settingsLayout.count()):
+            widget = self.settingsLayout.itemAt(i).widget()
+            if widget:
+                widget.setEnabled(enabled)
+
     def _save_raw(self):
         filePath, _ = QFileDialog.getSaveFileName(
             self, 'Save raw', filter='*.raw')
