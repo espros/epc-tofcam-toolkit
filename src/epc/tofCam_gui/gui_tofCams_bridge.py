@@ -1,9 +1,11 @@
 import time
 import numpy as np
+from datetime import datetime
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
 from epc.tofCam_gui.data_logger import HDF5Logger
+from PySide6.QtWidgets import QFileDialog
 
 
 class Base_TOFcam_Bridge():
@@ -41,11 +43,7 @@ class Base_TOFcam_Bridge():
         gui.topMenuBar.stopRecordingAction.triggered.connect(
             self._stop_recording)
 
-        # connect signals between play & record logics
-        gui.topMenuBar.startRecordingAction.triggered.connect(
-            lambda _: (None if self.streamer.is_streaming()
-                       else gui.toolBar.playButton.trigger())
-        )
+        # connect signals between play & data record
         gui.topMenuBar.stopRecordingAction.triggered.connect(
             lambda _: gui.toolBar.playButton.trigger()
         )
@@ -108,8 +106,23 @@ class Base_TOFcam_Bridge():
             raise ValueError(f"Image type '{image_type}' is not supported")
 
     def _start_recording(self):
+
+        # file dialog for data save
+        default_name = datetime.now().strftime("data_%Y%m%d_%H%M%S.h5")
+        filepath, _ = QFileDialog.getSaveFileName(
+            self.gui,
+            "Save Recording As…",
+            default_name,
+            "HDF5 Files (*.h5)"
+        )
+        if not filepath:
+            return
+
+        if not self.streamer.is_streaming():
+            self.gui.toolBar.playButton.trigger()
+
         # initialize the logger
-        self.data_logger = HDF5Logger(self.image_type)
+        self.data_logger = HDF5Logger(self.image_type, filepath)
         metadata = self.gui._set_recording_metadata()
         if metadata:
             self.data_logger.set_metadata(**metadata)

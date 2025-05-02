@@ -2,15 +2,15 @@ import os
 import queue
 import h5py
 import numpy as np
-from datetime import datetime
 from typing import Tuple, Union
 from PySide6.QtCore import QThread
 
 
 class HDF5Logger(QThread):
 
-    def __init__(self, image_type, parent=None):
+    def __init__(self, image_type, file_path, parent=None):
         super().__init__(parent)
+        self._filepath = file_path
         self._meta_data: dict[str, object] = {}
         self._queue: queue.Queue[Union[Tuple[np.ndarray,
                                              float], None]] = queue.Queue()
@@ -40,14 +40,7 @@ class HDF5Logger(QThread):
 
     def run(self):
         self._running = True
-
-        # prepare filename & open the file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        logdir = "captured_data"
-        os.makedirs(logdir, exist_ok=True)
-        filepath = os.path.join(logdir, f"data_{timestamp}.h5")
-
-        with h5py.File(filepath, 'a') as f:
+        with h5py.File(self._filepath, 'a') as f:
 
             # write any metadata upfront
             for k, v in self._meta_data.items():
