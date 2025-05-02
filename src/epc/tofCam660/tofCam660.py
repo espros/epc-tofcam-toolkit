@@ -347,7 +347,7 @@ class TOFcam660(TOFcam):
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
 
-    def __del__(self):
+    def close(self):
         self.tcpInterface.close()
         self.udpInterface.close()
 
