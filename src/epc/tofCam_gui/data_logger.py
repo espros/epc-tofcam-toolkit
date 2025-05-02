@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 from datetime import datetime
 from typing import Tuple, Union
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import QThread
 
 
 class HDF5Logger(QThread):
@@ -23,7 +23,9 @@ class HDF5Logger(QThread):
     def set_metadata(self, **attrs: object) -> None:
         self._meta_data.update(attrs)
 
-    @Slot(np.ndarray, float)
+    def is_running(self):
+        return self._running
+
     def add_frame(self, frame, timestamp):
         if self._running:
             try:
@@ -32,7 +34,6 @@ class HDF5Logger(QThread):
                 raise queue.Full(
                     f"Recording Queue is full.")
 
-    @Slot()
     def stop_logging(self):
         self._running = False
         self._queue.put(None)
