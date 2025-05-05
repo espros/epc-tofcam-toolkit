@@ -8,6 +8,7 @@ from epc.tofCam_gui.widgets.console_widget import Console_Widget
 
 
 class Base_GUI_TOFcam(QMainWindow):
+
     def __init__(self, title: str, parent=None):
         super(Base_GUI_TOFcam, self).__init__()
         self._show_splash_screen()
@@ -55,6 +56,12 @@ class Base_GUI_TOFcam(QMainWindow):
             if widget and hasattr(widget, 'setDefaultValue'):
                 widget.setDefaultValue()
 
+    def setSettingsEnabled(self, enabled: bool):
+        for i in range(self.settingsLayout.count()):
+            widget = self.settingsLayout.itemAt(i).widget()
+            if widget:
+                widget.setEnabled(enabled)
+
     def _save_raw(self):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.raw')
         test = self.imageView.video.getImageItem().image
@@ -63,6 +70,13 @@ class Base_GUI_TOFcam(QMainWindow):
     def _save_png(self):
         filePath, _ = QFileDialog.getSaveFileName(self, 'Save raw', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
+
+    def _set_recording_metadata(self) -> dict[str, object]:
+        """
+        override by subclasses to supply recording metadata.
+        returns a dict of {metadata_name: value}. Default is empty.
+        """
+        return {}
 
     def _show_splash_screen(self, image_path=importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')):
         splash_pix = QPixmap(image_path)

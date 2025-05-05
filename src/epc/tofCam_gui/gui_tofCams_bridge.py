@@ -1,11 +1,15 @@
+import time
 import numpy as np
-from PySide6.QtCore import Qt
+from datetime import datetime
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_gui.data_logger import HDF5Logger
+from PySide6.QtWidgets import QFileDialog
 
 
 class Base_TOFcam_Bridge():
+
     MAX_AMPLITUDE = 0  # needs to be overwritten by the derived class
     MAX_GRAYSCALE = 0  # needs to be overwritten by the derived class
     MIN_DCS = -2048
@@ -14,6 +18,7 @@ class Base_TOFcam_Bridge():
     def __init__(self, cam: TOFcam, gui: Base_GUI_TOFcam):
         self.cam = cam
         self.gui = gui
+        self.data_logger = None
 
         self.image_type = 'Distance'
         self._distance_unambiguity = None  # needs to be overwritten by the derived class
@@ -31,7 +36,19 @@ class Base_TOFcam_Bridge():
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
-        gui.topMenuBar.openConsoleAction.triggered.connect(lambda: gui.console.startup_kernel(cam))
+        gui.topMenuBar.openConsoleAction.triggered.connect(
+            lambda: gui.console.startup_kernel(cam))
+        gui.topMenuBar.startRecordingAction.triggered.connect(
+            self._start_recording)
+        gui.topMenuBar.stopRecordingAction.triggered.connect(
+            self._stop_recording)
+
+        # connect signals between play & data record
+        gui.topMenuBar.stopRecordingAction.triggered.connect(
+            lambda _: gui.toolBar.playButton.trigger()
+        )
+        gui.toolBar.playButton.triggered.connect(
+            lambda enabled: self._stop_recording() if not enabled else None)
 
     def capture(self, mode=0):
         image = self.getImage()
@@ -40,6 +57,8 @@ class Base_TOFcam_Bridge():
     def updateImage(self, image):
         if self.streamer.is_streaming():
             self.gui.updateImage(image)
+        if self.data_logger != None and self.data_logger.is_running():
+            self.data_logger.add_frame(image.copy(), time.time())
 
     def getImage(self):
         return self._get_image_cb()
@@ -85,3 +104,38 @@ class Base_TOFcam_Bridge():
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)
         else:
             raise ValueError(f"Image type '{image_type}' is not supported")
+
+    def _start_recording(self):
+
+        # file dialog for data save
+        default_name = datetime.now().strftime("data_%Y%m%d_%H%M%S.h5")
+        filepath, _ = QFileDialog.getSaveFileName(
+            self.gui,
+            "Save Recording As…",
+            default_name,
+            "HDF5 Files (*.h5)"
+        )
+        if not filepath:
+            return
+
+        if not self.streamer.is_streaming():
+            self.gui.toolBar.playButton.trigger()
+
+        # initialize the logger
+        self.data_logger = HDF5Logger(self.image_type, filepath)
+        metadata = self.gui._set_recording_metadata()
+        if metadata:
+            self.data_logger.set_metadata(**metadata)
+        self.data_logger.start()
+        self.gui.setSettingsEnabled(False)
+        self.gui.topMenuBar.startRecordingAction.setEnabled(False)
+        self.gui.topMenuBar.stopRecordingAction.setEnabled(True)
+
+    def _stop_recording(self):
+        if self.data_logger is None:
+            return
+        self.data_logger.stop_logging()
+        self.data_logger.wait()
+        self.gui.setSettingsEnabled(True)
+        self.gui.topMenuBar.startRecordingAction.setEnabled(True)
+        self.gui.topMenuBar.stopRecordingAction.setEnabled(False)
