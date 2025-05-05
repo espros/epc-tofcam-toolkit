@@ -13,6 +13,10 @@
         "-m",
         ""
     ],
+    "autopep8.args": [
+        "--max-line-length",
+        "250"
+    ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "editor.tabSize": 4

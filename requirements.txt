@@ -7,3 +7,4 @@ setuptools
 urllib3==1.26.7
 mypy
 tox>=4
+h5py

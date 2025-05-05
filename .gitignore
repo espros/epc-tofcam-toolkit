@@ -3,6 +3,8 @@
 .venv37
 build
 doc/build
+scripts/data/*
+scripts/plots/*
 dist
 tmp
 **/__pycache__
