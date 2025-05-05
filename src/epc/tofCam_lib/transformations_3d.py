@@ -1,13 +1,11 @@
 import numpy as np
-
-from epc.tofCam_gui.config import NARROW_FIELD, STANDARD_FIELD, WIDE_FIELD
+import importlib.resources
 
 lens_type_map = {
-    'Wide Field': WIDE_FIELD,
-    'Narrow Field':  NARROW_FIELD,
-    'Standard Field':  STANDARD_FIELD
+    'Wide Field': importlib.resources.files('epc.data').joinpath('lense_calibration_wide_field.csv'),
+    'Narrow Field':  importlib.resources.files('epc.data').joinpath('lense_calibration_narrow_field.csv'),
+    'Standard Field':  importlib.resources.files('epc.data').joinpath('lense_calibration_standard_field.csv')
 }
-
 
 def get_camera_matrix(resolution, focalLength):
 
@@ -15,10 +13,9 @@ def get_camera_matrix(resolution, focalLength):
     cx, cy = np.array(resolution) / 2.0
     fx = fy = focalLength
     camera_matrix = np.array([[fx, 0, cx],
-                              [0, fy, cy],
-                              [0, 0, 1]])
+                            [0, fy, cy],
+                            [0, 0, 1]])
     return camera_matrix
-
 
 def depth_to_3d(depth, resolution, focalLengh):
 
@@ -38,7 +35,7 @@ def depth_to_3d(depth, resolution, focalLengh):
 
     # Multiply the coordinates by the depth to get 3D points
     points = coords * depth.reshape(1, -1)
-    points = points.reshape(3, height, width)
+    points = points.reshape(3,height,width)
 
     return points
 
@@ -46,24 +43,24 @@ def depth_to_3d(depth, resolution, focalLengh):
 class Lense_Projection():
 
     def __init__(self, rp, angle, width=320, height=240, offsetX=0, offsetY=0):
-        self.angle = np.zeros(101)
-        self.rp = np.zeros(101)
-        self.height = height
-        self.width = width
+        self.angle=np.zeros(101)
+        self.rp=np.zeros(101)
+        self.height=height
+        self.width=width
         self.lenseMatrix = np.zeros((3, self.width, self.height))
 
         self.rp = rp
         self.angle = angle
-
-        self.lensTableSize = 100
-        self.sensorPointSizeMM = 0.02
+        
+        self.lensTableSize=100
+        self.sensorPointSizeMM=0.02
 
         for y, row in enumerate(np.arange(-height/2, height/2)):
             row += 0.5
             for x, col in enumerate(np.arange(-width/2, width/2)):
                 col += 0.5
                 r = self.sensorPointSizeMM * np.sqrt(row**2 + col**2)
-
+                
                 # Find the closest rp and corresponding angle
                 angle_deg = np.interp(r, rp, angle)
                 angle_rad = np.deg2rad(angle_deg)
@@ -84,3 +81,4 @@ class Lense_Projection():
 
     def transformImage(self, depth: np.ndarray):
         return depth * self.lenseMatrix[:, 0:depth.shape[0], 0:depth.shape[1]]
+    
