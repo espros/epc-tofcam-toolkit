@@ -79,4 +79,4 @@ class DcsParser(Parser):
     def parseData(self, frame):
         data = np.frombuffer(self.bytestream, dtype=np.uint16)
         data = data.reshape(4, frame.rows, frame.cols)
-        frame.dcs = np.array([data])
+        frame.dcs = np.ndarray.astype(data, np.int16)
