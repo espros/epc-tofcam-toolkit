@@ -42,11 +42,6 @@ class Base_TOFcam_Bridge():
         gui.topMenuBar.openConsoleAction.triggered.connect(
             lambda: gui.console.startup_kernel(cam))
 
-        # gui.topMenuBar.startRecordingAction.triggered.connect(
-        #     self._start_recording)
-        # gui.topMenuBar.stopRecordingAction.triggered.connect(
-        #     self._stop_recording)
-
         # connect signals between play & data record
         gui.topMenuBar.stopRecordingAction.triggered.connect(
             lambda _: gui.toolBar.playButton.trigger()
@@ -77,13 +72,13 @@ class Base_TOFcam_Bridge():
         image[resolution[0]:, resolution[1]:] = dcs[3]
         return image
 
-    def _set_streaming(self, enable: bool):
+    def _set_streaming(self, enable: bool) -> None:
         if enable:
             self.streamer.start_stream()
         else:
             self.streamer.stop_stream()
 
-    def _set_recording(self, enable: bool):
+    def _set_recording(self, enable: bool) -> None:
         if enable:
             self._start_recording()
         else:
