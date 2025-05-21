@@ -1,8 +1,8 @@
-import os
 import queue
-import h5py
-import numpy as np
 from typing import Tuple, Union
+
+import h5py  # type: ignore
+import numpy as np
 from PySide6.QtCore import QThread
 
 
@@ -10,6 +10,7 @@ class HDF5Logger(QThread):
 
     def __init__(self, image_type, file_path, parent=None):
         super().__init__(parent)
+        self.image_type = image_type
         self._filepath = file_path
         self._meta_data: dict[str, object] = {}
         self._queue: queue.Queue[Union[Tuple[np.ndarray,
@@ -41,6 +42,7 @@ class HDF5Logger(QThread):
     def run(self):
         self._running = True
         with h5py.File(self._filepath, 'a') as f:
+            f = f.require_group(self.image_type)
 
             # write any metadata upfront
             for k, v in self._meta_data.items():
