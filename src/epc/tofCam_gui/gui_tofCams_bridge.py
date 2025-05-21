@@ -1,11 +1,13 @@
 import time
-import numpy as np
 from datetime import datetime
-from epc.tofCam_lib import TOFcam
-from epc.tofCam_gui import Base_GUI_TOFcam
-from epc.tofCam_gui.streamer import Streamer, pause_streaming
-from epc.tofCam_gui.data_logger import HDF5Logger
+
+import numpy as np
 from PySide6.QtWidgets import QFileDialog
+
+from epc.tofCam_gui import Base_GUI_TOFcam
+from epc.tofCam_gui.data_logger import HDF5Logger
+from epc.tofCam_gui.streamer import Streamer, pause_streaming
+from epc.tofCam_lib import TOFcam
 
 
 class Base_TOFcam_Bridge():
@@ -36,12 +38,14 @@ class Base_TOFcam_Bridge():
         # connect signals
         gui.toolBar.captureButton.triggered.connect(self.capture)
         gui.toolBar.playButton.triggered.connect(self._set_streaming)
+        gui.toolBar.recordButton.triggered.connect(self._set_recording)
         gui.topMenuBar.openConsoleAction.triggered.connect(
             lambda: gui.console.startup_kernel(cam))
-        gui.topMenuBar.startRecordingAction.triggered.connect(
-            self._start_recording)
-        gui.topMenuBar.stopRecordingAction.triggered.connect(
-            self._stop_recording)
+
+        # gui.topMenuBar.startRecordingAction.triggered.connect(
+        #     self._start_recording)
+        # gui.topMenuBar.stopRecordingAction.triggered.connect(
+        #     self._stop_recording)
 
         # connect signals between play & data record
         gui.topMenuBar.stopRecordingAction.triggered.connect(
@@ -78,6 +82,12 @@ class Base_TOFcam_Bridge():
             self.streamer.start_stream()
         else:
             self.streamer.stop_stream()
+
+    def _set_recording(self, enable: bool):
+        if enable:
+            self._start_recording()
+        else:
+            self._stop_recording()
 
     def _set_standard_image_type(self, image_type: str):
         """ Set the image type to the given type and update the GUI accordingly """
