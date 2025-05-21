@@ -1,12 +1,15 @@
+from typing import Optional
+
 import numpy as np
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QQuaternion, QVector3D
-from PySide6.QtWidgets import QStackedWidget
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QSlider, QStackedWidget,
+                               QVBoxLayout, QWidget)
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -93,27 +96,69 @@ class PointCloudWidget(GLViewWidget):
         self.camera.update_point_cloud(points[0], points[1])
 
 
-class VideoWidget(QStackedWidget):
-    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(
-        0.0, 1.0, 6), color=CMAP_GRAYSCALE)
+class VideoSlider(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+
+        super().__init__(parent=parent)
+        self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
+        self.slider.setValue(self.slider.maximum())
+        self.slider.setEnabled(False)
+        self.slider.setStyleSheet("""
+            QSlider::groove:horizontal {
+                height: 4px;
+                background: #ccc;
+            }
+            QSlider::handle:horizontal {
+                background: white;
+                border: 1px solid #aaa;
+                width: 12px;
+                margin: -5px 0;
+                border-radius: 6px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #FF0000;
+            }
+        """)
+
+        self.label = QLabel("00:00 / 00:00")
+
+        _layout = QHBoxLayout(self)
+        _layout.addWidget(self.slider)
+        _layout.addWidget(self.label)
+        self.setLayout(_layout)
+
+
+class VideoWidget(QWidget):
+    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
 
     def __init__(self, parent=None):
         super(VideoWidget, self).__init__(parent)
         self.video = ImageView(self)
         self.pc = PointCloudWidget()
-        self.addWidget(self.video)
-        self.addWidget(self.pc)
+        self.slider = VideoSlider(parent=self)
+
+        # Stack
+        self.stacked = QStackedWidget()
+        self.stacked.addWidget(self.video)
+        self.stacked.addWidget(self.pc)
+
+        # Layout
+        _layout = QVBoxLayout()
+        _layout.setContentsMargins(0, 0, 0, 0)
+        _layout.addWidget(self.stacked)
+        _layout.addWidget(self.slider)
+        self.setLayout(_layout)
 
     def setActiveView(self, view: str):
         if view == 'image':
-            self.setCurrentWidget(self.video)
+            self.stacked.setCurrentWidget(self.video)
         elif view == 'pointcloud':
-            self.setCurrentWidget(self.pc)
+            self.stacked.setCurrentWidget(self.pc)
 
     def setImage(self, *args, **kwargs):
         data = args[0]
-        if self.currentWidget() == self.video:
+        if self.stacked.currentWidget() == self.video:
             self.video.setImage(*args, **kwargs)
         else:
             self.pc.update_point_cloud(data)
