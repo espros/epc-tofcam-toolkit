@@ -47,9 +47,9 @@ class HDF5Logger(QThread):
         self._queue.put(None)
 
     def run(self) -> None:
-        """Main thread loop creating/appending to the datasets"""
+        """Main thread loop creating/appending to the datases"""
         self._running = True
-        dset = ts = None
+        ds_frames = ds_timestamps = None
         with h5py.File(self._filepath, 'a') as f:
             self._store_meta(f)
             while True:
@@ -59,12 +59,12 @@ class HDF5Logger(QThread):
 
                 _frame, _timestamp = item
 
-                if dset is None and ts is None:
-                    dset, ts = self._init_db(
+                if ds_frames is None and ds_timestamps is None:
+                    ds_frames, ds_timestamps = self._init_db(
                         f, shape=_frame.shape, dtype=_frame.dtype)
 
-                self._append(dataset=dset, new=_frame)
-                self._append(dataset=ts, new=_timestamp)
+                self._append(dataset=ds_frames, new=_frame)
+                self._append(dataset=ds_timestamps, new=_timestamp)
 
     def _init_db(self, f: h5py.File, shape: Tuple[int], dtype: str) -> Tuple[h5py.Dataset, h5py.Dataset]:
         """Initialize the frame and timesteps datasets
@@ -106,6 +106,6 @@ class HDF5Logger(QThread):
         Args:
             f (h5py.File): The append mode file object
         """
-        assert f.mode == "a"
+        assert f.mode == "r+"
         for k, v in self._meta_data.items():
             f.attrs[k] = v
