@@ -5,14 +5,13 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 from coap.common import Coap_Settings  # type: ignore
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QFileDialog, QMessageBox
-
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5_Settings_Controller, H5Cam
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class Base_TOFcam_Bridge():
@@ -29,7 +28,7 @@ class Base_TOFcam_Bridge():
 
         self.image_type = 'Distance'
         self._distance_unambiguity = None  # needs to be overwritten by the derived class
-        self.streamer: Optional[Streamer] = None
+        self.streamer = Streamer(lambda: np.ndarray([]))
 
         # connect signals
         self.gui.toolBar.captureButton.triggered.connect(self.capture)
@@ -42,6 +41,8 @@ class Base_TOFcam_Bridge():
 
         if cam is not None:
             self._bridge_cam(cam=cam)
+
+        self.cam = cam
 
     def _bridge_cam(self, cam: Optional[TOFcam]) -> None:
         assert cam is not None
@@ -77,75 +78,83 @@ class Base_TOFcam_Bridge():
             )
 
     def capture(self, mode=0):
-        assert self.streamer is not None
-        image = self.getImage()
-        self.gui.updateImage(image)
+        if self.cam is not None:
+            image = self.getImage()
+            self.gui.updateImage(image)
 
     def updateImage(self, image):
-        assert self.streamer is not None
-        if self.streamer.is_streaming():
-            self.gui.updateImage(image)
-        if self.data_logger != None and self.data_logger.is_running():
-            self.data_logger.add_frame(image.copy(), time.time())
+        if self.cam is not None:
+            if self.streamer.is_streaming():
+                self.gui.updateImage(image)
+            if self.data_logger != None and self.data_logger.is_running():
+                self.data_logger.add_frame(image.copy(), time.time())
 
     def getImage(self):
-        assert self.cam is not None
-        return self._get_image_cb()
+        if self.cam is not None:
+            return self._get_image_cb()
+        else:
+            return lambda: np.ndarray([])
 
     def get_combined_dcs(self):
-        assert self.cam is not None
-        dcs = self.cam.get_raw_dcs_images()
-        resolution = np.array(dcs.shape[1:])
-        image = np.zeros(2*resolution)
-        image[0:resolution[0], 0:resolution[1]] = dcs[0]
-        image[0:resolution[0], resolution[1]:] = dcs[1]
-        image[resolution[0]:, 0:resolution[1]] = dcs[2]
-        image[resolution[0]:, resolution[1]:] = dcs[3]
-        return image
+        if self.cam is not None:
+            dcs = self.cam.get_raw_dcs_images()
+            resolution = np.array(dcs.shape[1:])
+            image = np.zeros(2*resolution)
+            image[0:resolution[0], 0:resolution[1]] = dcs[0]
+            image[0:resolution[0], resolution[1]:] = dcs[1]
+            image[resolution[0]:, 0:resolution[1]] = dcs[2]
+            image[resolution[0]:, resolution[1]:] = dcs[3]
+            return image
+        else:
+            return np.ndarray([])
 
     def _set_streaming(self, enable: bool) -> None:
-        assert self.streamer is not None
-        if enable:
-            self.streamer.start_stream()
-        else:
-            self.streamer.stop_stream()
+        if self.cam is not None:
+            if enable:
+                self.streamer.start_stream()
+            else:
+                self.streamer.stop_stream()
 
     def _set_recording(self, enable: bool) -> None:
-        if enable:
-            self._start_recording()
-        else:
-            self._stop_recording()
+        if self.cam is not None:
+            if enable:
+                self._start_recording()
+            else:
+                self._stop_recording()
 
     def _set_standard_image_type(self, image_type: str):
         """ Set the image type to the given type and update the GUI accordingly """
-        assert self.cam is not None
         self.image_type = image_type
         if image_type == 'Distance':
             assert self._distance_unambiguity is not None
             self.gui.imageView.setActiveView('image')
-            self._get_image_cb = self.cam.get_distance_image
+            if self.cam is not None:
+                self._get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self._distance_unambiguity*1000)
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
-            self._get_image_cb = self.cam.get_amplitude_image
+            if self.cam is not None:
+                self._get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
             self.gui.imageView.setActiveView('image')
-            self._get_image_cb = self.cam.get_grayscale_image
+            if self.cam is not None:
+                self._get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         elif image_type == 'DCS':
             self.gui.imageView.setActiveView('image')
-            self._get_image_cb = self.get_combined_dcs
+            if self.cam is not None:
+                self._get_image_cb = self.get_combined_dcs
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)
         else:
             raise ValueError(f"Image type '{image_type}' is not supported")
 
     def _start_recording(self):
-        assert self.streamer is not None
+
         # file dialog for data save
         default_name = datetime.now().strftime("data_%Y%m%d_%H%M%S.h5")
         filepath, _ = QFileDialog.getSaveFileName(
@@ -171,13 +180,12 @@ class Base_TOFcam_Bridge():
         self.gui.topMenuBar.stopRecordingAction.setEnabled(True)
 
     def _stop_recording(self):
-        if self.data_logger is None:
-            return
-        self.data_logger.stop_logging()
-        self.data_logger.wait()
-        self.gui.setSettingsEnabled(True)
-        self.gui.topMenuBar.startRecordingAction.setEnabled(True)
-        self.gui.topMenuBar.stopRecordingAction.setEnabled(False)
+        if self.data_logger is not None:
+            self.data_logger.stop_logging()
+            self.data_logger.wait()
+            self.gui.setSettingsEnabled(True)
+            self.gui.topMenuBar.startRecordingAction.setEnabled(True)
+            self.gui.topMenuBar.stopRecordingAction.setEnabled(False)
 
     def _replay(self, enable: bool) -> None:
         """Select the binary file and update the firmware"""
