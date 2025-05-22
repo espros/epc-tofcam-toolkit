@@ -42,7 +42,8 @@ _SVG_DICT = {
     "wifi": """<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-wifi"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18l.01 0" /><path d="M9.172 15.172a4 4 0 0 1 5.656 0" /><path d="M6.343 12.343a8 8 0 0 1 11.314 0" /><path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0" /></svg>""",
     "wifi_off": """<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-wifi-off"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18l.01 0" /><path d="M9.172 15.172a4 4 0 0 1 5.656 0" /><path d="M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2" /><path d="M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374" /><path d="M3 3l18 18" /></svg>"""
 }
-_LOGO_PATH = importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')
+_LOGO_PATH = importlib.resources.files(
+    'epc.tofCam_gui.icons').joinpath('epc-logo.png')
 
 
 class ToolBar(QToolBar):
@@ -51,14 +52,20 @@ class ToolBar(QToolBar):
         self.gui_version = importlib.metadata.version("epc-tofcam-toolkit")
 
         # Render icons at run-time
-        self._icons = {_key: _svg2icon(_val) for _key, _val in _SVG_DICT.items()}
+        self._icons = {_key: _svg2icon(_val)
+                       for _key, _val in _SVG_DICT.items()}
 
         # Buttons
-        self.playButton = QAction(self._icons["play"], "Start", self, toolTip="Start and stop live stream", checkable=True)
-        self.captureButton = QAction(self._icons["capture"], "Capture", self, toolTip="Capture a single frame")
-        self.recordButton = QAction(self._icons["record"], "Record", self, toolTip="Record live stream", checkable=True)
-        self.importButton = QAction(self._icons["file_import"], "Import File", self, toolTip="Import a file to replay", checkable=True)
-        self.replayButton = QAction(self._icons["replay"], "Replay", self, toolTip="Replay the recorded stream", checkable=True, enabled=False)
+        self.playButton = QAction(
+            self._icons["play"], "Start", self, toolTip="Start and stop live stream", checkable=True)
+        self.captureButton = QAction(
+            self._icons["capture"], "Capture", self, toolTip="Capture a single frame")
+        self.recordButton = QAction(
+            self._icons["record"], "Record", self, toolTip="Record live stream", checkable=True)
+        self.importButton = QAction(
+            self._icons["file_import"], "Import File", self, toolTip="Import a file to replay", checkable=True)
+        self.replayButton = QAction(
+            self._icons["replay"], "Replay", self, toolTip="Replay the recorded stream", checkable=True, enabled=False)
 
         # Button actions
         self.playButton.toggled.connect(self._playButtonToggled)
@@ -76,14 +83,17 @@ class ToolBar(QToolBar):
         esprosLogo = QPixmap(_LOGO_PATH)  # type: ignore
         esprosLogo = esprosLogo.scaled(
             100, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        self.logo = QLabel(pixmap=esprosLogo, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.logo = QLabel(pixmap=esprosLogo,
+                           alignment=Qt.AlignmentFlag.AlignCenter)
         self.logo.setFixedSize(100, 50)
 
         # Create the spacers
         left_spacer = QWidget()
-        left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        left_spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         right_spacer = QWidget()
-        right_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        right_spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         self.addAction(self.playButton)
         self.addAction(self.captureButton)
@@ -102,7 +112,8 @@ class ToolBar(QToolBar):
         self.fpsInfo.setText(f'FPS: {fps:5.1f}')
 
     def _playButtonToggled(self) -> None:
-        self.__setOnOffIcons(self.playButton, self._icons["play"], self._icons["stop"])
+        self.__setOnOffIcons(
+            self.playButton, self._icons["play"], self._icons["stop"])
 
         if not self.playButton.isChecked() and self.recordButton.isChecked():
             QTimer.singleShot(0, self.recordButton.trigger)
@@ -117,14 +128,19 @@ class ToolBar(QToolBar):
         if self.playButton.isChecked():
             QTimer.singleShot(0, self.playButton.trigger)
 
-        QTimer.singleShot(100, lambda: self.playButton.setEnabled(not self.importButton.isChecked()))
-        QTimer.singleShot(100, lambda: self.captureButton.setEnabled(not self.importButton.isChecked()))
-        QTimer.singleShot(100, lambda: self.recordButton.setEnabled(not self.importButton.isChecked()))
+        QTimer.singleShot(100, lambda: self.playButton.setEnabled(
+            not self.importButton.isChecked()))
+        QTimer.singleShot(100, lambda: self.captureButton.setEnabled(
+            not self.importButton.isChecked()))
+        QTimer.singleShot(100, lambda: self.recordButton.setEnabled(
+            not self.importButton.isChecked()))
 
-        QTimer.singleShot(100, lambda: self.replayButton.setEnabled(self.importButton.isChecked()))
+        QTimer.singleShot(100, lambda: self.replayButton.setEnabled(
+            self.importButton.isChecked()))
 
     def _replayButtonToggled(self) -> None:
-        self.__setOnOffIcons(self.replayButton, self._icons["replay"], self._icons["pause"])
+        self.__setOnOffIcons(
+            self.replayButton, self._icons["replay"], self._icons["pause"])
 
     def __setOnOffIcons(self, button: QAction, on: QIcon, off: QIcon) -> None:
         """Set ON/OFF icon variations for the same button
@@ -139,7 +155,7 @@ class ToolBar(QToolBar):
         else:
             button.setIcon(on)
 
-    def setVersionInfo(self, fwVersion: int) -> None:
+    def setVersionInfo(self, fwVersion: str) -> None:
         self.versionInfo.setText(f'GUI: {self.gui_version}\nFW: {fwVersion}')
 
     def setChipInfo(self, chipID: int, waferID: int) -> None:
