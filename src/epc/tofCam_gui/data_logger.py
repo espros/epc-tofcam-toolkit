@@ -42,11 +42,12 @@ class HDF5Logger(QThread):
     def run(self):
         self._running = True
         with h5py.File(self._filepath, 'a') as f:
-            f = f.require_group(self.image_type)
 
             # write any metadata upfront
             for k, v in self._meta_data.items():
                 f.attrs[k] = v
+
+            f = f.require_group(self.image_type)
 
             dset = ts = None
             while True:
