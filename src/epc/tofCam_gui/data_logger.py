@@ -79,11 +79,10 @@ class HDF5Logger(QThread):
                 ds_frames: The frame storage
                 ds_timestamps: The timeline storage
         """
-        _group = f.require_group(self.image_type)
-        ds_frames = _group.create_dataset("frames", shape=(0, *shape),
-                                          maxshape=(None, *shape), chunks=(1, *shape), dtype=dtype)
-        ds_timestamps = _group.create_dataset("timestamps", shape=(0,),
-                                              maxshape=(None,), chunks=(1,), dtype='float64')
+        ds_frames = f.create_dataset("frames", shape=(0, *shape),
+                                     maxshape=(None, *shape), chunks=(1, *shape), dtype=dtype)
+        ds_timestamps = f.create_dataset("timestamps", shape=(0,),
+                                         maxshape=(None,), chunks=(1,), dtype='float64')
         return ds_frames, ds_timestamps
 
     def _append(self, dataset: h5py.Dataset, new: float | np.ndarray) -> None:
