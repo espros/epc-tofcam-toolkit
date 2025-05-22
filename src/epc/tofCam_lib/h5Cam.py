@@ -30,12 +30,47 @@ class _H5Base:
         self._extension = ".h5"
         self.source = source  # type: ignore
         self._attributes: Optional[Dict[str, Any]] = None
-        self._recordings: Dict[str, Dict[int, Tuple[float, np.ndarray]]] = {}
+        self._recordings: Dict[int, Tuple[float, np.ndarray]] = {}
         self.group = group
 
         # State params
-        self.index: Dict[str, int] = {}
-        self._prev_timestep = None
+        self.index: int = 0
+        self._prev_timestep: Optional[float] = None
+
+    @property
+    def image_type(self) -> str:
+        __attr = self._get_attribute("image_type")
+        assert isinstance(__attr, str)
+        return __attr
+
+    def __len__(self) -> int:
+        """Get the record length in number of frames"""
+        if len(self._recordings) == 0:
+            self.__getitem__(0)
+        return len(self._recordings)
+
+    def __getitem__(self, index: int) -> Tuple[float, np.ndarray]:
+        """Read the timestamp and frame from the source"""
+
+        if len(self._recordings) == 0:
+            with h5py.File(self.source, "r") as f:
+                if self.group is not None:
+                    group = f[self.group]
+                else:
+                    group = f
+                _timestamps, _frames = group["timestamps"][:], group["frames"][:]
+                _timestamps: np.ndarray
+                _frames: np.ndarray
+                _recordings = {_i: (float(_ts), _frame) for _i, (_ts, _frame) in enumerate(
+                    zip(_timestamps, _frames))}
+
+            self._recordings = _recordings
+
+        if index > len(self._recordings):
+            raise StopIteration(
+                f"Record length exceeded! {index} > {len(self._recordings)}")
+
+        return self._recordings[index]
 
     @property
     def source(self) -> Path:
@@ -89,32 +124,7 @@ class _H5Base:
         else:
             raise IndexError(f"Cannot find attribute {key}")
 
-    def _get_frame(self, key: str, index: int) -> Tuple[float, np.ndarray]:
-        """Read the timestamp and frame from the source"""
-
-        if key not in self._recordings:
-            with h5py.File(self.source, "r") as f:
-                if self.group is not None:
-                    group = f[self.group]
-                else:
-                    group = f
-                if key in group:
-                    group = group[key]
-                else:
-                    raise IndexError(f"{key} not in recorded!")
-                _timestamps, _frames = group["timestamps"][:], group["frames"][:]
-                _timestamps: np.ndarray
-                _frames: np.ndarray
-                _recordings = {key: {_i: (float(_ts), _frame) for _i, (_ts, _frame) in enumerate(zip(_timestamps, _frames))}}
-
-            self._recordings = _recordings
-
-        if index > len(self._recordings[key]):
-            raise StopIteration(f"Record length exceeded! {index} > {len(self._recordings[key])}")
-
-        return self._recordings[key][index]
-
-    def _stream_next(self, key: str) -> Tuple[float, np.ndarray]:
+    def _stream_next(self) -> Tuple[float, np.ndarray]:
         """Get a stream of frames from the h5 source, in the same speed
 
         Args:
@@ -125,24 +135,28 @@ class _H5Base:
                 timestep: the timestep when the image has fetched
                 frame: the frame instance that that specific timestep
         """
-        if key not in self.index:
-            self.index[key] = 0
+        _tic = time.time()
 
-        _timestamp, _frame = self._get_frame(key, self.index[key] % self._get_record_length(key))
-        self.index[key] += 1
+        if self.index >= len(self):
+            self.index = 0
+            self._prev_timestep = None
 
-        if self._prev_timestep is not None:
+        _timestamp, _frame = self.__getitem__(self.index)
 
-            time.sleep(_timestamp - self._prev_timestep)
+        if self._prev_timestep is None:
             self._prev_timestep = _timestamp
+
+        self.index += 1
+        _toc = time.time()
+        time.sleep(max(_timestamp - self._prev_timestep - (_toc-_tic), 0))
+        self._prev_timestep = _timestamp
 
         return _timestamp, _frame
 
-    def _get_record_length(self, key: str) -> int:
-        """Get the record length of a specific recording"""
-        if key not in self._recordings:
-            self._get_frame(key, 0)
-        return len(self._recordings[key])
+    def update_index(self, idx: int) -> None:
+        """Updates the index of a specific key"""
+        self._prev_timestep = None
+        self.index = idx
 
 
 class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
@@ -169,25 +183,32 @@ class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
         return tuple(self._get_attribute("roi"))
 
     def set_modulation(self, frequency_mhz: float, channel: int = 0):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set modulation!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set modulation!")
 
     def set_roi(self, roi: tuple[int, int, int, int]):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set ROI!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set ROI!")
 
     def set_minimal_amplitude(self, amplitude: int):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set minimal aplitude!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set minimal aplitude!")
 
     def set_integration_time(self, int_time_us: int):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set integration time!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set integration time!")
 
     def set_integration_time_grayscale(self, int_time_us: int):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set ingegration time grayscale!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set ingegration time grayscale!")
 
     def set_dll_step(self, step: int, fine_step=0):
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set DLL step!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set DLL step!")
 
     def set_hdr(self, mode: int) -> None:
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set HDR!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set HDR!")
 
 
 class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
@@ -210,11 +231,13 @@ class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
         return _val
 
     def get_chip_temperature(self) -> float:
-        logger.critical(f"H5Cam is static! It can only read the time depended dynamic values like temperature")
+        logger.critical(
+            f"H5Cam is static! It can only read the time depended dynamic values like temperature")
         return -1
 
     def write_register(self, reg_addr: int, value: int) -> None:
-        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set register!")
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set register!")
 
 
 class H5Cam(ABC, _H5Base, TOFcam):
@@ -229,9 +252,11 @@ class H5Cam(ABC, _H5Base, TOFcam):
         _H5Base.__init__(self, source=source, group=None)
 
         if self.source != settings_ctrl.source:
-            raise ValueError(f"`H5Cam` and `H5_Settings_Controller` source mismatch! {source} != {settings_ctrl.source}")
+            raise ValueError(
+                f"`H5Cam` and `H5_Settings_Controller` source mismatch! {source} != {settings_ctrl.source}")
         if self.source != info_ctrl.source:
-            raise ValueError(f"`H5Cam` and `H5Dev_Infos_Controller` source mismatch! {source} != {info_ctrl.source}")
+            raise ValueError(
+                f"`H5Cam` and `H5Dev_Infos_Controller` source mismatch! {source} != {info_ctrl.source}")
 
         TOFcam.__init__(self, settings_ctrl=settings_ctrl, info_ctrl=info_ctrl)
 
@@ -246,21 +271,34 @@ class H5Cam(ABC, _H5Base, TOFcam):
         pass
 
     def get_distance_image(self):
-        pass
+        if self.image_type != 'Distance':
+            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Distance!")
+        _timestamp, _frame = self._stream_next()
+        return _frame
 
     def get_amplitude_image(self):
-        pass
+        if self.image_type != 'Amplitude':
+            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Amplitude!")
+        _timestamp, _frame = self._stream_next()
+        return _frame
 
     def get_grayscale_image(self):
-        pass
+        if self.image_type != 'Grayscale':
+            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Grayscale!")
+        _timestamp, _frame = self._stream_next()
+        return _frame
 
     def get_raw_dcs_images(self):
-        __key = "DCS"
-        _timestamp, _frame = self._stream_next(__key)
+        if self.image_type != 'DCS':
+            raise ValueError(f"This H5Cam recorded {self.image_type}! Not DCS!")
+        _timestamp, _frame = self._stream_next()
         return _frame
 
     def get_point_cloud(self):
-        pass
+        if self.image_type != 'Point Cloud':
+            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Point Cloud!")
+        _timestamp, _frame = self._stream_next()
+        return _frame
 
     @property
     def mod_frequency(self) -> float:
