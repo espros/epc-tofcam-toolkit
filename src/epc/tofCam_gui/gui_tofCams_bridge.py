@@ -67,8 +67,10 @@ class Base_TOFcam_Bridge():
 
         # Fetch meta
         self._meta = {
-            "roi": cam.settings.get_roi(),
+            "chipid": chipID,
+            "waferid": waferId,
             "chip_infos": (chipID, waferId),
+            "roi": cam.settings.get_roi(),
             "fw_version": fw_version,
         }
 
@@ -87,6 +89,11 @@ class Base_TOFcam_Bridge():
         if self.cam is not None:
             if self.streamer.is_streaming():
                 self.gui.updateImage(image)
+                if isinstance(self.cam, H5Cam):
+                    self.gui.imageView.slider.blockSignals(True)
+                    self.gui.imageView.slider.slider.setValue(self.cam.index)
+                    self.gui.imageView.slider.update_label(self.cam.index)
+                    self.gui.imageView.slider.blockSignals(False)
 
     def storeImage(self, image):
         if self.data_logger is not None:
@@ -247,9 +254,18 @@ class Base_TOFcam_Bridge():
                 if confirm == QMessageBox.StandardButton.Yes:
                     if hasattr(self, "cam"):
                         self.prev_cam = self.cam
-                    self._bridge_cam(H5Cam(_recorded_stream))
+                    cam = H5Cam(_recorded_stream)
+
+                    def _get_frame(idx: int):
+                        cam.update_index(idx)
+                        self.capture()
+
+                    self._bridge_cam(cam)
                     self.gui.imageView.setActiveView('image')
                     _success = True
+                    self.gui.imageView.slider.update_record(len(cam))
+                    self.gui.imageView.slider.frame_idx_changed.connect(
+                        _get_frame)
 
             if not _success:
                 QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
