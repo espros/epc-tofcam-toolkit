@@ -1,4 +1,6 @@
+import logging
 import os
+import time
 from abc import ABC
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -9,6 +11,8 @@ import numpy as np
 from epc.tofCam_lib.tofCam import (Dev_Infos_Controller,
                                    TOF_Settings_Controller, TOFcam)
 
+logger = logging.getLogger("H5Cam")
+
 
 class ReadOnlyError(ValueError):
     pass
@@ -16,11 +20,22 @@ class ReadOnlyError(ValueError):
 
 class _H5Base:
     def __init__(self, source: Path | str, group: Optional[str] = None) -> None:
+        """
+
+        Args:
+            source (Path | str): The `*.h5` file path
+            group (Optional[str], optional): The group name that stores the attributes and frames. Defaults to None.
+        """
+
         self._extension = ".h5"
         self.source = source  # type: ignore
         self._attributes: Optional[Dict[str, Any]] = None
         self._recordings: Dict[str, Dict[int, Tuple[float, np.ndarray]]] = {}
         self.group = group
+
+        # State params
+        self.index: Dict[str, int] = {}
+        self._prev_timestep = None
 
     @property
     def source(self) -> Path:
@@ -99,6 +114,30 @@ class _H5Base:
 
         return self._recordings[key][index]
 
+    def _stream_next(self, key: str) -> Tuple[float, np.ndarray]:
+        """Get a stream of frames from the h5 source, in the same speed
+
+        Args:
+            key (str): The image type key
+
+        Returns:
+            Tuple[float,np.ndarray]: timestep, frame
+                timestep: the timestep when the image has fetched
+                frame: the frame instance that that specific timestep
+        """
+        if key not in self.index:
+            self.index[key] = 0
+
+        _timestamp, _frame = self._get_frame(key, self.index[key] % self._get_record_length(key))
+        self.index[key] += 1
+
+        if self._prev_timestep is not None:
+
+            time.sleep(_timestamp - self._prev_timestep)
+            self._prev_timestep = _timestamp
+
+        return _timestamp, _frame
+
     def _get_record_length(self, key: str) -> int:
         """Get the record length of a specific recording"""
         if key not in self._recordings:
@@ -108,11 +147,15 @@ class _H5Base:
 
 class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
     def __init__(self, source: str | Path) -> None:
-        _H5Base.__init__(self, source=source, group="settings")
+        _H5Base.__init__(self, source=source, group=None)
         TOF_Settings_Controller.__init__(self)
 
     def get_modulation_frequencies(self) -> list[float]:
         return list(self._get_attribute("modulation_frequencies"))
+
+    def get_modulation(self) -> float:
+        """Modulation frequency"""
+        return float(self._get_attribute("mod_frequency"))
 
     def get_modulation_channels(self) -> list[int]:
         return list(self._get_attribute("modulation_channels"))
@@ -126,30 +169,30 @@ class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
         return tuple(self._get_attribute("roi"))
 
     def set_modulation(self, frequency_mhz: float, channel: int = 0):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set modulation!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set modulation!")
 
     def set_roi(self, roi: tuple[int, int, int, int]):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set ROI!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set ROI!")
 
     def set_minimal_amplitude(self, amplitude: int):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set minimal aplitude!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set minimal aplitude!")
 
     def set_integration_time(self, int_time_us: int):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set integration time!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set integration time!")
 
     def set_integration_time_grayscale(self, int_time_us: int):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set ingegration time grayscale!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set ingegration time grayscale!")
 
     def set_dll_step(self, step: int, fine_step=0):
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set DLL step!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set DLL step!")
 
     def set_hdr(self, mode: int) -> None:
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set HDR!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set HDR!")
 
 
 class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
     def __init__(self, source: str | Path) -> None:
-        _H5Base.__init__(self, source=source, group="device")
+        _H5Base.__init__(self, source=source, group=None)
         Dev_Infos_Controller.__init__(self)
 
     def get_chip_infos(self) -> tuple[int, int]:
@@ -167,10 +210,11 @@ class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
         return _val
 
     def get_chip_temperature(self) -> float:
-        raise ReadOnlyError(f"H5Cam is static! It can only read the time depended dynamic values like temperature")
+        logger.critical(f"H5Cam is static! It can only read the time depended dynamic values like temperature")
+        return -1
 
     def write_register(self, reg_addr: int, value: int) -> None:
-        raise ReadOnlyError(f"H5Cam is readonly! It can only read the previously set values, cannot set register!")
+        logger.info(f"H5Cam is readonly! It can only read the previously set values, cannot set register!")
 
 
 class H5Cam(ABC, _H5Base, TOFcam):
@@ -194,7 +238,6 @@ class H5Cam(ABC, _H5Base, TOFcam):
         # Update tyhpehints
         self.settings: H5_Settings_Controller
         self.device: H5Dev_Infos_Controller
-        self.index: Dict[str, int] = {}
 
     def __del__(self) -> None:
         pass
@@ -213,12 +256,13 @@ class H5Cam(ABC, _H5Base, TOFcam):
 
     def get_raw_dcs_images(self):
         __key = "DCS"
-        if __key not in self.index:
-            self.index[__key] = 0
-
-        _timestamp, _frame = self._get_frame(__key, self.index[__key])
-        self.index[__key] += 1
+        _timestamp, _frame = self._stream_next(__key)
         return _frame
 
     def get_point_cloud(self):
         pass
+
+    @property
+    def mod_frequency(self) -> float:
+        """Modulation frequency"""
+        return float(self._get_attribute("mod_frequency"))
