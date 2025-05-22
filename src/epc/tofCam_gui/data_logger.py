@@ -1,5 +1,7 @@
 import queue
-from typing import Tuple, Union
+import time
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 import h5py  # type: ignore
 import numpy as np
@@ -7,93 +9,103 @@ from PySide6.QtCore import QThread
 
 
 class HDF5Logger(QThread):
+    """HDF5 log worker object, storing streamed images"""
 
-    def __init__(self, image_type, file_path, parent=None):
+    def __init__(self, image_type: str, file_path: str | Path, parent=None) -> None:
+        """
+
+        Args:
+            image_type (str): The type of the image "DCS", "Point cloud", .."
+            file_path (str | Path): The path the source file
+        """
         super().__init__(parent)
         self.image_type = image_type
         self._filepath = file_path
-        self._meta_data: dict[str, object] = {}
-        self._queue: queue.Queue[Union[Tuple[np.ndarray,
-                                             float], None]] = queue.Queue()
+        self._meta_data: Dict[str, Any] = {}
+        self._queue: queue.Queue[Optional[Tuple[np.ndarray, float]]] = queue.Queue(
+        )
         self._running = False
-        if image_type == 'DCS':
-            self._preprocess = self.recreate_dcs_from_image_grid
-        else:
-            self._preprocess = lambda img: img
+
+    def is_running(self) -> bool:
+        return self._running
 
     def set_metadata(self, **attrs: object) -> None:
         self._meta_data.update(attrs)
 
-    def is_running(self):
-        return self._running
-
-    def add_frame(self, frame, timestamp):
+    def add_frame(self, frame: np.ndarray) -> None:
+        """Add a frame with the timestamp flag to the queue"""
         if self._running:
             try:
-                self._queue.put_nowait((frame, timestamp))
+                self._queue.put_nowait((frame, time.time()))
             except queue.Full:
                 raise queue.Full(
                     f"Recording Queue is full.")
 
-    def stop_logging(self):
+    def stop_logging(self) -> None:
+        """Stop the data logging by inserting a None to the queue"""
         self._running = False
         self._queue.put(None)
 
-    def run(self):
+    def run(self) -> None:
+        """Main thread loop creating/appending to the datasets"""
         self._running = True
+        dset = ts = None
         with h5py.File(self._filepath, 'a') as f:
-
-            # write any metadata upfront
-            for k, v in self._meta_data.items():
-                f.attrs[k] = v
-
-            f = f.require_group(self.image_type)
-
-            dset = ts = None
+            self._store_meta(f)
             while True:
                 item = self._queue.get()
                 if item is None:
                     break
 
-                raw_frame, tstamp = item
-                frame = self._preprocess(raw_frame)
+                _frame, _timestamp = item
 
-                # if this is the first real frame, create the datasets:
-                if dset is None or ts is None:
+                if dset is None and ts is None:
+                    dset, ts = self._init_db(
+                        f, shape=_frame.shape, dtype=_frame.dtype)
 
-                    shape = frame.shape
-                    dset = f.create_dataset(
-                        'frames',
-                        shape=(0, *shape),
-                        maxshape=(None, *shape),
-                        dtype=frame.dtype,
-                    )
-                    ts = f.create_dataset(
-                        'timestamps',
-                        shape=(0,),
-                        maxshape=(None,),
-                        dtype='float64'
-                    )
+                self._append(dataset=dset, new=_frame)
+                self._append(dataset=ts, new=_timestamp)
 
-                # append frame & timestamp
-                idx = dset.shape[0]
-                dset.resize(idx+1, axis=0)
-                dset[idx, ...] = frame
-                ts.resize(idx+1, axis=0)
-                ts[idx] = tstamp
+    def _init_db(self, f: h5py.File, shape: Tuple[int], dtype: str) -> Tuple[h5py.Dataset, h5py.Dataset]:
+        """Initialize the frame and timesteps datasets
 
-    def recreate_dcs_from_image_grid(self, image):
+        Args:
+            f (h5py.File): Wirte/Append mode h5 file object
+            shape (Tuple[int]): The shape of a single frame
+            dtype (str): The type of the dataset
+
+        Returns:
+            Tuple[h5py.Dataset, h5py.Dataset]: ds_frames, ds_timestamps
+                ds_frames: The frame storage
+                ds_timestamps: The timeline storage
         """
-        reconstruct the 4DCS from the 2x2 image grid view.
-        returns reconstructed DCS with shape (4, width, height)
-        """
-        width = image.shape[0]//2
-        height = image.shape[1]//2
-        dcs = np.zeros((4, height, width), dtype=image.dtype)
+        _group = f.require_group(self.image_type)
+        ds_frames = _group.create_dataset("frames", shape=(0, *shape),
+                                          maxshape=(None, *shape), chunks=(1, *shape), dtype=dtype)
+        ds_timestamps = _group.create_dataset("timestamps", shape=(0,),
+                                              maxshape=(None,), chunks=(1,), dtype='float64')
+        return ds_frames, ds_timestamps
 
-        image = image.T
-        dcs[0] = image[0:height, 0:width]
-        dcs[1] = image[0:height, width:2*width]
-        dcs[2] = image[height:2*height, 0:width]
-        dcs[3] = image[height:2*height, width:2*width]
-        return dcs.transpose((0, 2, 1))
+    def _append(self, dataset: h5py.Dataset, new: float | np.ndarray) -> None:
+        """Append a new instance to a dataset
+
+        Args:
+            dataset (h5py.Dataset): The dataset to append to
+            new (float | np.ndarray): New instance
+        """
+        idx = dataset.shape[0]
+        dataset.resize(idx+1, axis=0)
+        if isinstance(new, float):
+            dataset[idx] = new
+        else:
+            dataset[idx, ...] = new
+
+    def _store_meta(self, f: h5py.File) -> None:
+        """Store the meta information in the top level
+
+        Args:
+            f (h5py.File): The append mode file object
+        """
+        assert f.mode == "a"
+        for k, v in self._meta_data.items():
+            f.attrs[k] = v
