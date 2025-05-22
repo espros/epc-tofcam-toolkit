@@ -6,7 +6,7 @@ from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QSlider, QStackedWidget,
                                QVBoxLayout, QWidget)
@@ -97,12 +97,13 @@ class PointCloudWidget(GLViewWidget):
 
 
 class VideoSlider(QWidget):
+    frame_idx_changed = Signal(int)
+
     def __init__(self, parent: Optional[QWidget] = None):
 
         super().__init__(parent=parent)
         self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
-        self.slider.setValue(self.slider.maximum())
-        self.slider.setEnabled(False)
+        # self.slider.setEnabled(False)
         self.slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 height: 4px;
@@ -119,13 +120,38 @@ class VideoSlider(QWidget):
                 background: #FF0000;
             }
         """)
+        self.index = 0
+        self.total = 0
 
-        self.label = QLabel("00:00 / 00:00")
+        self.label = QLabel(f"{self.index} / {self.total}")
 
         _layout = QHBoxLayout(self)
         _layout.addWidget(self.slider)
         _layout.addWidget(self.label)
         self.setLayout(_layout)
+        self.setEnabled(False)
+
+        self.slider.valueChanged.connect(self.on_value_changed)
+
+    def update_record(self, total: int) -> None:
+        """Update the slider label"""
+        self.slider.setRange(0, total)
+        self.slider.setValue(0)
+        self.update_label(index=0, total=total)
+        self.setEnabled(True)
+
+    def update_label(self, index: Optional[int] = None, total: Optional[int] = None) -> None:
+        if index is not None:
+            self.index = index
+        if total is not None:
+            self.total = total
+        self.label.setText(f"{self.index} / {self.total}")
+
+    def on_value_changed(self, value: int) -> None:
+        """Update the label and emit frame index changed"""
+        self.index = value
+        self.label.setText(f"{self.index} / {self.total}")
+        self.frame_idx_changed.emit(value)
 
 
 class VideoWidget(QWidget):
