@@ -62,6 +62,7 @@ class Base_TOFcam_Bridge():
         self.cam = cam
         self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.updateImage)
+        self.streamer.signal_new_frame.connect(self.storeImage)
         self.gui.setDefaultValues()
 
         # Fetch meta
@@ -86,8 +87,13 @@ class Base_TOFcam_Bridge():
         if self.cam is not None:
             if self.streamer.is_streaming():
                 self.gui.updateImage(image)
-            if self.data_logger != None and self.data_logger.is_running():
-                self.data_logger.add_frame(image.copy(), time.time())
+
+    def storeImage(self, image):
+        if self.data_logger is not None:
+            if self.data_logger.is_running():
+                if self._get_image_cb.__func__ is self.get_combined_dcs.__func__:
+                    image = self._unroll_combined_dcs(image)
+                self.data_logger.add_frame(image)
 
     def getImage(self):
         if self.cam is not None:
@@ -95,15 +101,37 @@ class Base_TOFcam_Bridge():
         else:
             return lambda: np.ndarray([])
 
+    @staticmethod
+    def _combine_dcs(frame: np.ndarray) -> np.ndarray:
+        """Combine the dcs frames in one frame"""
+        resolution = np.array(frame.shape[1:])
+        image = np.zeros(2*resolution)
+
+        image[0:resolution[0], 0:resolution[1]] = frame[0]
+        image[0:resolution[0], resolution[1]:] = frame[1]
+        image[resolution[0]:, 0:resolution[1]] = frame[2]
+        image[resolution[0]:, resolution[1]:] = frame[3]
+
+        return image
+
+    @staticmethod
+    def _unroll_combined_dcs(image: np.ndarray) -> np.ndarray:
+        """Unroll the combined dcs frame to it's components"""
+        height = image.shape[0]//2
+        width = image.shape[1]//2
+        frame = np.zeros((4, height, width), dtype=image.dtype)
+
+        frame[0] = image[0:height, 0:width]
+        frame[1] = image[0:height, width:2*width]
+        frame[2] = image[height:2*height, 0:width]
+        frame[3] = image[height:2*height, width:2*width]
+
+        return frame
+
     def get_combined_dcs(self):
         if self.cam is not None:
             dcs = self.cam.get_raw_dcs_images()
-            resolution = np.array(dcs.shape[1:])
-            image = np.zeros(2*resolution)
-            image[0:resolution[0], 0:resolution[1]] = dcs[0]
-            image[0:resolution[0], resolution[1]:] = dcs[1]
-            image[resolution[0]:, 0:resolution[1]] = dcs[2]
-            image[resolution[0]:, resolution[1]:] = dcs[3]
+            image = self._combine_dcs(dcs)
             return image
         else:
             return np.ndarray([])
