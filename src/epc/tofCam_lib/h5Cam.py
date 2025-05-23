@@ -36,6 +36,7 @@ class _H5Base:
         # State params
         self.index: int = 0
         self._prev_timestep: Optional[float] = None
+        self.__timestamps: Optional[np.ndarray] = None
 
     @property
     def image_type(self) -> str:
@@ -65,6 +66,7 @@ class _H5Base:
                     zip(_timestamps, _frames))}
 
             self._recordings = _recordings
+            self.__timestamps = _timestamps
 
         if index > len(self._recordings):
             raise StopIteration(
@@ -146,10 +148,10 @@ class _H5Base:
         if self._prev_timestep is None:
             self._prev_timestep = _timestamp
 
-        self.index += 1
         _toc = time.time()
         time.sleep(max(_timestamp - self._prev_timestep - (_toc-_tic), 0))
         self._prev_timestep = _timestamp
+        self.index += 1
 
         return _timestamp, _frame
 
@@ -157,6 +159,15 @@ class _H5Base:
         """Updates the index of a specific key"""
         self._prev_timestep = None
         self.index = idx
+
+    @property
+    def timestamps(self) -> np.ndarray:
+        if self.__timestamps is None:
+            self.__getitem__(0)
+        if self.__timestamps is not None:
+            return self.__timestamps
+        else:
+            raise ValueError("Timestamps cannot be fetched!")
 
 
 class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
@@ -272,31 +283,36 @@ class H5Cam(ABC, _H5Base, TOFcam):
 
     def get_distance_image(self):
         if self.image_type != 'Distance':
-            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Distance!")
+            raise ValueError(
+                f"This H5Cam recorded {self.image_type}! Not Distance!")
         _timestamp, _frame = self._stream_next()
         return _frame
 
     def get_amplitude_image(self):
         if self.image_type != 'Amplitude':
-            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Amplitude!")
+            raise ValueError(
+                f"This H5Cam recorded {self.image_type}! Not Amplitude!")
         _timestamp, _frame = self._stream_next()
         return _frame
 
     def get_grayscale_image(self):
         if self.image_type != 'Grayscale':
-            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Grayscale!")
+            raise ValueError(
+                f"This H5Cam recorded {self.image_type}! Not Grayscale!")
         _timestamp, _frame = self._stream_next()
         return _frame
 
     def get_raw_dcs_images(self):
         if self.image_type != 'DCS':
-            raise ValueError(f"This H5Cam recorded {self.image_type}! Not DCS!")
+            raise ValueError(
+                f"This H5Cam recorded {self.image_type}! Not DCS!")
         _timestamp, _frame = self._stream_next()
         return _frame
 
     def get_point_cloud(self):
         if self.image_type != 'Point Cloud':
-            raise ValueError(f"This H5Cam recorded {self.image_type}! Not Point Cloud!")
+            raise ValueError(
+                f"This H5Cam recorded {self.image_type}! Not Point Cloud!")
         _timestamp, _frame = self._stream_next()
         return _frame
 
