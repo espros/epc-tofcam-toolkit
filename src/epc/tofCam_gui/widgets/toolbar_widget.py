@@ -1,10 +1,11 @@
 import importlib.metadata
 import importlib.resources
 
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolBar, QWidget
+
+from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
 
 _LOGO_PATH = importlib.resources.files(
     'epc.tofCam_gui.icons').joinpath('epc-logo.png')
@@ -87,13 +88,6 @@ class ToolBar(QToolBar):
     def _importButtonToggled(self) -> None:
         if self.playButton.isChecked():
             QTimer.singleShot(0, self.playButton.trigger)
-
-        QTimer.singleShot(100, lambda: self.playButton.setEnabled(
-            not self.importButton.isChecked()))
-        QTimer.singleShot(100, lambda: self.captureButton.setEnabled(
-            not self.importButton.isChecked()))
-        QTimer.singleShot(100, lambda: self.recordButton.setEnabled(
-            not self.importButton.isChecked()))
 
     def __setOnOffIcons(self, button: QAction, on: QIcon, off: QIcon) -> None:
         """Set ON/OFF icon variations for the same button
