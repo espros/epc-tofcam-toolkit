@@ -33,7 +33,8 @@ class Base_TOFcam_Bridge():
         # connect signals
         self.gui.toolBar.captureButton.triggered.connect(self.capture)
         self.gui.toolBar.playButton.triggered.connect(self._set_streaming)
-        self.gui.toolBar.replayButton.triggered.connect(self._set_streaming)
+        self.gui.imageView.slider.playButton.clicked.connect(
+            self._set_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
         self.gui.toolBar.importButton.triggered.connect(self._replay)
 
@@ -263,6 +264,7 @@ class Base_TOFcam_Bridge():
                     self._bridge_cam(cam)
                     self.gui.imageView.setActiveView('image')
                     _success = True
+                    self.gui.imageView.slider.setVisible(True)
                     self.gui.imageView.slider.update_record(len(cam))
                     self.gui.imageView.slider.frame_idx_changed.connect(
                         _get_frame)
@@ -270,6 +272,10 @@ class Base_TOFcam_Bridge():
             if not _success:
                 QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
         else:
+            image = self.getImage()
+            self.gui.updateImage(np.zeros_like(image))
             if hasattr(self, "prev_cam"):
                 self.cam = self.prev_cam
-                self._bridge_cam(self.cam)
+                if self.cam is not None:
+                    self._bridge_cam(self.cam)
+                self.gui.imageView.slider.setVisible(False)
