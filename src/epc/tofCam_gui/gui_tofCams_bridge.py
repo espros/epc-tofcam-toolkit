@@ -267,7 +267,7 @@ class Base_TOFcam_Bridge():
                     self.gui.imageView.slider.setVisible(True)
                     QTimer.singleShot(
                         100, self.gui.imageView.update_label_position)
-                    self.gui.imageView.slider.update_record(len(cam))
+                    self.gui.imageView.slider.update_record(cam.timestamps)
                     self.gui.imageView.slider.frame_idx_changed.connect(
                         _get_frame)
                     self.gui.imageView.source_label.setText(f"{cam.source}")
