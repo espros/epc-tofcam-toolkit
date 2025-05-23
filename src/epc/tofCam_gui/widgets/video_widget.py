@@ -1,7 +1,8 @@
 from typing import Optional
 
 import numpy as np
-from pyqtgraph import ImageView
+from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
+from pyqtgraph import ImageView, TextItem
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
@@ -10,8 +11,6 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
                                QStackedWidget, QVBoxLayout, QWidget)
-
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -180,14 +179,19 @@ class VideoSlider(QWidget):
 
 
 class VideoWidget(QWidget):
-    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(0.0, 1.0, 6), color=CMAP_GRAYSCALE)
+    GRAYSCALE_CMAP = ColorMap(pos=np.linspace(
+        0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
 
     def __init__(self, parent=None):
+        self._updating_label = False
         super(VideoWidget, self).__init__(parent)
         self.video = ImageView(self)
-        self.pc = PointCloudWidget()
+        self.pc = PointCloudWidget(self)
         self.slider = VideoSlider(parent=self)
+
+        # Handle source label
+        self.source_label = TextItem("epc", color="y", anchor=(0, 1))
 
         # Stack
         self.stacked = QStackedWidget()
@@ -201,6 +205,18 @@ class VideoWidget(QWidget):
         _layout.addWidget(self.slider)
         self.setLayout(_layout)
 
+        # Update text position
+        self.video.getView().sigResized.connect(self.update_source_label_position_image)
+
+    def update_source_label_position_image(self):
+        """Kepp the label at the bottom left"""
+        view = self.video.getView()
+        rect = view.sceneBoundingRect()
+        margin = 10
+        x = rect.left() + margin
+        y = rect.bottom() - margin
+        self.source_label.setPos(x, y)
+
     def setActiveView(self, view: str):
         if view == 'image':
             self.stacked.setCurrentWidget(self.video)
@@ -211,6 +227,9 @@ class VideoWidget(QWidget):
         data = args[0]
         if self.stacked.currentWidget() == self.video:
             self.video.setImage(*args, **kwargs)
+            if self.source_label.scene() is None:
+                self.video.scene.addItem(self.source_label)
+                self.update_source_label_position_image()
         else:
             self.pc.update_point_cloud(data)
 
