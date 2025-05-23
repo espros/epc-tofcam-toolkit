@@ -1,8 +1,7 @@
 from typing import Optional
 
 import numpy as np
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
-from pyqtgraph import ImageView, TextItem
+from pyqtgraph import ImageView
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
@@ -11,6 +10,8 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
                                QStackedWidget, QVBoxLayout, QWidget)
+
+from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -127,9 +128,9 @@ class VideoSlider(QWidget):
             }
         """)
         self.index = 0
-        self.total = 0
+        self.timestamps = np.array([])
 
-        self.label = QLabel(f"{self.index} / {self.total}")
+        self.label = QLabel(f"00:00.000 / 00:00.000")
 
         _layout = QHBoxLayout(self)
         _layout.addWidget(self.playButton)
@@ -157,25 +158,73 @@ class VideoSlider(QWidget):
         else:
             button.setIcon(on)
 
-    def update_record(self, total: int) -> None:
+    def update_record(self, timestamps: np.ndarray) -> None:
         """Update the slider label"""
-        self.slider.setRange(0, total)
+        self.slider.setRange(0, len(timestamps)-1)
         self.slider.setValue(0)
-        self.update_label(index=0, total=total)
+        self.update_label(index=0, timestamps=timestamps)
         self.setEnabled(True)
 
-    def update_label(self, index: Optional[int] = None, total: Optional[int] = None) -> None:
+    def update_label(self, index: Optional[int] = None, timestamps: Optional[np.ndarray] = None) -> None:
+        """Update the time label with a new index and a timestamp
+
+        Args:
+            index (Optional[int], optional): The new frame index. Defaults to None.
+            timestamps (Optional[np.ndarray], optional): The new timestamps array. Defaults to None.
+        """
         if index is not None:
             self.index = index
-        if total is not None:
-            self.total = total
-        self.label.setText(f"{self.index} / {self.total}")
+        if timestamps is not None:
+            self.timestamps = timestamps
+        self.__update_label_text()
 
     def on_value_changed(self, value: int) -> None:
         """Update the label and emit frame index changed"""
         self.index = value
-        self.label.setText(f"{self.index} / {self.total}")
         self.frame_idx_changed.emit(value)
+        self.__update_label_text()
+
+    def __update_label_text(self) -> None:
+        """Update the label text and adjust the size if necessary"""
+        _new_text = f"{self.time_instance} / {self.duration}"
+        _old_text = self.label.text()
+        self.label.setText(_new_text)
+        if len(_new_text) > len(_old_text):
+            self.label.adjustSize()
+
+    def _get_time_str(self, seconds: float) -> str:
+        """Parse a duration string from the given seconds
+
+        Args:
+            seconds (float): Seconds to covert to a time string
+
+        Returns:
+            str: mm:ss or hh:mm:ss format duration string
+        """
+        total_seconds = np.ceil(seconds)
+        total_ms = int(seconds * 1000)
+
+        hours = int(total_seconds//3600)
+        minutes = int((total_seconds % 3600)//60)
+        seconds = int(total_seconds % 60)
+        miliseconds = int(total_ms % 1000)
+
+        if hours == 0:
+            return f"{minutes:02}:{seconds:02}.{miliseconds:03}"
+        else:
+            return f"{hours:02}:{minutes:02}:{seconds:02}.{miliseconds:03}"
+
+    @property
+    def duration(self) -> str:
+        """Total duration of the record"""
+        _seconds = self.timestamps[-1] - self.timestamps[0]
+        return self._get_time_str(_seconds)
+
+    @property
+    def time_instance(self) -> str:
+        """The exact time instance relating to the index"""
+        _seconds = self.timestamps[self.index] - self.timestamps[0]
+        return self._get_time_str(_seconds)
 
 
 class VideoWidget(QWidget):
