@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QMenuBar, QMenu
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu, QMenuBar
 
 
 class MenuBar(QMenuBar):
@@ -14,13 +14,6 @@ class MenuBar(QMenuBar):
         self.saveRawAction = QAction("Save raw", self)
         self.fileMenu.addAction(self.saveRawAction)
 
-        # data recording 
-        self.startRecordingAction = QAction("Start Recording", self)
-        self.stopRecordingAction  = QAction("Stop Recording", self)
-        self.stopRecordingAction.setEnabled(False)  
-        self.fileMenu.addAction(self.startRecordingAction)
-        self.fileMenu.addAction(self.stopRecordingAction)
-        
         self.viewMenu = QMenu("View", self)
         self.openConsoleAction = QAction("Show console", self)
         self.viewMenu.addAction(self.openConsoleAction)
