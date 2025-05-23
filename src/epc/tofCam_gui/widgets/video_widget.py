@@ -9,10 +9,9 @@ from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
-                               QStackedWidget, QVBoxLayout,
-                               QWidget)
+                               QStackedWidget, QVBoxLayout, QWidget)
 
-from epc.tofCam_gui.widgets.toolbar_widget import _SVG_DICT, _svg2icon
+from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -108,7 +107,7 @@ class VideoSlider(QWidget):
         self.setVisible(False)
         self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
         self.playButton = QPushButton(self)
-        self.playButton.setIcon(_svg2icon(_SVG_DICT["play"]))
+        self.playButton.setIcon(svg2icon(SVG_DICT["play"]))
         self.playButton.setCheckable(True)
         self.playButton.toggled.connect(self._playButtonToggled)
 
@@ -144,7 +143,7 @@ class VideoSlider(QWidget):
 
     def _playButtonToggled(self) -> None:
         self.__setOnOffIcons(
-            self.playButton, _svg2icon(_SVG_DICT["play"]), _svg2icon(_SVG_DICT["pause"]))
+            self.playButton, svg2icon(SVG_DICT["play"]), svg2icon(SVG_DICT["pause"]))
 
     def __setOnOffIcons(self, button: QPushButton, on: QIcon, off: QIcon) -> None:
         """Set ON/OFF icon variations for the same button
