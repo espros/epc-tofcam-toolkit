@@ -7,9 +7,12 @@ from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QQuaternion, QVector3D
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QSlider, QStackedWidget,
-                               QVBoxLayout, QWidget)
+from PySide6.QtGui import QIcon, QQuaternion, QVector3D
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
+                               QStackedWidget, QVBoxLayout,
+                               QWidget)
+
+from epc.tofCam_gui.widgets.toolbar_widget import _SVG_DICT, _svg2icon
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -102,8 +105,13 @@ class VideoSlider(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
 
         super().__init__(parent=parent)
+        self.setVisible(False)
         self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
-        # self.slider.setEnabled(False)
+        self.playButton = QPushButton(self)
+        self.playButton.setIcon(_svg2icon(_SVG_DICT["play"]))
+        self.playButton.setCheckable(True)
+        self.playButton.toggled.connect(self._playButtonToggled)
+
         self.slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 height: 4px;
@@ -126,12 +134,30 @@ class VideoSlider(QWidget):
         self.label = QLabel(f"{self.index} / {self.total}")
 
         _layout = QHBoxLayout(self)
+        _layout.addWidget(self.playButton)
         _layout.addWidget(self.slider)
         _layout.addWidget(self.label)
         self.setLayout(_layout)
         self.setEnabled(False)
 
         self.slider.valueChanged.connect(self.on_value_changed)
+
+    def _playButtonToggled(self) -> None:
+        self.__setOnOffIcons(
+            self.playButton, _svg2icon(_SVG_DICT["play"]), _svg2icon(_SVG_DICT["pause"]))
+
+    def __setOnOffIcons(self, button: QPushButton, on: QIcon, off: QIcon) -> None:
+        """Set ON/OFF icon variations for the same button
+
+        Args:
+            button (QAction): The button to set the icons
+            on (QIcon): ON icon
+            off (QIcon): OFF icon
+        """
+        if button.isChecked():
+            button.setIcon(off)
+        else:
+            button.setIcon(on)
 
     def update_record(self, total: int) -> None:
         """Update the slider label"""
