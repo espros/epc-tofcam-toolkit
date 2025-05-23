@@ -64,14 +64,11 @@ class ToolBar(QToolBar):
             self._icons["record"], "Record", self, toolTip="Record live stream", checkable=True)
         self.importButton = QAction(
             self._icons["file_import"], "Import File", self, toolTip="Import a file to replay", checkable=True)
-        self.replayButton = QAction(
-            self._icons["replay"], "Replay", self, toolTip="Replay the recorded stream", checkable=True, enabled=False)
 
         # Button actions
         self.playButton.toggled.connect(self._playButtonToggled)
         self.recordButton.toggled.connect(self._recordButtonToggled)
         self.importButton.toggled.connect(self._importButtonToggled)
-        self.replayButton.toggled.connect(self._replayButtonToggled)
 
         # Chip and fps info
         self.chipInfo = QLabel('Chip ID: 000\nWafer ID: 000')
@@ -99,7 +96,6 @@ class ToolBar(QToolBar):
         self.addAction(self.captureButton)
         self.addAction(self.recordButton)
         self.addAction(self.importButton)
-        self.addAction(self.replayButton)
 
         self.addWidget(left_spacer)
         self.addWidget(self.versionInfo)
@@ -134,13 +130,6 @@ class ToolBar(QToolBar):
             not self.importButton.isChecked()))
         QTimer.singleShot(100, lambda: self.recordButton.setEnabled(
             not self.importButton.isChecked()))
-
-        QTimer.singleShot(100, lambda: self.replayButton.setEnabled(
-            self.importButton.isChecked()))
-
-    def _replayButtonToggled(self) -> None:
-        self.__setOnOffIcons(
-            self.replayButton, self._icons["replay"], self._icons["pause"])
 
     def __setOnOffIcons(self, button: QAction, on: QIcon, off: QIcon) -> None:
         """Set ON/OFF icon variations for the same button
