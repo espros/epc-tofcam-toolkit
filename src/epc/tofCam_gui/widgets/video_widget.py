@@ -7,7 +7,7 @@ from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
                                QStackedWidget, QVBoxLayout, QWidget)
@@ -184,38 +184,50 @@ class VideoWidget(QWidget):
     DISTANCE_CMAP = getFromMatplotlib('turbo')
 
     def __init__(self, parent=None):
-        self._updating_label = False
+
         super(VideoWidget, self).__init__(parent)
         self.video = ImageView(self)
         self.pc = PointCloudWidget(self)
         self.slider = VideoSlider(parent=self)
 
-        # Handle source label
-        self.source_label = TextItem("epc", color="y", anchor=(0, 1))
-
         # Stack
-        self.stacked = QStackedWidget()
+        self.stacked = QStackedWidget(self)
         self.stacked.addWidget(self.video)
         self.stacked.addWidget(self.pc)
 
+        # Handle source label
+        self.source_label = QLabel("epc", self)
+        self.source_label.setStyleSheet(
+            "color: yellow; background-color: rgba(0,0,0,128); padding: 4px;")
+        self.source_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.stacked.currentChanged.connect(self.update_label_position)
+        self.source_label.installEventFilter(self)
+        self.update_label_position()
+
         # Layout
-        _layout = QVBoxLayout()
+        _layout = QVBoxLayout(self)
         _layout.setContentsMargins(0, 0, 0, 0)
         _layout.addWidget(self.stacked)
         _layout.addWidget(self.slider)
         self.setLayout(_layout)
 
-        # Update text position
-        self.video.getView().sigResized.connect(self.update_source_label_position_image)
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        if obj == self.source_label and event.type() == QEvent.Type.Resize:
+            self.update_label_position()
+        return super().eventFilter(obj, event)
 
-    def update_source_label_position_image(self):
-        """Kepp the label at the bottom left"""
-        view = self.video.getView()
-        rect = view.sceneBoundingRect()
+    def update_label_position(self):
+        """Keep the label at the bottom left"""
+        current_widget = self.stacked.currentWidget()
+        if not current_widget:
+            return
+
         margin = 10
-        x = rect.left() + margin
-        y = rect.bottom() - margin
-        self.source_label.setPos(x, y)
+        pos = current_widget.mapTo(self, current_widget.rect().bottomLeft())
+        x = pos.x() + margin
+        y = pos.y() - self.source_label.height() - margin
+        self.source_label.move(x, y)
 
     def setActiveView(self, view: str):
         if view == 'image':
@@ -227,9 +239,6 @@ class VideoWidget(QWidget):
         data = args[0]
         if self.stacked.currentWidget() == self.video:
             self.video.setImage(*args, **kwargs)
-            if self.source_label.scene() is None:
-                self.video.scene.addItem(self.source_label)
-                self.update_source_label_position_image()
         else:
             self.pc.update_point_cloud(data)
 
