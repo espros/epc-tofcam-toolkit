@@ -255,6 +255,7 @@ class Base_TOFcam_Bridge():
                 if confirm == QMessageBox.StandardButton.Yes:
                     if hasattr(self, "cam"):
                         self.prev_cam = self.cam
+                        self.prev_source = self.gui.imageView.source_label.text()
                     cam = H5Cam(_recorded_stream)
 
                     def _get_frame(idx: int):
@@ -263,19 +264,31 @@ class Base_TOFcam_Bridge():
 
                     self._bridge_cam(cam)
                     self.gui.imageView.setActiveView('image')
-                    _success = True
                     self.gui.imageView.slider.setVisible(True)
+                    QTimer.singleShot(
+                        100, self.gui.imageView.update_label_position)
                     self.gui.imageView.slider.update_record(len(cam))
                     self.gui.imageView.slider.frame_idx_changed.connect(
                         _get_frame)
+                    self.gui.imageView.source_label.setText(f"{cam.source}")
+                    self.gui.imageView.source_label.adjustSize()
+                    QTimer.singleShot(
+                        0, self.gui.imageView.slider.playButton.click)
+                    _success = True
 
             if not _success:
                 QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
         else:
             image = self.getImage()
             self.gui.updateImage(np.zeros_like(image))
+            if self.gui.imageView.slider.playButton.isChecked():
+                self.gui.imageView.slider.playButton.click()
             if hasattr(self, "prev_cam"):
                 self.cam = self.prev_cam
+                self.gui.imageView.source_label.setText(f"{self.prev_source}")
+                self.gui.imageView.source_label.adjustSize()
                 if self.cam is not None:
                     self._bridge_cam(self.cam)
                 self.gui.imageView.slider.setVisible(False)
+                QTimer.singleShot(
+                    100, self.gui.imageView.update_label_position)
