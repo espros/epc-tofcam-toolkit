@@ -1,11 +1,10 @@
 import importlib.metadata
 import importlib.resources
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QFont, QIcon
-from PySide6.QtWidgets import QLabel, QSizePolicy, QToolBar, QWidget
-
 from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
+from PySide6.QtWidgets import QLabel, QSizePolicy, QToolBar, QWidget
 
 _LOGO_PATH = importlib.resources.files(
     'epc.tofCam_gui.icons').joinpath('epc-logo.png')
