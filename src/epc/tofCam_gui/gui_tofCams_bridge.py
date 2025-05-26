@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -34,9 +33,9 @@ class Base_TOFcam_Bridge():
         self.gui.toolBar.captureButton.triggered.connect(self.capture)
         self.gui.toolBar.playButton.triggered.connect(self._set_streaming)
         self.gui.imageView.slider.playButton.clicked.connect(
-            self._set_streaming)
+            self._set_replay_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
-        self.gui.toolBar.importButton.triggered.connect(self._replay)
+        self.gui.toolBar.importButton.triggered.connect(self._connect_replay_source)
 
         self._meta: Dict[str, Any] = {}
 
@@ -61,7 +60,11 @@ class Base_TOFcam_Bridge():
 
         # Set the cam and get the streamer
         self.cam = cam
-        self.streamer = Streamer(self.getImage)
+
+        if isinstance(self.cam, H5Cam):
+            self.streamer = Streamer(self.getImage, post_stop_cb=self.capture)
+        else:
+            self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.updateImage)
         self.streamer.signal_new_frame.connect(self.storeImage)
         self.gui.setDefaultValues()
@@ -90,11 +93,6 @@ class Base_TOFcam_Bridge():
         if self.cam is not None:
             if self.streamer.is_streaming():
                 self.gui.updateImage(image)
-                if isinstance(self.cam, H5Cam):
-                    self.gui.imageView.slider.blockSignals(True)
-                    self.gui.imageView.slider.slider.setValue(self.cam.index)
-                    self.gui.imageView.slider.update_label(self.cam.index)
-                    self.gui.imageView.slider.blockSignals(False)
 
     def storeImage(self, image):
         if self.data_logger is not None:
@@ -149,6 +147,16 @@ class Base_TOFcam_Bridge():
             if enable:
                 self.streamer.start_stream()
             else:
+                self.streamer.stop_stream()
+
+    def _set_replay_streaming(self, enable: bool) -> None:
+        if self.cam is not None:
+            assert isinstance(self.cam, H5Cam)
+            if enable:
+                self.cam.enable_continous(True)
+                self.streamer.start_stream()
+            else:
+                self.cam.enable_continous(False)
                 self.streamer.stop_stream()
 
     def _set_recording(self, enable: bool) -> None:
@@ -212,83 +220,81 @@ class Base_TOFcam_Bridge():
             self.data_logger.set_metadata(**metadata)
         self.data_logger.start()
         self.gui.setSettingsEnabled(False)
-        self.gui.topMenuBar.startRecordingAction.setEnabled(False)
-        self.gui.topMenuBar.stopRecordingAction.setEnabled(True)
 
     def _stop_recording(self):
         if self.data_logger is not None:
             self.data_logger.stop_logging()
             self.data_logger.wait()
             self.gui.setSettingsEnabled(True)
-            self.gui.topMenuBar.startRecordingAction.setEnabled(True)
-            self.gui.topMenuBar.stopRecordingAction.setEnabled(False)
 
-    def _replay(self, enable: bool) -> None:
-        """Select the binary file and update the firmware"""
+    def _connect_H5Cam(self) -> Optional[H5Cam]:
+        """Connect the source h5 file to interract with"""
         _success = False
-        if enable:
-            _recorded_stream, _ = QFileDialog.getOpenFileName(
-                parent=self.gui,
-                caption="Select recorded stream",
-                dir="",
-                filter="H5 Files (*.h5);;All Files (*)"
-            )
-            if _recorded_stream is None:
-                QMessageBox.warning(
-                    self.gui, "No file selected", "Select a recorded stream `*.h5`!")
+        _recorded_stream, _ = QFileDialog.getOpenFileName(
+            parent=self.gui,
+            caption="Select recorded stream",
+            dir="",
+            filter="H5 Files (*.h5);;All Files (*)"
+        )
+        if _recorded_stream is None:
+            QMessageBox.warning(
+                self.gui, "No file selected", "Select a recorded stream `*.h5`!")
 
-            elif Path(_recorded_stream).is_dir():
-                QMessageBox.warning(
-                    self.gui, "Directory selected", "Please select a standalone `*.h5` file!")
+        elif Path(_recorded_stream).is_dir():
+            QMessageBox.warning(
+                self.gui, "Directory selected", "Please select a standalone `*.h5` file!")
 
-            elif Path(_recorded_stream).suffix != ".h5":
-                QMessageBox.warning(self.gui, "Wrong file selected",
-                                    f"`{_recorded_stream}` is not valid! Recorded stream file should have the extension `.h5`")
+        elif Path(_recorded_stream).suffix != ".h5":
+            QMessageBox.warning(self.gui, "Wrong file selected",
+                                f"`{_recorded_stream}` is not valid! Recorded stream file should have the extension `.h5`")
 
-            else:
-                confirm = QMessageBox.question(self.gui,
-                                               "Recorded stream selected",
-                                               f"`{_recorded_stream}` will be replayed. Do you confirm?",
-                                               buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                               defaultButton=QMessageBox.StandardButton.Yes)
-
-                if confirm == QMessageBox.StandardButton.Yes:
-                    if hasattr(self, "cam"):
-                        self.prev_cam = self.cam
-                        self.prev_source = self.gui.imageView.source_label.text()
-                    cam = H5Cam(_recorded_stream)
-
-                    def _get_frame(idx: int):
-                        cam.update_index(idx)
-                        self.capture()
-
-                    self._bridge_cam(cam)
-                    self.gui.imageView.setActiveView('image')
-                    self.gui.imageView.slider.setVisible(True)
-                    QTimer.singleShot(
-                        100, self.gui.imageView.update_label_position)
-                    self.gui.imageView.slider.update_record(cam.timestamps)
-                    self.gui.imageView.slider.frame_idx_changed.connect(
-                        _get_frame)
-                    self.gui.imageView.source_label.setText(f"{cam.source}")
-                    self.gui.imageView.source_label.adjustSize()
-                    QTimer.singleShot(
-                        0, self.gui.imageView.slider.playButton.click)
-                    _success = True
-
-            if not _success:
-                QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
         else:
-            image = self.getImage()
-            self.gui.updateImage(np.zeros_like(image))
-            if self.gui.imageView.slider.playButton.isChecked():
-                self.gui.imageView.slider.playButton.click()
-            if hasattr(self, "prev_cam"):
-                self.cam = self.prev_cam
-                self.gui.imageView.source_label.setText(f"{self.prev_source}")
-                self.gui.imageView.source_label.adjustSize()
-                if self.cam is not None:
-                    self._bridge_cam(self.cam)
-                self.gui.imageView.slider.setVisible(False)
+            confirm = QMessageBox.question(self.gui,
+                                           "Recorded stream selected",
+                                           f"`{_recorded_stream}` will be replayed. Do you confirm?",
+                                           buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                           defaultButton=QMessageBox.StandardButton.Yes)
+
+            if confirm == QMessageBox.StandardButton.Yes:
+                if hasattr(self, "cam"):
+                    self.prev_cam = self.cam
+                    self.prev_source = self.gui.imageView.source_label.text()
+                cam = H5Cam(_recorded_stream, continuous=False)
+
+                self.gui.imageView.slider.setVisible(True)
+                self._bridge_cam(cam)
                 QTimer.singleShot(
                     100, self.gui.imageView.update_label_position)
+                self.gui.imageView.source_label.setText(f"{cam.source}")
+                self.gui.imageView.source_label.adjustSize()
+                self.gui.imageView.slider.update_cam(cam)
+                _success = True
+                return cam
+
+        if not _success:
+            QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
+        return None
+
+    def _disconnect_H5Cam(self) -> None:
+        """Revert the replay source connection"""
+        image = self.getImage()
+        self.gui.updateImage(np.zeros_like(image))
+        if self.gui.imageView.slider.playButton.isChecked():
+            self.gui.imageView.slider.playButton.click()
+        if hasattr(self, "prev_cam"):
+            self.cam = self.prev_cam
+            self.gui.imageView.source_label.setText(f"{self.prev_source}")
+            self.gui.imageView.source_label.adjustSize()
+            if self.cam is not None:
+                self._bridge_cam(self.cam)
+            self.gui.imageView.slider.setVisible(False)
+            QTimer.singleShot(
+                100, self.gui.imageView.update_label_position)
+
+    def _connect_replay_source(self, enable: bool) -> None:
+        """Select the binary file and update the firmware"""
+
+        if enable:
+            self._connect_H5Cam()
+        else:
+            self._disconnect_H5Cam()
