@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import h5py  # type: ignore
 import numpy as np
+from PySide6.QtCore import QObject, Signal
 
 from epc.tofCam_lib.tofCam import (Dev_Infos_Controller,
                                    TOF_Settings_Controller, TOFcam)
@@ -19,7 +20,7 @@ class ReadOnlyError(ValueError):
 
 
 class _H5Base:
-    def __init__(self, source: Path | str, group: Optional[str] = None) -> None:
+    def __init__(self, source: Path | str, group: Optional[str] = None, continuous: bool = False) -> None:
         """
 
         Args:
@@ -27,6 +28,7 @@ class _H5Base:
             group (Optional[str], optional): The group name that stores the attributes and frames. Defaults to None.
         """
 
+        self.__continuous = continuous
         self._extension = ".h5"
         self.source = source  # type: ignore
         self._attributes: Optional[Dict[str, Any]] = None
@@ -34,9 +36,22 @@ class _H5Base:
         self.group = group
 
         # State params
-        self.index: int = 0
-        self._prev_timestep: Optional[float] = None
+        self.index = 0
+        self._tic = time.time()
+        self._prev_timestamp: Optional[float] = None
         self.__timestamps: Optional[np.ndarray] = None
+
+    @property
+    def index(self) -> int:
+        return self.__index
+
+    @index.setter
+    def index(self, val: int) -> None:
+        self.__index = val
+
+    def enable_continous(self, val: bool) -> None:
+        """Enable/Disable continuous streaming"""
+        self.__continuous = val
 
     @property
     def image_type(self) -> str:
@@ -126,8 +141,8 @@ class _H5Base:
         else:
             raise IndexError(f"Cannot find attribute {key}")
 
-    def _stream_next(self) -> Tuple[float, np.ndarray]:
-        """Get a stream of frames from the h5 source, in the same speed
+    def _stream(self) -> Tuple[float, np.ndarray]:
+        """Get a stream of frames from the h5 source, in the same speed if continuous mode is enabled
 
         Args:
             key (str): The image type key
@@ -137,31 +152,47 @@ class _H5Base:
                 timestep: the timestep when the image has fetched
                 frame: the frame instance that that specific timestep
         """
-        _tic = time.time()
 
-        if self.index >= len(self):
-            self.index = 0
-            self._prev_timestep = None
-
+        self._simulate_shutter_delay()
         _timestamp, _frame = self.__getitem__(self.index)
-
-        if self._prev_timestep is None:
-            self._prev_timestep = _timestamp
-
-        _toc = time.time()
-        time.sleep(max(_timestamp - self._prev_timestep - (_toc-_tic), 0))
-        self._prev_timestep = _timestamp
-        self.index += 1
-
+        if self.__continuous:
+            self._increment_index()
         return _timestamp, _frame
 
+    def _simulate_shutter_delay(self) -> None:
+        """Sleep for at most t_wait time if the time passed is not enough"""
+        _toc = time.time()
+        _sleep_time = max(self.t_wait - (_toc-self._tic), 0)
+        logger.debug(f"Sleeping for {_sleep_time:3.2f} seconds..")
+        time.sleep(_sleep_time)
+        self._tic = time.time()
+
+    def _increment_index(self) -> None:
+        """Inrement the index by 1 and update the previous timestep"""
+        if self.index < len(self) - 1:
+            self._prev_timestamp = self.timestamp
+            self.index += 1
+        else:
+            self.index = 0
+            self._prev_timestamp = self.timestamps[0] - self.dt_mean
+
     def update_index(self, idx: int) -> None:
-        """Updates the index of a specific key"""
-        self._prev_timestep = None
-        self.index = idx
+        """Update the index and reset the shutter delay"""
+        if idx < len(self) and idx >= 0:
+            self.index = idx
+            self._prev_timestamp = None
+        else:
+            raise ValueError(
+                f"Index update is beyond the limits! 0 <= idx < {len(self)}! idx = {idx}")
+
+    def reset_stream(self) -> None:
+        """Set the index to idle position to reset the stream"""
+        self.index = 0
+        self._prev_timestamp = None
 
     @property
     def timestamps(self) -> np.ndarray:
+        """The timeline of the record"""
         if self.__timestamps is None:
             self.__getitem__(0)
         if self.__timestamps is not None:
@@ -169,10 +200,45 @@ class _H5Base:
         else:
             raise ValueError("Timestamps cannot be fetched!")
 
+    @property
+    def timestamp(self) -> float:
+        """The exact timestamp of the current index"""
+        return float(self.timestamps[self.index])
+
+    @property
+    def duration(self) -> float:
+        """The duration of the record, in seconds"""
+        return float(self.timestamps[-1] - self.timestamps[0])
+
+    @property
+    def time_passed(self) -> float:
+        """The exact time passed since the record started, in seconds"""
+        return float(self.timestamps[self.index] - self.timestamps[0])
+
+    @property
+    def dt_mean(self) -> float:
+        """Average time interval between two consecutive frames"""
+        if not hasattr(self, "__dt"):
+            self.__dt = float(np.mean(np.abs(np.diff(self.timestamps))))
+        return self.__dt
+
+    @property
+    def fps_mean(self) -> float:
+        """Mean fps value"""
+        return 1.0/self.dt_mean
+
+    @property
+    def t_wait(self) -> float:
+        """Time to wait before returning the next frame"""
+        if self._prev_timestamp is None:
+            return 0
+        else:
+            return self.timestamp - self._prev_timestamp
+
 
 class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
     def __init__(self, source: str | Path) -> None:
-        _H5Base.__init__(self, source=source, group=None)
+        _H5Base.__init__(self, source=source, group=None, continuous=False)
         TOF_Settings_Controller.__init__(self)
 
     def get_modulation_frequencies(self) -> list[float]:
@@ -224,7 +290,7 @@ class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
 
 class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
     def __init__(self, source: str | Path) -> None:
-        _H5Base.__init__(self, source=source, group=None)
+        _H5Base.__init__(self, source=source, group=None, continuous=False)
         Dev_Infos_Controller.__init__(self)
 
     def get_chip_infos(self) -> tuple[int, int]:
@@ -251,8 +317,12 @@ class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
             f"H5Cam is readonly! It can only read the previously set values, cannot set register!")
 
 
-class H5Cam(ABC, _H5Base, TOFcam):
-    def __init__(self, source: str | Path, settings_ctrl: Optional[H5_Settings_Controller] = None, info_ctrl: Optional[H5Dev_Infos_Controller] = None) -> None:
+class H5Cam(_H5Base, TOFcam, QObject):
+    indexChanged = Signal(int)
+
+    def __init__(self, source: str | Path, continuous: bool = True, settings_ctrl: Optional[H5_Settings_Controller] = None, info_ctrl: Optional[H5Dev_Infos_Controller] = None) -> None:
+
+        QObject.__init__(self, parent=None)
 
         if settings_ctrl is None:
             settings_ctrl = H5_Settings_Controller(source=source)
@@ -260,7 +330,7 @@ class H5Cam(ABC, _H5Base, TOFcam):
         if info_ctrl is None:
             info_ctrl = H5Dev_Infos_Controller(source=source)
 
-        _H5Base.__init__(self, source=source, group=None)
+        _H5Base.__init__(self, source=source, group=None, continuous=continuous)
 
         if self.source != settings_ctrl.source:
             raise ValueError(
@@ -275,6 +345,16 @@ class H5Cam(ABC, _H5Base, TOFcam):
         self.settings: H5_Settings_Controller
         self.device: H5Dev_Infos_Controller
 
+    @property
+    def index(self) -> int:
+        return self.__index
+
+    @index.setter
+    def index(self, val: int) -> None:
+        """Emit when the index has been updated"""
+        self.__index = val
+        self.indexChanged.emit(val)
+
     def __del__(self) -> None:
         pass
 
@@ -285,38 +365,49 @@ class H5Cam(ABC, _H5Base, TOFcam):
         if self.image_type != 'Distance':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Distance!")
-        _timestamp, _frame = self._stream_next()
+        _timestamp, _frame = self._stream()
         return _frame
 
     def get_amplitude_image(self):
         if self.image_type != 'Amplitude':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Amplitude!")
-        _timestamp, _frame = self._stream_next()
+        _timestamp, _frame = self._stream()
         return _frame
 
     def get_grayscale_image(self):
         if self.image_type != 'Grayscale':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Grayscale!")
-        _timestamp, _frame = self._stream_next()
+        _timestamp, _frame = self._stream()
         return _frame
 
     def get_raw_dcs_images(self):
         if self.image_type != 'DCS':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not DCS!")
-        _timestamp, _frame = self._stream_next()
+        _timestamp, _frame = self._stream()
         return _frame
 
     def get_point_cloud(self):
         if self.image_type != 'Point Cloud':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Point Cloud!")
-        _timestamp, _frame = self._stream_next()
+        _timestamp, _frame = self._stream()
         return _frame
 
     @property
     def mod_frequency(self) -> float:
         """Modulation frequency"""
         return float(self._get_attribute("mod_frequency"))
+
+
+if __name__ == "__main__":
+    cam = H5Cam(
+        source="/home/uca/repos/hawkeye-application/fw_hawkeye_zephyr/data_20250523_141531.h5")
+    for i in range(100):
+        _tic = time.time()
+        cam._stream()
+        print(f"Prev: {cam.index}")
+        _toc = time.time()
+        print(f"{_toc-_tic}")
