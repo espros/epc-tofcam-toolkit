@@ -1,6 +1,8 @@
 from typing import Optional
 
 import numpy as np
+from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
+from epc.tofCam_lib.h5Cam import H5Cam
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
@@ -9,9 +11,7 @@ from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
-                               QStackedWidget, QVBoxLayout, QWidget)
-
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
+                               QStackedWidget, QToolTip, QVBoxLayout, QWidget)
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -99,13 +99,15 @@ class PointCloudWidget(GLViewWidget):
 
 
 class VideoSlider(QWidget):
-    frame_idx_changed = Signal(int)
+    user_updated_slider = Signal(int)
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: Optional[QWidget] = None, cam: Optional[H5Cam] = None):
 
         super().__init__(parent=parent)
         self.setVisible(False)
         self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
+        self.slider.setMouseTracking(True)
+        self.slider.installEventFilter(self)
         self.playButton = QPushButton(self)
         self.playButton.setIcon(svg2icon(SVG_DICT["play"]))
         self.playButton.setCheckable(True)
@@ -127,8 +129,6 @@ class VideoSlider(QWidget):
                 background: #FF0000;
             }
         """)
-        self.index = 0
-        self.timestamps = np.array([])
 
         self.label = QLabel(f"00:00.000 / 00:00.000")
 
@@ -139,7 +139,24 @@ class VideoSlider(QWidget):
         self.setLayout(_layout)
         self.setEnabled(False)
 
-        self.slider.valueChanged.connect(self.on_value_changed)
+        self._user_interaction = False
+        self._slider_pressed = False
+        self.slider.valueChanged.connect(self._on_value_changed)
+        self.slider.sliderPressed.connect(self._on_slider_pressed)
+        self.slider.sliderReleased.connect(self._on_slider_released)
+
+        if cam is not None:
+            self.update_cam(cam)
+
+    def eventFilter(self, obj: QObject, event: QEvent):
+        """Add a tooltip and index update action flag"""
+        if event.type() == QEvent.Type.MouseMove:
+            if self.cam is not None:
+                QToolTip.showText(event.globalPosition().toPoint(
+                ), f"{self.cam.index}/{len(self.cam)-1}")
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress):
+            self._user_interaction = True
+        return super().eventFilter(obj, event)
 
     def _playButtonToggled(self) -> None:
         self.__setOnOffIcons(
@@ -158,31 +175,46 @@ class VideoSlider(QWidget):
         else:
             button.setIcon(on)
 
-    def update_record(self, timestamps: np.ndarray) -> None:
+    def update_cam(self, cam: H5Cam) -> None:
         """Update the slider label"""
-        self.slider.setRange(0, len(timestamps)-1)
-        self.slider.setValue(0)
-        self.update_label(index=0, timestamps=timestamps)
+        self.cam = cam
+        self.cam.indexChanged.connect(self.slider.setValue)
+        self.slider.setRange(0, len(self.cam.timestamps)-1)
         self.setEnabled(True)
+        QTimer.singleShot(0, lambda: self.cam.reset_stream())
 
-    def update_label(self, index: Optional[int] = None, timestamps: Optional[np.ndarray] = None) -> None:
+    def update_label(self, index: Optional[int] = None) -> None:
         """Update the time label with a new index and a timestamp
 
         Args:
             index (Optional[int], optional): The new frame index. Defaults to None.
-            timestamps (Optional[np.ndarray], optional): The new timestamps array. Defaults to None.
         """
+        if self.cam is None:
+            raise ValueError("cam is None! Set it for convenient access")
         if index is not None:
-            self.index = index
-        if timestamps is not None:
-            self.timestamps = timestamps
+            self.cam.update_index(index)
+
         self.__update_label_text()
 
-    def on_value_changed(self, value: int) -> None:
+    def _on_value_changed(self, value: int) -> None:
         """Update the label and emit frame index changed"""
-        self.index = value
-        self.frame_idx_changed.emit(value)
+        if self.cam is None:
+            raise ValueError("cam is None! Set it for convenient access")
+
+        if self._user_interaction or self._slider_pressed:
+            self.cam.update_index(value)
+            self.user_updated_slider.emit(value)
+
+        self._user_interaction = False
         self.__update_label_text()
+
+    def _on_slider_pressed(self) -> None:
+        """User interacted with the slider"""
+        self._slider_pressed = True
+
+    def _on_slider_released(self) -> None:
+        """User released the slider"""
+        self._slider_pressed = False
 
     def __update_label_text(self) -> None:
         """Update the label text and adjust the size if necessary"""
@@ -217,14 +249,16 @@ class VideoSlider(QWidget):
     @property
     def duration(self) -> str:
         """Total duration of the record"""
-        _seconds = self.timestamps[-1] - self.timestamps[0]
-        return self._get_time_str(_seconds)
+        if self.cam is None:
+            raise ValueError("cam is None! Set the for convenient access")
+        return self._get_time_str(self.cam.duration)
 
     @property
     def time_instance(self) -> str:
         """The exact time instance relating to the index"""
-        _seconds = self.timestamps[self.index] - self.timestamps[0]
-        return self._get_time_str(_seconds)
+        if self.cam is None:
+            raise ValueError("cam is None! Set the for convenient access")
+        return self._get_time_str(self.cam.time_passed)
 
 
 class VideoWidget(QWidget):
@@ -245,7 +279,7 @@ class VideoWidget(QWidget):
         self.stacked.addWidget(self.pc)
 
         # Handle source label
-        self.source_label = QLabel("epc", self)
+        self.source_label = QLabel("No source", self)
         self.source_label.setStyleSheet(
             "color: yellow; background-color: rgba(0,0,0,128); padding: 4px;")
         self.source_label.setAttribute(
@@ -271,12 +305,8 @@ class VideoWidget(QWidget):
         current_widget = self.stacked.currentWidget()
         if not current_widget:
             return
-
-        margin = 10
-        pos = current_widget.mapTo(self, current_widget.rect().bottomLeft())
-        x = pos.x() + margin
-        y = pos.y() - self.source_label.height() - margin
-        self.source_label.move(x, y)
+        pos = current_widget.mapTo(self, current_widget.rect().topLeft())
+        self.source_label.move(pos.x(), pos.y())
 
     def setActiveView(self, view: str):
         if view == 'image':
