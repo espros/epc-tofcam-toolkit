@@ -35,7 +35,8 @@ class Base_TOFcam_Bridge():
         self.gui.imageView.slider.playButton.clicked.connect(
             self._set_replay_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
-        self.gui.toolBar.importButton.triggered.connect(self._connect_replay_source)
+        self.gui.toolBar.importButton.triggered.connect(
+            self._connect_replay_source)
 
         self._meta: Dict[str, Any] = {}
 
@@ -63,6 +64,8 @@ class Base_TOFcam_Bridge():
 
         if isinstance(self.cam, H5Cam):
             self.streamer = Streamer(self.getImage, post_stop_cb=self.capture)
+            self.gui.imageView.slider.user_updated_slider.connect(
+                self._slider_handler)
         else:
             self.streamer = Streamer(self.getImage)
         self.streamer.signal_new_frame.connect(self.updateImage)
@@ -298,3 +301,14 @@ class Base_TOFcam_Bridge():
             self._connect_H5Cam()
         else:
             self._disconnect_H5Cam()
+
+    def _slider_handler(self, val: int) -> None:
+        if self.cam is not None:
+            if not isinstance(self.cam, H5Cam):
+                raise NotImplementedError(
+                    f"Slide handler is only available for H5Cam! Not for {self.cam.__class__.__name__}")
+
+            if self.gui.imageView.slider.playButton.isChecked():
+                self.gui.imageView.slider.playButton.click()
+            self.cam.update_index(val)
+            self.capture()
