@@ -281,7 +281,12 @@ class Base_TOFcam_Bridge():
     def _disconnect_H5Cam(self) -> None:
         """Revert the replay source connection"""
         image = self.getImage()
-        self.gui.updateImage(np.zeros_like(image))
+        if isinstance(image, np.ndarray):
+            self.gui.updateImage(np.zeros_like(image))
+        elif isinstance(image, tuple) and isinstance(image[0], np.ndarray) and isinstance(image[1], np.ndarray):
+            _zeros_cloud = np.zeros_like(image[0])
+            _zeros_amplitude = np.zeros_like(image[1])
+            self.gui.updateImage((_zeros_cloud, _zeros_amplitude))
         if self.gui.imageView.slider.playButton.isChecked():
             self.gui.imageView.slider.playButton.click()
         if hasattr(self, "prev_cam"):
