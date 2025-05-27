@@ -22,7 +22,7 @@ class HDF5Logger(QThread):
         self.image_type = image_type
         self._filepath = file_path
         self._meta_data: Dict[str, Any] = {}
-        self._queue: queue.Queue[Optional[Tuple[np.ndarray, float]]] = queue.Queue(
+        self._queue: queue.Queue[Optional[Tuple[np.ndarray | Tuple[np.ndarray], float]]] = queue.Queue(
         )
         self._running = False
 
@@ -32,7 +32,7 @@ class HDF5Logger(QThread):
     def set_metadata(self, **attrs: object) -> None:
         self._meta_data.update(attrs)
 
-    def add_frame(self, frame: np.ndarray) -> None:
+    def add_frame(self, frame: np.ndarray | Tuple[np.ndarray]) -> None:
         """Add a frame with the timestamp flag to the queue"""
         if self._running:
             try:
@@ -49,7 +49,8 @@ class HDF5Logger(QThread):
     def run(self) -> None:
         """Main thread loop creating/appending to the datases"""
         self._running = True
-        ds_frames = ds_timestamps = None
+        ds_frames = None
+        ds_timestamps = None
         with h5py.File(self._filepath, 'a') as f:
             self._store_meta(f)
             while True:
@@ -58,32 +59,52 @@ class HDF5Logger(QThread):
                     break
 
                 _frame, _timestamp = item
-
-                if ds_frames is None and ds_timestamps is None:
-                    ds_frames, ds_timestamps = self._init_db(
-                        f, shape=_frame.shape, dtype=_frame.dtype)
-
-                self._append(dataset=ds_frames, new=_frame)
+                if ds_timestamps is None:
+                    ds_timestamps = self.__init_timestamps_ds(f=f)
                 self._append(dataset=ds_timestamps, new=_timestamp)
 
-    def _init_db(self, f: h5py.File, shape: Tuple[int], dtype: str) -> Tuple[h5py.Dataset, h5py.Dataset]:
+                if isinstance(_frame, np.ndarray):
+                    _frame = (_frame,)
+
+                if isinstance(_frame, tuple):
+                    if ds_frames is None:
+                        ds_frames = [self.__init_frames_ds(
+                            f=f, shape=_fr.shape, dtype=_fr.dtype, name=f"frames_{i}") for i, _fr in enumerate(_frame)]
+
+                    for i, _fr in enumerate(_frame):
+                        self._append(dataset=ds_frames[i], new=_fr)
+
+                else:
+                    raise ValueError(f"Type not handled {type(_frame)}")
+
+    def __init_frames_ds(self, f: h5py.File, shape: Tuple[int], dtype: str, name: str = "frames") -> h5py.Dataset:
         """Initialize the frame and timesteps datasets
 
         Args:
             f (h5py.File): Wirte/Append mode h5 file object
             shape (Tuple[int]): The shape of a single frame
             dtype (str): The type of the dataset
+            name (str): The name of the dataset
 
         Returns:
-            Tuple[h5py.Dataset, h5py.Dataset]: ds_frames, ds_timestamps
-                ds_frames: The frame storage
-                ds_timestamps: The timeline storage
+            h5py.Dataset: The dataset storing the frames
         """
-        ds_frames = f.create_dataset("frames", shape=(0, *shape),
-                                     maxshape=(None, *shape), chunks=(1, *shape), dtype=dtype)
+        ds_frames = f.create_dataset(name, shape=(
+            0, *shape), maxshape=(None, *shape), chunks=(1, *shape), dtype=dtype)
+        return ds_frames
+
+    def __init_timestamps_ds(self, f: h5py.File) -> h5py.Dataset:
+        """Initialize the timesteps dataset
+
+        Args:
+            f (h5py.File): Wirte/Append mode h5 file object
+
+        Returns:
+            h5py.Dataset: The dataset storing the timestamps
+        """
         ds_timestamps = f.create_dataset("timestamps", shape=(0,),
                                          maxshape=(None,), chunks=(1,), dtype='float64')
-        return ds_frames, ds_timestamps
+        return ds_timestamps
 
     def _append(self, dataset: h5py.Dataset, new: float | np.ndarray) -> None:
         """Append a new instance to a dataset
