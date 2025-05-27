@@ -32,7 +32,7 @@ class _H5Base:
         self._extension = ".h5"
         self.source = source  # type: ignore
         self._attributes: Optional[Dict[str, Any]] = None
-        self._recordings: Dict[int, Tuple[float, np.ndarray]] = {}
+        self._recordings: Dict[int, Tuple[float, np.ndarray | Tuple[np.ndarray]]] = {}
         self.group = group
 
         # State params
@@ -65,20 +65,23 @@ class _H5Base:
             self.__getitem__(0)
         return len(self._recordings)
 
-    def __getitem__(self, index: int) -> Tuple[float, np.ndarray]:
+    def __getitem__(self, index: int) -> Tuple[float, np.ndarray | Tuple[np.ndarray]]:
         """Read the timestamp and frame from the source"""
 
         if len(self._recordings) == 0:
+            _frame_keys = []
             with h5py.File(self.source, "r") as f:
+
                 if self.group is not None:
                     group = f[self.group]
                 else:
                     group = f
-                _timestamps, _frames = group["timestamps"][:], group["frames"][:]
-                _timestamps: np.ndarray
-                _frames: np.ndarray
-                _recordings = {_i: (float(_ts), _frame) for _i, (_ts, _frame) in enumerate(
-                    zip(_timestamps, _frames))}
+                _timestamps = group["timestamps"][:]
+                _frame_keys = [_key for _key in group.keys() if "frame" in _key]
+                _frames: Tuple[np.ndarray] = tuple([group[_key][:] for _key in _frame_keys])
+
+                _recordings = {_i: (float(_ts), *_frs) for _i, (_ts, *_frs) in enumerate(
+                    zip(_timestamps, *_frames))}
 
             self._recordings = _recordings
             self.__timestamps = _timestamps
@@ -141,23 +144,23 @@ class _H5Base:
         else:
             raise IndexError(f"Cannot find attribute {key}")
 
-    def _stream(self) -> Tuple[float, np.ndarray]:
+    def _stream(self) -> Tuple[float, np.ndarray | Tuple[np.ndarray]]:
         """Get a stream of frames from the h5 source, in the same speed if continuous mode is enabled
 
         Args:
             key (str): The image type key
 
         Returns:
-            Tuple[float,np.ndarray]: timestep, frame
+            Tuple[float, np.ndarray | Tuple[np.ndarray]: timestep, frame
                 timestep: the timestep when the image has fetched
-                frame: the frame instance that that specific timestep
+                frame: the frame instance that that specific timestep (can be a tuple in the case of point cloud)
         """
 
         self._simulate_shutter_delay()
-        _timestamp, _frame = self.__getitem__(self.index)
+        _out = self.__getitem__(self.index)
         if self.__continuous:
             self._increment_index()
-        return _timestamp, _frame
+        return _out
 
     def _simulate_shutter_delay(self) -> None:
         """Sleep for at most t_wait time if the time passed is not enough"""
@@ -365,36 +368,41 @@ class H5Cam(_H5Base, TOFcam, QObject):
         if self.image_type != 'Distance':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Distance!")
-        _timestamp, _frame = self._stream()
-        return _frame
+        _timestamp, *_frames = self._stream()
+        assert len(_frames) == 1
+        return _frames[0]
 
     def get_amplitude_image(self):
         if self.image_type != 'Amplitude':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Amplitude!")
-        _timestamp, _frame = self._stream()
-        return _frame
+        _timestamp, *_frames = self._stream()
+        assert len(_frames) == 1
+        return _frames[0]
 
     def get_grayscale_image(self):
         if self.image_type != 'Grayscale':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Grayscale!")
-        _timestamp, _frame = self._stream()
-        return _frame
+        _timestamp, *_frames = self._stream()
+        assert len(_frames) == 1
+        return _frames[0]
 
     def get_raw_dcs_images(self):
         if self.image_type != 'DCS':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not DCS!")
-        _timestamp, _frame = self._stream()
-        return _frame
+        _timestamp, *_frames = self._stream()
+        assert len(_frames) == 1
+        return _frames[0]
 
     def get_point_cloud(self):
         if self.image_type != 'Point Cloud':
             raise ValueError(
                 f"This H5Cam recorded {self.image_type}! Not Point Cloud!")
-        _timestamp, _frame = self._stream()
-        return _frame
+        _timestamp, *_frames = self._stream()
+        assert len(_frames) == 2
+        return _frames[0], _frames[1]
 
     @property
     def mod_frequency(self) -> float:
@@ -403,11 +411,11 @@ class H5Cam(_H5Base, TOFcam, QObject):
 
 
 if __name__ == "__main__":
-    cam = H5Cam(
-        source="/home/uca/repos/hawkeye-application/fw_hawkeye_zephyr/data_20250523_141531.h5")
-    for i in range(100):
+    cam = H5Cam(source="/home/uca/Downloads/data_20250526_165536.h5")
+    for i in range(50):
         _tic = time.time()
-        cam._stream()
-        print(f"Prev: {cam.index}")
+        out = cam.get_point_cloud()
+        print(out)
+        print(f"idx: {cam.index}")
         _toc = time.time()
         print(f"{_toc-_tic}")
