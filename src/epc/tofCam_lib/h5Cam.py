@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import h5py  # type: ignore
 import numpy as np
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from epc.tofCam_lib.tofCam import (Dev_Infos_Controller,
                                    TOF_Settings_Controller, TOFcam)
@@ -167,7 +167,7 @@ class _H5Base:
         _toc = time.time()
         _sleep_time = max(self.t_wait - (_toc-self._tic), 0)
         logger.debug(f"Sleeping for {_sleep_time:3.2f} seconds..")
-        time.sleep(_sleep_time)
+        QThread.msleep(int(_sleep_time*1000))
         self._tic = time.time()
 
     def _increment_index(self) -> None:
