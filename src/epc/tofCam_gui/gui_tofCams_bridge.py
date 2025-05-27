@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
-from coap.common import Coap_Settings  # type: ignore
+from coap.common.cam import TOFcam  # type: ignore
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
@@ -81,11 +81,8 @@ class Base_TOFcam_Bridge():
             "fw_version": fw_version,
         }
 
-        if isinstance(cam.settings, Coap_Settings) or isinstance(cam.settings, H5_Settings_Controller):
-            self._meta.update(
-                {"mod_frequency": cam.settings.get_modulation(),
-                 }
-            )
+        if isinstance(cam, TOFcam) or isinstance(cam, H5Cam):
+            self._meta.update({"mod_frequency": cam.mod_frequency})
 
     def capture(self, mode=0):
         if self.cam is not None:
