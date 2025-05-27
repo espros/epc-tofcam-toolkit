@@ -200,29 +200,58 @@ class Base_TOFcam_Bridge():
         else:
             raise ValueError(f"Image type '{image_type}' is not supported")
 
-    def _start_recording(self):
+    def _start_recording(self) -> None:
+        _success = False
+        _dev_id = ""
 
-        # file dialog for data save
-        default_name = datetime.now().strftime("data_%Y%m%d_%H%M%S.h5")
+        if self.cam is not None:
+            try:
+                _cid, _wid = self.cam.device.get_chip_infos()
+                _dev_id = f"_w{_wid:03}c{_cid:03}"
+            except:
+                pass
+
+        _img_type = self.image_type.lower().replace(" ", "_")
+        _date = datetime.now().strftime("%y%m%d_%H%M%S")
+
+        default_name = datetime.now().strftime(
+            f"{_img_type}{_dev_id}_{_date}.h5")
+
         filepath, _ = QFileDialog.getSaveFileName(
             self.gui,
             "Save Recording As…",
             default_name,
             "HDF5 Files (*.h5)"
         )
-        if not filepath:
-            return
+        if filepath is None:
+            QMessageBox.warning(
+                self.gui, "No file set", "Set a valid target`*.h5`!")
 
-        if not self.streamer.is_streaming():
-            self.gui.toolBar.playButton.trigger()
+        elif Path(filepath).is_dir():
+            QMessageBox.warning(
+                self.gui, "Directory set", "Please set a standalone `*.h5` filename!")
 
-        # initialize the logger
-        self.data_logger = HDF5Logger(self.image_type, filepath)
-        metadata = self.gui._set_recording_metadata()
-        if metadata:
-            self.data_logger.set_metadata(**metadata)
-        self.data_logger.start()
-        self.gui.setSettingsEnabled(False)
+        elif Path(filepath).suffix != ".h5":
+            QMessageBox.warning(self.gui, "Wrong format set",
+                                f"`{filepath}` is not valid! Recorded stream file should have the extension `.h5`")
+
+        else:
+
+            if not self.streamer.is_streaming():
+                self.gui.toolBar.playButton.trigger()
+
+            # initialize the logger
+            self.data_logger = HDF5Logger(self.image_type, filepath)
+
+            metadata = self.gui._set_recording_metadata()
+            if metadata:
+                self.data_logger.set_metadata(**metadata)
+            self.data_logger.start()
+            self.gui.setSettingsEnabled(False)
+            _success = True
+
+        if not _success:
+            QTimer.singleShot(100, self.gui.toolBar.recordButton.toggle)
 
     def _stop_recording(self):
         if self.data_logger is not None:
