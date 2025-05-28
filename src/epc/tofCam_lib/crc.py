@@ -12,6 +12,7 @@ class CrcMode(Enum):
     CRC32_UINT8 = 1
     CRC32_UINT8_LIB = 2
     CRC32_STM32 = 3
+    CRC32_TOFCAM660 = 4
 
 
 class Crc:
@@ -73,6 +74,17 @@ class Crc:
         carray = (ctypes.c_uint8*len(data)).from_buffer(data)
 
         return self.lib.calcCrc32_32(carray, len(data), ctypes.c_uint32(self.polynom))
+    
+    def __calcCrc32_TofCam660(self, data: bytearray):
+        crc = 0xFFFFFFFF
+        for byte in data:
+            crc ^= byte
+            for _ in range(8):
+                if crc & 1:
+                    crc = (crc >> 1) ^ self.polynom
+                else:
+                    crc >>= 1
+        return crc ^ 0xFFFFFFFF
 
     def calculate(self, data: bytearray) -> bytearray:
         crc = bytearray([])
@@ -83,6 +95,8 @@ class Crc:
                 crc = self.__calcCrc32Uint8_lib(bytearray(data))
             case CrcMode.CRC32_STM32:
                 crc = self.__calcCrc32Uin8_python(data)
+            case CrcMode.CRC32_TOFCAM660:
+                return self.__calcCrc32_TofCam660(data)
 
         if self.revout:
             crc = struct.unpack('>I', struct.pack('<I', crc))[0]
