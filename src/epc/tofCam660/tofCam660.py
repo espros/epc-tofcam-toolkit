@@ -457,10 +457,10 @@ class TOFcam660(TOFcam):
 
     def initialize(self):
         self.settings._store_dll_settings()
-        self.settings.set_modulation(12)
+        self.settings.set_modulation(3)
         self.settings.set_roi((0, 0, 320, 240))
         self.settings.set_hdr(2)
-        self.settings.set_modulation(frequency_mhz=12, channel=0)
+        self.settings.set_modulation(frequency_mhz=3, channel=0)
         self.settings.set_integration_hdr([25, 40, 400, 2000])
         self.settings.set_minimal_amplitude(100)
         self.settings.disable_filters()
