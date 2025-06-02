@@ -6,12 +6,13 @@ from PySide6.QtCore import Signal
 class RoiSettings(QGroupBox):
     signal_roi_changed = Signal(int, int, int, int)
 
-    def __init__(self, width: int, height: int, label='ROI', steps=1):
+    def __init__(self, width: int, height: int, label='ROI', steps=1, defaults=None):
         super(RoiSettings, self).__init__(label)
         self.roi_width = width
         self.roi_height = height
         self.steps = steps
         self.last_roi_values = (0, 0, width, height)
+        self.defaults = defaults
 
         self.gridLayout = QGridLayout()
         self.x1 = QSpinBox(self)
@@ -86,9 +87,15 @@ class RoiSettings(QGroupBox):
             spinBox.setValue(new_value)
 
     def setDefaultValue(self):
-        self.x1.setValue(0)
-        self.x2.setValue(self.roi_width)
-        self.y1.setValue(0)
-        self.y2.setValue(self.roi_height)
+        if self.defaults:
+            self.x1.setValue(self.defaults[0])
+            self.x2.setValue(self.defaults[2])
+            self.y1.setValue(self.defaults[1])
+            self.y2.setValue(self.defaults[3])
+        else:
+            self.x1.setValue(0)
+            self.x2.setValue(self.roi_width)
+            self.y1.setValue(0)
+            self.y2.setValue(self.roi_height)
         self.signal_roi_changed.emit(
             self.x1.value(), self.y1.value(), self.x2.value(), self.y2.value())
