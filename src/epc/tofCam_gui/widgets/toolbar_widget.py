@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolBar, QWidget
 
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
+from epc.tofCam_gui.icon_svg import svg2icon
 
 _LOGO_PATH = importlib.resources.files(
     'epc.tofCam_gui.icons').joinpath('epc-logo.png')
@@ -17,8 +17,8 @@ class ToolBar(QToolBar):
         self.gui_version = importlib.metadata.version("epc-tofcam-toolkit")
 
         # Render icons at run-time
-        self._icons = {_key: svg2icon(_val)
-                       for _key, _val in SVG_DICT.items()}
+        self._icons = {_name: svg2icon(f"{_name}.svg")
+                       for _name in ["play", "stop", "capture", "record", "file_import"]}
 
         # Buttons
         self.playButton = QAction(
