@@ -127,7 +127,7 @@ class _H5Base:
 
         self.__source = value
 
-    def _get_attribute(self, key: str) -> Any:
+    def _get_attribute(self, key: str, cast: Optional[type] = None) -> Any:
         """Read the attribute from the source"""
 
         if self._attributes is None:
@@ -140,9 +140,13 @@ class _H5Base:
             self._attributes = _attributes
 
         if key in self._attributes:
-            return self._attributes[key]
+            _res = self._attributes[key]
+            if cast is not None:
+                return cast(_res)
+            else:
+                return _res
         else:
-            raise IndexError(f"Cannot find attribute {key}")
+            return None
 
     def _stream(self) -> Tuple[float, np.ndarray | Tuple[np.ndarray]]:
         """Get a stream of frames from the h5 source, in the same speed if continuous mode is enabled
@@ -244,23 +248,23 @@ class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
         _H5Base.__init__(self, source=source, group=None, continuous=False)
         TOF_Settings_Controller.__init__(self)
 
-    def get_modulation_frequencies(self) -> list[float]:
-        return list(self._get_attribute("modulation_frequencies"))
+    def get_modulation_frequencies(self) -> Optional[list[float]]:
+        return self._get_attribute("modulation_frequencies", cast=list)
 
-    def get_modulation(self) -> float:
+    def get_modulation(self) -> Optional[float]:
         """Modulation frequency"""
-        return float(self._get_attribute("mod_frequency"))
+        return self._get_attribute("mod_frequency", cast=float)
 
-    def get_modulation_channels(self) -> list[int]:
-        return list(self._get_attribute("modulation_channels"))
+    def get_modulation_channels(self) -> Optional[list[int]]:
+        return self._get_attribute("modulation_channels", cast=list)
 
-    def get_roi(self) -> tuple[int, int, int, int]:
+    def get_roi(self) -> Optional[tuple[int, int, int, int]]:
         """The region of interest (ROI) of the camera.
 
         Returns:
             tuple[int, int, int, int]: x0, y0, x1, y1
         """
-        return tuple(self._get_attribute("roi"))
+        return self._get_attribute("roi", cast=tuple)
 
     def set_modulation(self, frequency_mhz: float, channel: int = 0):
         logger.info(
@@ -296,19 +300,17 @@ class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
         _H5Base.__init__(self, source=source, group=None, continuous=False)
         Dev_Infos_Controller.__init__(self)
 
-    def get_chip_infos(self) -> tuple[int, int]:
-        return tuple(self._get_attribute("chip_infos"))
+    def get_chip_infos(self) -> Optional[tuple[int, int]]:
+        return self._get_attribute("chip_infos", cast=tuple)
 
-    def get_fw_version(self) -> str:
-        return str(self._get_attribute("fw_version"))
+    def get_fw_version(self) -> Optional[str]:
+        return self._get_attribute("fw_version", cast=str)
 
     def get_device_id(self) -> Any:
         return self._get_attribute("device_id")
 
-    def read_register(self, reg_addr: int) -> int:
-        _val = self._get_attribute(str(reg_addr))
-        assert isinstance(_val, int)
-        return _val
+    def read_register(self, reg_addr: int) -> Optional[int]:
+        return self._get_attribute(str(reg_addr), cast=int)
 
     def get_chip_temperature(self) -> float:
         logger.critical(
@@ -405,6 +407,6 @@ class H5Cam(_H5Base, TOFcam, QObject):
         return _frames[0], _frames[1]
 
     @property
-    def mod_frequency(self) -> float:
+    def mod_frequency(self) -> Optional[float]:
         """Modulation frequency"""
-        return float(self._get_attribute("mod_frequency"))
+        return self._get_attribute("mod_frequency", cast=float)
