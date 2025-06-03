@@ -4,14 +4,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QFileDialog, QMessageBox
-
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5Cam
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class Base_TOFcam_Bridge():
@@ -38,6 +37,7 @@ class Base_TOFcam_Bridge():
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
         self.gui.toolBar.importButton.triggered.connect(
             self._connect_replay_source)
+        self.gui.toolBar.importButton.toggled.connect(self._import_toggled)
 
         self._meta: Dict[str, Any] = {}
 
@@ -45,6 +45,23 @@ class Base_TOFcam_Bridge():
             self._bridge_cam(cam=cam)
 
         self.cam = cam
+
+    def _import_toggled(self) -> None:
+        if self.cam is None or (hasattr(self, "prev_cam") and self.prev_cam is None):
+            QTimer.singleShot(
+                100, lambda: self.gui.toolBar.playButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.gui.toolBar.captureButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.gui.toolBar.recordButton.setEnabled(False))
+
+        else:
+            QTimer.singleShot(100, lambda: self.gui.toolBar.playButton.setEnabled(
+                not self.gui.toolBar.importButton.isChecked()))
+            QTimer.singleShot(100, lambda: self.gui.toolBar.captureButton.setEnabled(
+                not self.gui.toolBar.importButton.isChecked()))
+            QTimer.singleShot(100, lambda: self.gui.toolBar.recordButton.setEnabled(
+                not self.gui.toolBar.importButton.isChecked()))
 
     def _bridge_cam(self, cam: Optional[TOFcam]) -> None:
         assert cam is not None
@@ -245,6 +262,7 @@ class Base_TOFcam_Bridge():
             self.data_logger = HDF5Logger(self.image_type, filepath)
 
             metadata = self.gui._set_recording_metadata()
+            metadata.update(self._meta)
             if metadata:
                 self.data_logger.set_metadata(**metadata)
             self.data_logger.start()
@@ -302,6 +320,17 @@ class Base_TOFcam_Bridge():
                 self.gui.imageView.source_label.adjustSize()
                 self.gui.imageView.slider.update_cam(cam)
                 _success = True
+
+                # Disable settings
+                if hasattr(self, "_set_image_type") and hasattr(self.gui, "imageTypeWidget"):
+                    self._set_image_type(cam.image_type)
+                    self.gui.imageTypeWidget.comboBox.setCurrentText(
+                        cam.image_type)
+
+                for i in range(self.gui.settingsLayout.count()):
+                    widget = self.gui.settingsLayout.itemAt(i).widget()
+                    widget.setEnabled(False)
+
                 return cam
 
         if not _success:
@@ -328,6 +357,12 @@ class Base_TOFcam_Bridge():
             self.gui.imageView.slider.setVisible(False)
             QTimer.singleShot(
                 100, self.gui.imageView.update_label_position)
+
+        # Enable settings
+        self.gui.settingsLayout.setEnabled(True)
+        for i in range(self.gui.settingsLayout.count()):
+            widget = self.gui.settingsLayout.itemAt(i).widget()
+            widget.setEnabled(True)
 
     def _connect_replay_source(self, enable: bool) -> None:
         """Select the binary file and update the firmware"""
