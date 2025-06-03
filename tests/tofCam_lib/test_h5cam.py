@@ -25,6 +25,7 @@ def test_h5cam_amplitude():
     assert isinstance(_frame, np.ndarray)
     assert len(_frame) > 0
     assert __index == cam.index - 1
+    assert cam.t_wait > 0
 
 
 def test_h5cam_point_cloud():
@@ -52,3 +53,4 @@ def test_h5cam_point_cloud():
     assert isinstance(_amplitude, np.ndarray)
     assert _pc.shape[1] == _amplitude.shape[0]
     assert __index == cam.index - 1
+    assert cam.t_wait > 0
