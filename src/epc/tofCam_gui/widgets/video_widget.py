@@ -149,6 +149,7 @@ class VideoSlider(QWidget):
         self.slider.sliderPressed.connect(self._on_slider_pressed)
         self.slider.sliderReleased.connect(self._on_slider_released)
 
+        self.cam = None
         if cam is not None:
             self.update_cam(cam)
 
@@ -181,6 +182,7 @@ class VideoSlider(QWidget):
 
     def update_cam(self, cam: H5Cam) -> None:
         """Update the slider label"""
+        assert cam is not None
         self.cam = cam
         self.cam.indexChanged.connect(self.slider.setValue)
         self.slider.setRange(0, len(self.cam.timestamps)-1)
