@@ -1,9 +1,17 @@
 import sys
+
 import qdarktheme
-from PySide6 import QtWidgets  
-from epc.tofCam_gui.widgets import VideoWidget, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings, IntegrationTimes
-from epc.tofCam_gui.widgets.filter_widgets import SimpleFilter, TemporalFilter, EdgeFilter, InterferenceFilter
+from PySide6 import QtWidgets
+
 from epc.tofCam_gui import Base_GUI_TOFcam
+from epc.tofCam_gui.widgets import (DropDownSetting, GroupBoxSelection,
+                                    IntegrationTimes, RoiSettings,
+                                    SettingsGroup, SpinBoxSetting, VideoWidget)
+from epc.tofCam_gui.widgets.filter_widgets import (EdgeFilter,
+                                                   InterferenceFilter,
+                                                   SimpleFilter,
+                                                   TemporalFilter)
+
 
 class ROISettings660(RoiSettings):
     def __init__(self, width, height):
@@ -45,10 +53,9 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.interferenceFilter = InterferenceFilter()
         self.builtInFilter = SettingsGroup('Built-In Filters', [self.medianFilter, self.averageFilter, self.edgeFilter, self.temporalFilter, self.interferenceFilter])
 
-
         self.roiSettings = ROISettings660(320, 240)
 
-        #Create Layout for settings
+        # Create Layout for settings
         self.settingsLayout.addWidget(self.imageTypeWidget)
         self.settingsLayout.addWidget(self.guiFilterGroupBox)
         self.settingsLayout.addWidget(self.modeSettings)
@@ -60,6 +67,15 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
 
         self.complete_setup()
 
+    def _set_recording_metadata(self) -> dict[str, object]:
+        """
+        """
+        return {
+            "image_type": self.imageTypeWidget.getSelection(),
+            "roi_width":  self.roiSettings.x2.value() - self.roiSettings.x1.value(),
+            "roi_height": self.roiSettings.y2.value() - self.roiSettings.y1.value(),
+        }
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
@@ -68,6 +84,7 @@ def main():
     stream = GUI_TOFcam660()
     stream.show()
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()
