@@ -5,6 +5,7 @@ build
 doc/build
 scripts/data/*
 scripts/plots/*
+scripts/logs/*
 dist
 tmp
 **.png

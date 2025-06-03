@@ -1,29 +1,51 @@
 import logging
 import numpy as np
+
+import sys
+import os
+sys.path.insert(0, 'src')
+
+from epc_lib.instruments.tti_supply import PL303
 from epc.tofCam660 import TOFcam660
 from epc.tofCam660.parser import Frame
 import matplotlib.pyplot as plt
 import datetime
 import time
+
+
 logging.getLogger("TOFcam660").setLevel(logging.WARNING)
 
-log = logging.getLogger('TofCam660HDRDevice')
+# Create logger
+log = logging.getLogger("multi_level_logger")
+log.setLevel(logging.DEBUG)  # Capture all levels
 
-# INTEGRATION_TIME_CONFIG_LIST = [
-#     IntegrationTimeConfig(4000, 10, 1900, 46667),
-#     IntegrationTimeConfig(2000, 40, 1900, 43333),
-#     IntegrationTimeConfig(1000, 60, 1900, 41667),
-#     IntegrationTimeConfig(500, 100, 1900, 40750),
-#     IntegrationTimeConfig(250, 100, 1900, 39000),
-#     IntegrationTimeConfig(125, 100, 1900, 37500),
-#     IntegrationTimeConfig(62, 100, 1900, 37500),
-#     IntegrationTimeConfig(31, 150, 1900, 37500),
-#     IntegrationTimeConfig(16, 200, 1900, 37500),
-#     IntegrationTimeConfig(8, 300, 1900, 37500),
-#     IntegrationTimeConfig(4, 350, 1900, 37500),
-#     IntegrationTimeConfig(2, 375, 1900, 37500),
-#     IntegrationTimeConfig(1, 400, 1900, 37500)
-# ]
+# Define a formatter for the log messages
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+file_handler_debug = logging.FileHandler("logs/debug.log") 
+file_handler_debug.setLevel(logging.DEBUG)
+file_handler_debug.setFormatter(formatter)
+log.addHandler(file_handler_debug)
+
+file_handler_warning = logging.FileHandler("logs/warning.log") 
+file_handler_warning.setLevel(logging.WARNING)
+file_handler_warning.setFormatter(formatter)
+log.addHandler(file_handler_warning)
+
+file_handler_info = logging.FileHandler("logs/info.log") 
+file_handler_info.setLevel(logging.INFO)
+file_handler_info.setFormatter(formatter)
+log.addHandler(file_handler_info)
+
+# Generate timestamp
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+image_counter = 0
+image_counter_invalid_total = 0
+NUMBER_TEST_LOOPS = 2
+POWER_ON_SECONDS = 10 #10 
+POWER_OFF_SECONDS = 5 #5
+INTEGRATION_TIME_CONFIG_LIST = [
+    (250, 10, 1900, 46667)]
 
 # INTEGRATION_TIME_CONFIG_LIST = [
 #     (4000, 10, 1900, 46667),
@@ -41,30 +63,8 @@ log = logging.getLogger('TofCam660HDRDevice')
 #     (1, 400, 1900, 37500)
 # ]
 
-
-# INTEGRATION_TIME_CONFIG_LIST = [
-#     (250, 10, 1900, 46667),
-#     (250, 40, 1900, 43333),
-#     (250, 60, 1900, 41667),
-#     (250, 100, 1900, 40750),
-#     (250, 100, 1900, 39000),
-#     (250, 100, 1900, 37500),
-#     (250, 100, 1900, 37500),
-#     (250, 150, 1900, 37500),
-#     (250, 200, 1900, 37500),
-#     (250, 300, 1900, 37500),
-#     (250, 350, 1900, 37500),
-#     (250, 375, 1900, 37500),
-#     (250, 400, 1900, 37500)
-# ]
-
-NUMBER_TEST_LOOPS = 100
-
-INTEGRATION_TIME_CONFIG_LIST = [
-    (250, 10, 1900, 46667)]
-
 INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
-INTEGRATION_TIME_CONFIG_LIST_GATHER_DATA_ITERATIONS = 10
+#INTEGRATION_TIME_CONFIG_LIST_GATHER_DATA_ITERATIONS = 10
 # INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = (INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS
 #                                                  + INTEGRATION_TIME_CONFIG_LIST_GATHER_DATA_ITERATIONS)
 
@@ -94,10 +94,12 @@ class TofCam660HDRDevice:
         self._hdr_image = None
         self._hdr_raw_measurements = None
         self._invalid_frame_count = 0
+        self._image_counter = 0
 
     def __del__(self):
-        self.tofcam660.__del__()
         log.debug("delete camera device")
+        self.tofcam660.__del__()
+
 
     def _is_fw_version_greater_than_or_equal(self, major: int, minor: int) -> bool:
         if self.tofcamFWVersionDict['major'] > major:
@@ -154,13 +156,18 @@ class TofCam660HDRDevice:
             return False
         if frame.dcs is not None:
             log.warning("Unexpected DCS data in frame")
+            return False
+
         return True
 
     def take_measurement(self) -> tuple[bool, int]:
         """Runs the measurement and returns the success status"""
         self._hdr_image = None
         self._hdr_raw_measurements = None
-        self._invalid_frame_count = 0
+
+        global image_counter_invalid_total
+        #self._invalid_frame_count = 0
+        #self._image_counter = 0
 
         for config_list_iteration in range(INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS):
             if config_list_iteration < INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS:
@@ -179,11 +186,10 @@ class TofCam660HDRDevice:
                 try_index = -1
                 for try_index in range(IMAGE_FRAME_TRY_COUNT):
                     distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude()
+                    crc_bool = self.tofcam660.get_crc_status()
+                    self._image_counter += 1
                     
-                    # Generate timestamp
-                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    # Create subplots
-
+                     # Create subplots
                     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
                     img0 = axes[0].imshow(distance_amplitude_frame[0], vmin=0, vmax=4000)
@@ -194,16 +200,20 @@ class TofCam660HDRDevice:
                     axes[1].set_title("Amplitude Image")
                     plt.colorbar(img1, ax=axes[1])
                     # Save figure with timestamp
-                    filename = f"plots/plot_distAmp_{timestamp}.png"
+                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.png"
                     plt.savefig(filename, dpi=300)  # Higher dpi for better resolution
                     plt.close()
-                    # if self._is_valid_tofcam660_frame(distance_amplitude_frame, integration_time_config):
-                    #     break
-                    # else:
-                    #     log.warning(f"Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
-                    #                 f" attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
-                    #     distance_amplitude_frame = None
-                    #     self._invalid_frame_count += 1
+
+                    if self._is_valid_tofcam660_frame(self.tofcam660.frame, integration_time_config):
+                        log.info(f"camera acquired image number #: {image_counter} as expected, incorrect images #: {image_counter_invalid_total}")
+                        break
+                    else:
+                        log.warning(f"Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
+                                    f" attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
+                        distance_amplitude_frame = None
+                        self._invalid_frame_count += 1
+                        image_counter_invalid_total+=1
 
                 if distance_amplitude_frame is None:
                     log.error(f"Failed to get valid frame for image {image_index}, measurement failure")
@@ -213,38 +223,62 @@ class TofCam660HDRDevice:
 
         # self._hdr_image = self._hdr.get_hdr_image_uint16()
         # self._hdr_raw_measurements = self._hdr.get_measurements_in_hdr_image()
-        # return True, self._invalid_frame_count
-        return True
+        return True, self._invalid_frame_count
 
+def main():
+    supply = PL303('10.10.32.226')
+    print(supply.getId())
 
-from epc_lib.instruments.tti_supply import PL303
-supply = PL303('10.10.32.226')
-print(supply.getId())
+    #%%
+    supply._CH = 1 # ch2 is on led
+    supply._VOLTAGE_MAX = 24
+    supply.outputOff(supply._CH)
+    supply.setVoltage(supply._CH, supply._VOLTAGE_MAX)
+    supply.setCurrentRangeHigh(supply._CH)
+    supply.setCurrentLimit(supply._CH, 0.0)
+    supply.outputOff(supply._CH)
+    
+    global image_counter
 
-#%%
-supply._CH = 1 # ch2 is on led
-supply._VOLTAGE_MAX = 24
-supply.outputOff(supply._CH)
-supply.setVoltage(supply._CH, supply._VOLTAGE_MAX)
-supply.setCurrentRangeHigh(supply._CH)
-supply.setCurrentLimit(supply._CH, 0.0)
-supply.outputOff(supply._CH)
-#supply.write('OCP{} 3.0'.format(supply._CH)) # set overcurrent protection of CH2 to 1A
-#supply.write('DELTAI{} 0.5'.format(supply._CH))
+    #supply.write('OCP{} 3.0'.format(supply._CH)) # set overcurrent protection of CH2 to 1A
+    #supply.write('DELTAI{} 0.5'.format(supply._CH))
 
-for loop in range(NUMBER_TEST_LOOPS):
-    if 'camera' in locals() or 'camera' in globals():
+    for loop in range(NUMBER_TEST_LOOPS):
+        image_counter += 1
+        if 'camera' in locals() or 'camera' in globals():
+            camera.__del__()
+
+        supply.setCurrentRangeHigh(supply._CH)
+        supply.setCurrentLimit(supply._CH, 3)
+        supply.outputOn(supply._CH)
+        
+        time.sleep(POWER_ON_SECONDS)
+
+        camera = TofCam660HDRDevice(ip_address='10.10.31.180')
+        print(camera.take_measurement())
         camera.__del__()
 
-    supply.setCurrentRangeHigh(supply._CH)
-    supply.setCurrentLimit(supply._CH, 3)
-    supply.outputOn(supply._CH)
-    time.sleep(10)
-    camera = TofCam660HDRDevice(ip_address='10.10.31.180')
-    print(camera.take_measurement())
-    camera.__del__()
+        supply.outputOff(supply._CH)
+        time.sleep(POWER_OFF_SECONDS)
+
+
+    # Close all handlers
+    for handler in log.handlers:
+        handler.close()
+        
+    #add device wafer and chip ID into the log name
+    old_name = "logs/debug.log"
+    new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
+    os.rename(old_name, new_name)
+    old_name = "logs/warning.log"
+    new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_warning.log"
+    os.rename(old_name, new_name)
+    old_name = "logs/info.log"
+    new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_info.log"
+    os.rename(old_name, new_name)
 
     supply.outputOff(supply._CH)
-    time.sleep(5)  
 
-supply.outputOff(supply._CH)
+# Standard Python convention to call main
+if __name__ == "__main__":
+    main()
