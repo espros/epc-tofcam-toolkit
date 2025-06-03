@@ -11,7 +11,7 @@ from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
-from epc.tofCam_lib.h5Cam import H5_Settings_Controller, H5Cam
+from epc.tofCam_lib.h5Cam import H5Cam
 
 
 class Base_TOFcam_Bridge():
