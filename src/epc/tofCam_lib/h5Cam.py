@@ -408,14 +408,3 @@ class H5Cam(_H5Base, TOFcam, QObject):
     def mod_frequency(self) -> float:
         """Modulation frequency"""
         return float(self._get_attribute("mod_frequency"))
-
-
-if __name__ == "__main__":
-    cam = H5Cam(source="/home/uca/Downloads/data_20250526_165536.h5")
-    for i in range(50):
-        _tic = time.time()
-        out = cam.get_point_cloud()
-        print(out)
-        print(f"idx: {cam.index}")
-        _toc = time.time()
-        print(f"{_toc-_tic}")
