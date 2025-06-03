@@ -166,6 +166,19 @@ class ReadRegister(Command):
         return struct.pack('!B', self.data['address'])
 
 
+class SetIlluminatorSegments(Command):
+    commandId = 51
+
+    def dataToBytes(self):
+        dataByte = 0
+        for i in range(4):
+            if self.data[f'segment{i + 1}']:
+                dataByte |= 1 << i
+        if 'segment_2_to_4' in self.data and self.data['segment_2_to_4']:
+            dataByte |= 16
+        return struct.pack('!B', dataByte)
+
+
 class GetTemperature(Command):
     commandId = 74
 
@@ -246,4 +259,5 @@ commands = {'setRoi': SetRoi,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
             'getCalibrationData' : GetCalibrationData,
+            'setIlluminatorSegments': SetIlluminatorSegments,
             }

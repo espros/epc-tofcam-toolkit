@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import datetime
 import time
 
-
 logging.getLogger("TOFcam660").setLevel(logging.WARNING)
 
 # Create logger
@@ -41,9 +40,9 @@ log.addHandler(file_handler_info)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 2
+NUMBER_TEST_LOOPS = 10
 POWER_ON_SECONDS = 10 #10 
-POWER_OFF_SECONDS = 5 #5
+POWER_OFF_SECONDS = 1 #5
 INTEGRATION_TIME_CONFIG_LIST = [
     (250, 10, 1900, 46667)]
 
