@@ -1,8 +1,6 @@
 from typing import Optional
 
 import numpy as np
-from epc.tofCam_gui.icon_svg import SVG_DICT, svg2icon
-from epc.tofCam_lib.h5Cam import H5Cam
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
@@ -12,6 +10,9 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
                                QStackedWidget, QToolTip, QVBoxLayout, QWidget)
+
+from epc.tofCam_gui.icon_svg import svg2icon
+from epc.tofCam_lib.h5Cam import H5Cam
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -103,13 +104,16 @@ class VideoSlider(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None, cam: Optional[H5Cam] = None):
 
+        self._icons = {_name: svg2icon(f"{_name}.svg")
+                       for _name in ["play", "pause"]}
+
         super().__init__(parent=parent)
         self.setVisible(False)
         self.slider = QSlider(Qt.Orientation.Horizontal, parent=parent)
         self.slider.setMouseTracking(True)
         self.slider.installEventFilter(self)
         self.playButton = QPushButton(self)
-        self.playButton.setIcon(svg2icon(SVG_DICT["play"]))
+        self.playButton.setIcon(self._icons["play"])
         self.playButton.setCheckable(True)
         self.playButton.toggled.connect(self._playButtonToggled)
 
@@ -160,7 +164,7 @@ class VideoSlider(QWidget):
 
     def _playButtonToggled(self) -> None:
         self.__setOnOffIcons(
-            self.playButton, svg2icon(SVG_DICT["play"]), svg2icon(SVG_DICT["pause"]))
+            self.playButton, self._icons["play"], self._icons["pause"])
 
     def __setOnOffIcons(self, button: QPushButton, on: QIcon, off: QIcon) -> None:
         """Set ON/OFF icon variations for the same button
@@ -279,7 +283,7 @@ class VideoWidget(QWidget):
         self.stacked.addWidget(self.pc)
 
         # Handle source label
-        self.source_label = QLabel("No source", self)
+        self.source_label = QLabel("", self)
         self.source_label.setStyleSheet(
             "color: yellow; background-color: rgba(0,0,0,128); padding: 4px;")
         self.source_label.setAttribute(
