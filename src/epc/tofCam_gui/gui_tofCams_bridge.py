@@ -100,10 +100,7 @@ class Base_TOFcam_Bridge():
         }
 
         if hasattr(cam, "mod_frequency"):
-            try:
-                self._meta.update({"mod_frequency": cam.mod_frequency})
-            except Exception as e:
-                logging.info(f"Cannot get mod frequency\n{e}")
+            self._meta.update({"mod_frequency": cam.mod_frequency})
 
     def capture(self, mode=0):
         if self.cam is not None:
