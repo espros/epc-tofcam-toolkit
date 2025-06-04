@@ -1,6 +1,0 @@
-2025-06-03 14:02:42,714 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
-2025-06-03 14:02:42,714 - multi_level_logger - DEBUG - delete camera device
-2025-06-03 14:02:47,732 - multi_level_logger - DEBUG - delete camera device
-2025-06-03 14:03:01,058 - multi_level_logger - DEBUG - delete camera device
-2025-06-03 14:03:01,921 - multi_level_logger - INFO - camera acquired image number #: 2 as expected, incorrect images #: 0
-2025-06-03 14:03:01,921 - multi_level_logger - DEBUG - delete camera device

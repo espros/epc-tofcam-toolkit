@@ -50,7 +50,6 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         self.flexModFreq_MHz = 0.0
         self.intTime_us = 0
         self.minAmplitude = 0
-        self.frame = None
         self.dllRegisterSettings = {
             0x71: 0x00,
             0x72: 0x00,
@@ -401,11 +400,14 @@ class TOFcam660(TOFcam):
         self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
         assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
 
+        self.is_valid_crc = None
+        self.frame = None
+
         # check if CRC enabled FW is running
         fw_version = self.device.get_fw_version()
         if fw_version != '3.32' and fw_version != '3.33':
             raise Exception("Incompatible FW version")
-        self.is_valid_crc = None
+
 
     def __del__(self):
         if self.tcpInterface.open:
