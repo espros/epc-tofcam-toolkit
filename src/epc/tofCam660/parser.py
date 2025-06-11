@@ -32,12 +32,13 @@ class Parser(abc.ABC):
         self.bytestream = None
         self.crc = Crc(mode=CrcMode.CRC32_IEEE)
 
-    def parse(self, bytestream):
+    def parse(self, bytestream, check_crc):
         self.bytestream = bytestream
         frame = Frame()
         self.parseHeader(frame)
         self.parseData(frame)
-        self.checkCRC(frame)
+        if check_crc:
+            self.checkCRC(frame)
         return frame
 
     def parseHeader(self, frame):
