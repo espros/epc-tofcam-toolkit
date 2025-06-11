@@ -30,7 +30,7 @@ class Parser(abc.ABC):
 
     def __init__(self):
         self.bytestream = None
-        self.crc = Crc(mode=CrcMode.CRC32_TOFCAM660, polynom=0xEDB88320, revout=False)
+        self.crc = Crc(mode=CrcMode.CRC32_IEEE)
 
     def parse(self, bytestream):
         self.bytestream = bytestream
