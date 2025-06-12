@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
-from door_sensor.algorithms import calc_unambiguity
+import logging
+from epc.tofCam_lib.algorithms import calc_unambiguity_distance
 
 
 class OffsetCompensation():
@@ -14,7 +15,7 @@ class OffsetCompensation():
             group = f['data']
             offset = group['offset'][()]
             mod_freq = group['modulation_frequency'][()]
-            unambiguity = calc_unambiguity(mod_freq*1000000)
+            unambiguity = calc_unambiguity_distance(mod_freq*1000000)
         return OffsetCompensation(offset, unambiguity)
 
     def compensate(self, distances):
@@ -35,7 +36,7 @@ class FourthHarmonicCompensation():
             lut = group['DRNU_LUT_mean'][:]
             dll_step_size = group['dll_step_size'][()]
             mod_freq = group['modulation_frequency'][()]
-            unambiguity = calc_unambiguity(mod_freq*1000000)
+            unambiguity = calc_unambiguity_distance(mod_freq*1000000)
         return FourthHarmonicCompensation(dll_step_size, lut, unambiguity)
 
     def compensate(self, distances):
@@ -63,9 +64,10 @@ class FourthHarmonicCompensation():
 
 
 class DRNUCompensation():
-    def __init__(self, lut: np.ndarray, step_size: float):
+    def __init__(self, lut: np.ndarray, step_size: float, roi=tuple[int, int, int, int]):
         self.lut = lut
         self.step_size = step_size
+        self.drnu_roi = roi
 
     @staticmethod
     def from_file(file: str):
@@ -73,24 +75,67 @@ class DRNUCompensation():
             drnu_table = f['data']
             lut = np.array(drnu_table['drnu_lut'])
             step_size = drnu_table['dll_step_size'][()]
-        return DRNUCompensation(lut, step_size)
+            drnu_roi = drnu_table['roi'][()]
+        return DRNUCompensation(lut, step_size, drnu_roi)
 
-    def compensate(self, image: np.ndarray):
-        lut_index = image / self.step_size
-        lut_index[lut_index > self.lut.shape[2]-1] -= self.lut.shape[2]
+    def get_overlap_rois(self, roi1, shape1, roi2, shape2):
+        # Overlap in big image coordinates
+        ox0 = max(roi1[0], roi2[0])
+        oy0 = max(roi1[1], roi2[1])
+        ox1 = min(roi1[2], roi2[2])
+        oy1 = min(roi1[3], roi2[3])
+
+        if ox0 >= ox1 or oy0 >= oy1:
+            # No overlap
+            return None
+
+        # Overlap region in local coordinates for img1
+        img1_roi = (ox0 - roi1[0], oy0 - roi1[1],
+                    ox1 - roi1[0], oy1 - roi1[1])
+        img2_roi = (ox0 - roi2[0], oy0 - roi2[1],
+                    ox1 - roi2[0], oy1 - roi2[1])
+
+        return img1_roi, img2_roi
+
+    def compensate(self, image: np.ndarray, cam_roi=None):
+        if cam_roi is None:
+            cam_roi = (0, 0, image.shape[1], image.shape[0])
+
+        # Validate the ROI dimensions
+        if (cam_roi[2] - cam_roi[0] != image.shape[1] or
+                cam_roi[3] - cam_roi[1] != image.shape[0]):
+            raise ValueError("ROI dimensions do not match image dimensions.")
+
+        rois = self.get_overlap_rois(
+            cam_roi, image.shape, self.drnu_roi, self.lut.shape[:2])
+        if rois is None:
+            logging.warning(
+                "No overlap between the image and the DRNU LUT ROI. No compensation applied.")
+            return image
+
+        roi_img = rois[0]
+        roi_lut = rois[1]
+        lut = self.lut[roi_lut[1]:roi_lut[3], roi_lut[0]:roi_lut[2], :]
+
+        lut_index = image[roi_img[1]:roi_img[3],
+                          roi_img[0]:roi_img[2]] / self.step_size
+        lut_index[lut_index > lut.shape[2]-1] -= lut.shape[2]
         floor_index = np.floor(lut_index).astype(int)
         ceil_index = np.ceil(lut_index).astype(int)
-        # ceil_index[ceil_index >= self.lut.shape[2]]
+        # ceil_index[ceil_index >= lut.shape[2]]
         frac = lut_index - floor_index
 
         # linearly interpolate between the two closest values
-        lower_error = self.lut[np.arange(self.lut.shape[0])[:, None],
-                               np.arange(self.lut.shape[1]), floor_index]
-        higher_error = self.lut[np.arange(self.lut.shape[0])[
-            :, None], np.arange(self.lut.shape[1]), ceil_index]
+        lower_error = lut[np.arange(lut.shape[0])[:, None],
+                          np.arange(lut.shape[1]), floor_index]
+        higher_error = lut[np.arange(lut.shape[0])[
+            :, None], np.arange(lut.shape[1]), ceil_index]
         errors = higher_error * frac + lower_error * (1-frac)
 
-        return image - errors
+        # compensate only the overlapping region
+        result = image.copy()
+        result[roi_img[1]:roi_img[3], roi_img[0]:roi_img[2]] -= errors
+        return result
 
 
 class TemperatureCompensation():
