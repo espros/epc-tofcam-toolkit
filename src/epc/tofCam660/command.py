@@ -229,6 +229,9 @@ class SetCompensation(Command):
 
 class GetCalibrationData(Command):
     commandId = 53
+
+class GetIntegrationTime(Command):
+    commandId = 56
     
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
@@ -260,4 +263,5 @@ commands = {'setRoi': SetRoi,
             'setCompensation' : SetCompensation,
             'getCalibrationData' : GetCalibrationData,
             'setIlluminatorSegments': SetIlluminatorSegments,
+            'getIntegrationTime' : GetIntegrationTime,
             }

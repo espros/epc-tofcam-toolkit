@@ -291,6 +291,10 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Command: {set_illuminator_cmd.toBytes()}")
         self.interface.transceive(set_illuminator_cmd)
 
+    def get_integration_time(self, ) -> list[dict]:
+        """Get the integration time(grayscale & 3D) from the camera."""
+        log.info(f"Reading integration time")
+        return self.interface.transceive(Command.create("getIntegrationTime")).data
 
 
 class TOFcam660_Device(Dev_Infos_Controller):

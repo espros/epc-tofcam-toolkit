@@ -113,6 +113,15 @@ class CalibrationData(Response):
 
         self.data = calibration_data
 
+class IntegrationTime(Response):
+    def parseDataFromBytes(self, data):
+        lowIntTime, midIntTime, highIntTime, gsIntTime = struct.unpack('!HHHH', data)
+        self.data = {'lowIntTime': lowIntTime,
+                     'midIntTime': midIntTime,
+                     'highIntTime': highIntTime,
+                     'grayscaleIntTime': gsIntTime,
+                    }
+
 class NotAcknowledge(Response):
     def isError(self):
         return True
@@ -125,5 +134,6 @@ responses = {0: Acknowledge,
              4: Temperature,
              6: ReadRegister,
              9: CalibrationData,
+             10: IntegrationTime,
              254: Calibrating,
              255: NotAcknowledge, }
