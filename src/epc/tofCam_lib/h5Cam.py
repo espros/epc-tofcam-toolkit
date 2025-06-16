@@ -293,6 +293,10 @@ class H5_Settings_Controller(ABC, _H5Base, TOF_Settings_Controller):
     def set_hdr(self, mode: int) -> None:
         logger.info(
             f"H5Cam is readonly! It can only read the previously set values, cannot set HDR!")
+        
+    def set_lense_type(self, lense_type: int) -> None:
+        logger.info(
+            f"H5Cam is readonly! It can only read the previously set values, cannot set lens type!")
 
 
 class H5Dev_Infos_Controller(ABC, _H5Base, Dev_Infos_Controller):
