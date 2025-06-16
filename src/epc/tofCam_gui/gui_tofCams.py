@@ -4,16 +4,15 @@ from pathlib import Path
 from typing import Optional, Type
 
 import numpy as np
+from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget
+from epc.tofCam_gui.widgets.console_widget import Console_Widget
+from epc.tofCam_lib import TOFcam
+from epc.tofCam_lib.h5Cam import H5Cam
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGridLayout,
                                QMainWindow, QMessageBox, QSplashScreen,
                                QVBoxLayout, QWidget)
-
-from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget
-from epc.tofCam_gui.widgets.console_widget import Console_Widget
-from epc.tofCam_lib import TOFcam
-from epc.tofCam_lib.h5Cam import H5Cam
 
 
 class Base_GUI_TOFcam(QMainWindow):
@@ -53,21 +52,12 @@ class Base_GUI_TOFcam(QMainWindow):
         self.bridge: Optional[Base_TOFcam_Bridge] = None
 
     def _import_toggled(self) -> None:
-        if self.bridge is None or (isinstance(self.bridge.cam, H5Cam) and self.bridge.fallback_cam is None):
-            QTimer.singleShot(
-                100, lambda: self.toolBar.playButton.setEnabled(False))
-            QTimer.singleShot(
-                100, lambda: self.toolBar.captureButton.setEnabled(False))
-            QTimer.singleShot(
-                100, lambda: self.toolBar.recordButton.setEnabled(False))
-
-        else:
-            QTimer.singleShot(100, lambda: self.toolBar.playButton.setEnabled(
-                not self.toolBar.importButton.isChecked()))
-            QTimer.singleShot(100, lambda: self.toolBar.captureButton.setEnabled(
-                not self.toolBar.importButton.isChecked()))
-            QTimer.singleShot(100, lambda: self.toolBar.recordButton.setEnabled(
-                not self.toolBar.importButton.isChecked()))
+        QTimer.singleShot(0, lambda: self.toolBar.playButton.setEnabled(
+            not self.toolBar.importButton.isChecked()))
+        QTimer.singleShot(0, lambda: self.toolBar.captureButton.setEnabled(
+            not self.toolBar.importButton.isChecked()))
+        QTimer.singleShot(0, lambda: self.toolBar.recordButton.setEnabled(
+            not self.toolBar.importButton.isChecked()))
 
     def complete_setup(self):
         """ ! needs to be called at the end of the __init__ method of the derived class !
@@ -194,7 +184,12 @@ class Base_GUI_TOFcam(QMainWindow):
             self.bridge._fallback()
         except:
             self.bridge.disconnect()
-            self.bridge = None
+            QTimer.singleShot(
+                100, lambda: self.toolBar.playButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.toolBar.captureButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.toolBar.recordButton.setEnabled(False))
 
     def _connect_replay_source(self, enable: bool) -> None:
         """Select the binary file and update the firmware"""
