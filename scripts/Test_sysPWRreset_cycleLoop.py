@@ -6,7 +6,6 @@ import os
 sys.path.insert(0, 'src')
 sys.path.insert(0, 'epc_lib')
 
-from epc_lib.instruments.tti_supply import PL303
 from epc.tofCam660 import TOFcam660
 from epc.tofCam660.parser import Frame
 import matplotlib.pyplot as plt
@@ -133,6 +132,19 @@ class TofCam660HDRDevice:
         if frame.topRow != 0:
             log.error(f"Frame top row (RoiY0) mismatch, expected: 0, actual: {frame.topRow}")
             return False
+        integrationTimes = self.tofcam660.settings.get_integration_times()
+        if integrationTimes['lowIntTime'] != integration_time_config[0]:
+            log.error(f"Frame integration time mismatch, expected: {integration_time_config[0]}, actual: {integrationTimes['lowIntTime']}")
+            return False
+        if integrationTimes['midIntTime'] != 0:
+            log.error(f"Frame integration time mismatch, expected: 400us, actual: {integrationTimes['midIntTime']}")
+            return False
+        if integrationTimes['highIntTime'] != 0:
+            log.error(f"Frame integration time mismatch, expected: 2000us, actual: {integrationTimes['highIntTime']}")
+            return False
+        if integrationTimes['grayscaleIntTime'] != 25:
+            log.error(f"Frame integration time mismatch, expected: 25us, actual: {integrationTimes['grayscaleIntTime']}")
+            return False
         if frame.lowIntTime != integration_time_config[0]:
             log.error(f"Frame integration time mismatch, expected: {integration_time_config[0]}, actual: {frame.lowIntTime}")
             return False
@@ -226,17 +238,7 @@ class TofCam660HDRDevice:
         return True, self._invalid_frame_count
 
 def main():
-    supply = PL303('10.10.32.226')
-    print(supply.getId())
 
-    #%%
-    supply._CH = 1 # ch2 is on led
-    supply._VOLTAGE_MAX = 24
-    supply.outputOff(supply._CH)
-    supply.setVoltage(supply._CH, supply._VOLTAGE_MAX)
-    supply.setCurrentRangeHigh(supply._CH)
-    supply.setCurrentLimit(supply._CH, 0.0)
-    supply.outputOff(supply._CH)
     
     global image_counter
 
@@ -248,24 +250,20 @@ def main():
         if 'camera' in locals() or 'camera' in globals():
             camera.__del__()
 
-        supply.setCurrentRangeHigh(supply._CH)
-        supply.setCurrentLimit(supply._CH, 3)
-        supply.outputOn(supply._CH)
-        
+
         time.sleep(POWER_ON_SECONDS)
 
         try:
             camera = TofCam660HDRDevice(ip_address='10.10.31.180')
         except Exception as e:
             log.error(f"Failed to initialize camera: {e}")
-            supply.outputOff(supply._CH)
             time.sleep(POWER_OFF_SECONDS)
             continue
 
         print(camera.take_measurement())
         camera.__del__()
 
-        supply.outputOff(supply._CH)
+        #camera.sys
         time.sleep(POWER_OFF_SECONDS)
 
 
@@ -283,8 +281,6 @@ def main():
     old_name = "logs/info.log"
     new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_info.log"
     os.rename(old_name, new_name)
-
-    supply.outputOff(supply._CH)
 
 # Standard Python convention to call main
 if __name__ == "__main__":
