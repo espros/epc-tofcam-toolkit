@@ -9,7 +9,6 @@ from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5Cam
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
@@ -108,8 +107,7 @@ class Base_TOFcam_Bridge():
         self.cam, self.fallback_cam = self.fallback_cam, self.cam  # Switch, python way
         self._update_cam(self.cam)
         self.gui.imageView.source_label.adjustSize()
-        QTimer.singleShot(
-            100, self.gui.imageView.update_label_position)
+        self.gui.imageView.update_label_position()
 
     def disconnect(self) -> None:
         self.streamer.stop_stream()
@@ -264,7 +262,7 @@ class Base_TOFcam_Bridge():
             _success = True
 
         if not _success:
-            QTimer.singleShot(100, self.gui.toolBar.recordButton.toggle)
+            self.gui.toolBar.recordButton.toggle()
 
     def _stop_recording(self):
         if self.data_logger is not None:
