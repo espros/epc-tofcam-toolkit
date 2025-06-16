@@ -36,3 +36,16 @@ def cannyE (curimg):
     normImg *= 255
     normImg = normImg.astype(np.uint8)
     return cv2.Canny(normImg, 100, 50)
+
+class MinAmplitudeFilter():
+    def __init__(self, min_amplitude=50):
+        self.min_amplitude = min_amplitude
+
+    def filter(self, distance: np.ndarray, amplitude: np.ndarray):
+        """
+        Filter the distance image based on the amplitude image.
+        Pixels with amplitude below the minimum threshold are set to 0 in the distance image.
+        """
+        filtered_distance = np.copy(distance)
+        filtered_distance[amplitude < self.min_amplitude] = 0
+        return filtered_distance
