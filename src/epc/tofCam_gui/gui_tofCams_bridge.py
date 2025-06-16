@@ -45,7 +45,8 @@ class Base_TOFcam_Bridge():
         self.fallback_cam: Optional[TOFcam] = None
         self.fallback_source = ""
         self.cam = cam
-        self._update_cam(cam=cam)
+        self._update_cam(cam=cam) 
+        self.gui.bridge = self
 
     def _update_cam(self, cam: TOFcam) -> None:
         self.fallback_cam = self.cam
@@ -173,13 +174,13 @@ class Base_TOFcam_Bridge():
             self.streamer.stop_stream()
 
     def _set_replay_streaming(self, enable: bool) -> None:
-        assert isinstance(self.cam, H5Cam)
-        if enable:
-            self.cam.enable_continous(True)
-            self.streamer.start_stream()
-        else:
-            self.cam.enable_continous(False)
-            self.streamer.stop_stream()
+        if isinstance(self.cam, H5Cam):
+            if enable:
+                self.cam.enable_continous(True)
+                self.streamer.start_stream()
+            else:
+                self.cam.enable_continous(False)
+                self.streamer.stop_stream()
 
     def _set_recording(self, enable: bool) -> None:
         if enable:
