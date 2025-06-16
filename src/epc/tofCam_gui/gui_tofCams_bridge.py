@@ -1,17 +1,16 @@
+from copy import copy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QFileDialog, QMessageBox
-
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5Cam
-from copy import copy
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class Base_TOFcam_Bridge():
@@ -21,7 +20,13 @@ class Base_TOFcam_Bridge():
     MIN_DCS = -2048
     MAX_DCS = 2047
 
-    def __init__(self, cam: Optional[TOFcam], gui: Base_GUI_TOFcam):
+    def __init__(self, cam: TOFcam, gui: Base_GUI_TOFcam) -> None:
+        """
+
+        Args:
+            cam (TOFcam): The camera to bridge with the gui
+            gui (Base_GUI_TOFcam): The gui to bridge with the camera
+        """
 
         self.gui = gui
         self.data_logger: Optional[HDF5Logger] = None
@@ -36,36 +41,17 @@ class Base_TOFcam_Bridge():
         self.gui.imageView.slider.playButton.clicked.connect(
             self._set_replay_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
-        self.gui.toolBar.importButton.triggered.connect(
-            self._connect_replay_source)
-        self.gui.toolBar.importButton.toggled.connect(self._import_toggled)
 
         self._static_meta: Dict[str, Any] = {}
-
-        if cam is not None:
-            self._bridge_cam(cam=cam)
-
+        self.fallback_cam: Optional[TOFcam] = None
+        self.fallback_source = ""
         self.cam = cam
+        self._update_cam(cam=cam)
 
-    def _import_toggled(self) -> None:
-        if self.cam is None or (hasattr(self, "prev_cam") and self.prev_cam is None):
-            QTimer.singleShot(
-                100, lambda: self.gui.toolBar.playButton.setEnabled(False))
-            QTimer.singleShot(
-                100, lambda: self.gui.toolBar.captureButton.setEnabled(False))
-            QTimer.singleShot(
-                100, lambda: self.gui.toolBar.recordButton.setEnabled(False))
-
-        else:
-            QTimer.singleShot(100, lambda: self.gui.toolBar.playButton.setEnabled(
-                not self.gui.toolBar.importButton.isChecked()))
-            QTimer.singleShot(100, lambda: self.gui.toolBar.captureButton.setEnabled(
-                not self.gui.toolBar.importButton.isChecked()))
-            QTimer.singleShot(100, lambda: self.gui.toolBar.recordButton.setEnabled(
-                not self.gui.toolBar.importButton.isChecked()))
-
-    def _bridge_cam(self, cam: Optional[TOFcam]) -> None:
-        assert cam is not None
+    def _update_cam(self, cam: TOFcam) -> None:
+        self.fallback_cam = self.cam
+        self.fallback_source = self.gui.imageView.source_label.text()
+        self.cam = cam
         self._get_image_cb = cam.get_distance_image
 
         # update chip information
@@ -78,18 +64,34 @@ class Base_TOFcam_Bridge():
         self.gui.topMenuBar.openConsoleAction.triggered.connect(
             lambda: self.gui.console.startup_kernel(cam))
 
-        # Set the cam and get the streamer
-        self.cam = cam
+        self.gui.setDefaultValues()
 
-        if isinstance(self.cam, H5Cam):
+        if isinstance(cam, H5Cam):
+
+            if hasattr(self, "_set_image_type") and hasattr(self.gui, "imageTypeWidget"):
+                self._set_image_type(cam.image_type)
+                self.gui.imageTypeWidget.comboBox.setCurrentText(
+                    cam.image_type)
+
             self.streamer = Streamer(self.getImage, post_stop_cb=self.capture)
+            self.gui.imageView.slider.setVisible(True)
+            self.gui.imageView.source_label.setText(f"{cam.source}")
+            self.gui.imageView.source_label.adjustSize()
+            self.gui.imageView.slider.update_cam(cam)
             self.gui.imageView.slider.user_updated_slider.connect(
                 self._slider_handler)
+            self.gui.setSettingsEnabled(False)
+
         else:
+            self.fallback_cam = None
+            self.fallback_source = ""
+            self.gui.setSettingsEnabled(True)
+            self.gui.imageView.slider.setVisible(False)
             self.streamer = Streamer(self.getImage)
+
         self.streamer.signal_new_frame.connect(self.updateImage)
         self.streamer.signal_new_frame.connect(self.storeImage)
-        self.gui.setDefaultValues()
+        self.capture()
 
         # Fetch meta
         self._static_meta = {
@@ -99,15 +101,35 @@ class Base_TOFcam_Bridge():
             "fw_version": fw_version,
         }
 
+    def _fallback(self) -> None:
+        """Connect the fallback camera"""
+        assert self.fallback_cam is not None
+        self.gui.imageView.source_label.setText(f"{self.fallback_source}")
+        self.cam, self.fallback_cam = self.fallback_cam, self.cam  # Switch, python way
+        self._update_cam(self.cam)
+        self.gui.imageView.source_label.adjustSize()
+        QTimer.singleShot(
+            100, self.gui.imageView.update_label_position)
+
+    def disconnect(self) -> None:
+        image = self.getImage()
+        if isinstance(image, np.ndarray):
+            self.gui.updateImage(np.zeros_like(image))
+        elif isinstance(image, tuple) and isinstance(image[0], np.ndarray) and isinstance(image[1], np.ndarray):
+            _zeros_cloud = np.zeros_like(image[0])
+            _zeros_amplitude = np.zeros_like(image[1])
+            self.gui.updateImage((_zeros_cloud, _zeros_amplitude))
+
+        self.streamer.stop_stream()
+        self.streamer.deleteLater()
+
     def capture(self, mode=0):
-        if self.cam is not None:
-            image = self.getImage()
-            self.gui.updateImage(image)
+        image = self.getImage()
+        self.gui.updateImage(image)
 
     def updateImage(self, image):
-        if self.cam is not None:
-            if self.streamer.is_streaming():
-                self.gui.updateImage(image)
+        if self.streamer.is_streaming():
+            self.gui.updateImage(image)
 
     def storeImage(self, image):
         if self.data_logger is not None:
@@ -117,10 +139,7 @@ class Base_TOFcam_Bridge():
                 self.data_logger.add_frame(image)
 
     def getImage(self):
-        if self.cam is not None:
-            return self._get_image_cb()
-        else:
-            return lambda: np.ndarray([])
+        return self._get_image_cb()
 
     @staticmethod
     def _combine_dcs(frame: np.ndarray) -> np.ndarray:
@@ -150,36 +169,30 @@ class Base_TOFcam_Bridge():
         return frame
 
     def get_combined_dcs(self):
-        if self.cam is not None:
-            dcs = self.cam.get_raw_dcs_images()
-            image = self._combine_dcs(dcs)
-            return image
-        else:
-            return np.ndarray([])
+        dcs = self.cam.get_raw_dcs_images()
+        image = self._combine_dcs(dcs)
+        return image
 
     def _set_streaming(self, enable: bool) -> None:
-        if self.cam is not None:
-            if enable:
-                self.streamer.start_stream()
-            else:
-                self.streamer.stop_stream()
+        if enable:
+            self.streamer.start_stream()
+        else:
+            self.streamer.stop_stream()
 
     def _set_replay_streaming(self, enable: bool) -> None:
-        if self.cam is not None:
-            assert isinstance(self.cam, H5Cam)
-            if enable:
-                self.cam.enable_continous(True)
-                self.streamer.start_stream()
-            else:
-                self.cam.enable_continous(False)
-                self.streamer.stop_stream()
+        assert isinstance(self.cam, H5Cam)
+        if enable:
+            self.cam.enable_continous(True)
+            self.streamer.start_stream()
+        else:
+            self.cam.enable_continous(False)
+            self.streamer.stop_stream()
 
     def _set_recording(self, enable: bool) -> None:
-        if self.cam is not None:
-            if enable:
-                self._start_recording()
-            else:
-                self._stop_recording()
+        if enable:
+            self._start_recording()
+        else:
+            self._stop_recording()
 
     def _set_standard_image_type(self, image_type: str):
         """ Set the image type to the given type and update the GUI accordingly """
@@ -187,26 +200,22 @@ class Base_TOFcam_Bridge():
         if image_type == 'Distance':
             assert self._distance_unambiguity is not None
             self.gui.imageView.setActiveView('image')
-            if self.cam is not None:
-                self._get_image_cb = self.cam.get_distance_image
+            self._get_image_cb = self.cam.get_distance_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self._distance_unambiguity*1000)
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
-            if self.cam is not None:
-                self._get_image_cb = self.cam.get_amplitude_image
+            self._get_image_cb = self.cam.get_amplitude_image
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
             self.gui.imageView.setActiveView('image')
-            if self.cam is not None:
-                self._get_image_cb = self.cam.get_grayscale_image
+            self._get_image_cb = self.cam.get_grayscale_image
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_GRAYSCALE)
         elif image_type == 'DCS':
             self.gui.imageView.setActiveView('image')
-            if self.cam is not None:
-                self._get_image_cb = self.get_combined_dcs
+            self._get_image_cb = self.get_combined_dcs
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)
         else:
@@ -216,12 +225,11 @@ class Base_TOFcam_Bridge():
         _success = False
         _dev_id = ""
 
-        if self.cam is not None:
-            try:
-                _cid, _wid = self.cam.device.get_chip_infos()
-                _dev_id = f"_w{_wid:03}c{_cid:03}"
-            except:
-                pass
+        try:
+            _cid, _wid = self.cam.device.get_chip_infos()
+            _dev_id = f"_w{_wid:03}c{_cid:03}"
+        except:
+            pass
 
         _img_type = self.image_type.lower().replace(" ", "_")
         _date = datetime.now().strftime("%y%m%d_%H%M%S")
@@ -269,110 +277,15 @@ class Base_TOFcam_Bridge():
             self.data_logger.wait()
             self.gui.setSettingsEnabled(True)
 
-    def _connect_H5Cam(self) -> Optional[H5Cam]:
-        """Connect the source h5 file to interract with"""
-        _success = False
-        _recorded_stream, _ = QFileDialog.getOpenFileName(
-            parent=self.gui,
-            caption="Select recorded stream",
-            dir="",
-            filter="H5 Files (*.h5);;All Files (*)"
-        )
-        if _recorded_stream is None:
-            QMessageBox.warning(
-                self.gui, "No file selected", "Select a recorded stream `*.h5`!")
+    def _slider_handler(self, val: int) -> None:
+        if not isinstance(self.cam, H5Cam):
+            raise NotImplementedError(
+                f"Slide handler is only available for H5Cam! Not for {self.cam.__class__.__name__}")
 
-        elif Path(_recorded_stream).is_dir():
-            QMessageBox.warning(
-                self.gui, "Directory selected", "Please select a standalone `*.h5` file!")
-
-        elif Path(_recorded_stream).suffix != ".h5":
-            QMessageBox.warning(self.gui, "Wrong file selected",
-                                f"`{_recorded_stream}` is not valid! Recorded stream file should have the extension `.h5`")
-
-        else:
-            confirm = QMessageBox.question(self.gui,
-                                           "Recorded stream selected",
-                                           f"`{_recorded_stream}` will be replayed. Do you confirm?",
-                                           buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                           defaultButton=QMessageBox.StandardButton.Yes)
-
-            if confirm == QMessageBox.StandardButton.Yes:
-                if hasattr(self, "cam"):
-                    self.prev_cam = self.cam
-                    self.prev_source = self.gui.imageView.source_label.text()
-                cam = H5Cam(_recorded_stream, continuous=False)
-
-                self.gui.imageView.slider.setVisible(True)
-                self._bridge_cam(cam)
-                QTimer.singleShot(
-                    100, self.gui.imageView.update_label_position)
-                self.gui.imageView.source_label.setText(f"{cam.source}")
-                self.gui.imageView.source_label.adjustSize()
-                self.gui.imageView.slider.update_cam(cam)
-                _success = True
-
-                # Disable settings
-                if hasattr(self, "_set_image_type") and hasattr(self.gui, "imageTypeWidget"):
-                    self._set_image_type(cam.image_type)
-                    self.gui.imageTypeWidget.comboBox.setCurrentText(
-                        cam.image_type)
-
-                for i in range(self.gui.settingsLayout.count()):
-                    widget = self.gui.settingsLayout.itemAt(i).widget()
-                    widget.setEnabled(False)
-
-                return cam
-
-        if not _success:
-            QTimer.singleShot(100, self.gui.toolBar.importButton.toggle)
-        return None
-
-    def _disconnect_H5Cam(self) -> None:
-        """Revert the replay source connection"""
-        image = self.getImage()
-        if isinstance(image, np.ndarray):
-            self.gui.updateImage(np.zeros_like(image))
-        elif isinstance(image, tuple) and isinstance(image[0], np.ndarray) and isinstance(image[1], np.ndarray):
-            _zeros_cloud = np.zeros_like(image[0])
-            _zeros_amplitude = np.zeros_like(image[1])
-            self.gui.updateImage((_zeros_cloud, _zeros_amplitude))
         if self.gui.imageView.slider.playButton.isChecked():
             self.gui.imageView.slider.playButton.click()
-        if hasattr(self, "prev_cam"):
-            self.cam = self.prev_cam
-            self.gui.imageView.source_label.setText(f"{self.prev_source}")
-            self.gui.imageView.source_label.adjustSize()
-            if self.cam is not None:
-                self._bridge_cam(self.cam)
-            self.gui.imageView.slider.setVisible(False)
-            QTimer.singleShot(
-                100, self.gui.imageView.update_label_position)
-
-        # Enable settings
-        self.gui.settingsLayout.setEnabled(True)
-        for i in range(self.gui.settingsLayout.count()):
-            widget = self.gui.settingsLayout.itemAt(i).widget()
-            widget.setEnabled(True)
-
-    def _connect_replay_source(self, enable: bool) -> None:
-        """Select the binary file and update the firmware"""
-
-        if enable:
-            self._connect_H5Cam()
-        else:
-            self._disconnect_H5Cam()
-
-    def _slider_handler(self, val: int) -> None:
-        if self.cam is not None:
-            if not isinstance(self.cam, H5Cam):
-                raise NotImplementedError(
-                    f"Slide handler is only available for H5Cam! Not for {self.cam.__class__.__name__}")
-
-            if self.gui.imageView.slider.playButton.isChecked():
-                self.gui.imageView.slider.playButton.click()
-            self.cam.update_index(val)
-            self.capture()
+        self.cam.update_index(val)
+        self.capture()
 
     @property
     def metadata(self) -> dict[str, object]:
@@ -380,12 +293,11 @@ class Base_TOFcam_Bridge():
         __meta = copy(self._static_meta)
         __meta["image_type"] = self.image_type
 
-        if self.cam is not None:
-            __meta.update({
-                "image_type": self.image_type,
-                "roi": self.cam.settings.get_roi()})
+        __meta.update({
+            "image_type": self.image_type,
+            "roi": self.cam.settings.get_roi()})
 
-            if hasattr(self.cam, "mod_frequency"):
-                __meta["mod_frequency"] = self.cam.mod_frequency
+        if hasattr(self.cam, "mod_frequency"):
+            __meta["mod_frequency"] = self.cam.mod_frequency
 
         return __meta
