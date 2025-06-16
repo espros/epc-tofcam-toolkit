@@ -1,19 +1,26 @@
 import importlib.resources
 import time
+from pathlib import Path
+from typing import Optional, Type
 
 import numpy as np
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGridLayout,
-                               QMainWindow, QSplashScreen, QVBoxLayout,
-                               QWidget)
+                               QMainWindow, QMessageBox, QSplashScreen,
+                               QVBoxLayout, QWidget)
 
 from epc.tofCam_gui.widgets import MenuBar, ToolBar, VideoWidget
 from epc.tofCam_gui.widgets.console_widget import Console_Widget
+from epc.tofCam_lib import TOFcam
+from epc.tofCam_lib.h5Cam import H5Cam
 
 
 class Base_GUI_TOFcam(QMainWindow):
 
     def __init__(self, title: str, parent=None):
+        from epc.tofCam_gui.gui_tofCams_bridge import Base_TOFcam_Bridge
+
         super(Base_GUI_TOFcam, self).__init__()
         self._show_splash_screen()
         self.setWindowTitle(title)
@@ -39,6 +46,28 @@ class Base_GUI_TOFcam(QMainWindow):
         self.topMenuBar.savePngAction.triggered.connect(self._save_png)
         self.topMenuBar.setDefaultValuesAction.triggered.connect(
             self.setDefaultValues)
+        self.toolBar.importButton.toggled.connect(self._import_toggled)
+        self.toolBar.importButton.triggered.connect(
+            self._connect_replay_source)
+
+        self.bridge: Optional[Base_TOFcam_Bridge] = None
+
+    def _import_toggled(self) -> None:
+        if self.bridge is None or (isinstance(self.bridge.cam, H5Cam) and self.bridge.fallback_cam is None):
+            QTimer.singleShot(
+                100, lambda: self.toolBar.playButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.toolBar.captureButton.setEnabled(False))
+            QTimer.singleShot(
+                100, lambda: self.toolBar.recordButton.setEnabled(False))
+
+        else:
+            QTimer.singleShot(100, lambda: self.toolBar.playButton.setEnabled(
+                not self.toolBar.importButton.isChecked()))
+            QTimer.singleShot(100, lambda: self.toolBar.captureButton.setEnabled(
+                not self.toolBar.importButton.isChecked()))
+            QTimer.singleShot(100, lambda: self.toolBar.recordButton.setEnabled(
+                not self.toolBar.importButton.isChecked()))
 
     def complete_setup(self):
         """ ! needs to be called at the end of the __init__ method of the derived class !
@@ -52,7 +81,6 @@ class Base_GUI_TOFcam(QMainWindow):
         self.setCentralWidget(self.widget)
 
         self.resize(1200, 600)
-
         self.setDefaultValues()
 
     def setDefaultValues(self):
@@ -117,6 +145,71 @@ class Base_GUI_TOFcam(QMainWindow):
             image = self.__filter_cb(image)
         self.imageView.setImage(image, autoRange=False,
                                 autoHistogramRange=False, autoLevels=False)
+
+    def _connect_H5Cam(self) -> Optional[H5Cam]:
+        """Connect the source h5 file to interract with"""
+        _success = False
+        _recorded_stream, _ = QFileDialog.getOpenFileName(
+            parent=self,
+            caption="Select recorded stream",
+            dir="",
+            filter="H5 Files (*.h5);;All Files (*)"
+        )
+        if _recorded_stream is None:
+            QMessageBox.warning(
+                self, "No file selected", "Select a recorded stream `*.h5`!")
+
+        elif Path(_recorded_stream).is_dir():
+            QMessageBox.warning(
+                self, "Directory selected", "Please select a standalone `*.h5` file!")
+
+        elif Path(_recorded_stream).suffix != ".h5":
+            QMessageBox.warning(self, "Wrong file selected",
+                                f"`{_recorded_stream}` is not valid! Recorded stream file should have the extension `.h5`")
+
+        else:
+            confirm = QMessageBox.question(self,
+                                           "Recorded stream selected",
+                                           f"`{_recorded_stream}` will be replayed. Do you confirm?",
+                                           buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                           defaultButton=QMessageBox.StandardButton.Yes)
+
+            if confirm == QMessageBox.StandardButton.Yes:
+                cam = H5Cam(_recorded_stream, continuous=False)
+                self._set_bridge(cam)
+                _success = True
+                return cam
+
+        if not _success:
+            QTimer.singleShot(100, self.toolBar.importButton.toggle)
+
+        return None
+
+    def _disconnect_H5Cam(self) -> None:
+        """Revert the replay source connection"""
+        assert self.bridge is not None
+        if self.imageView.slider.playButton.isChecked():
+            self.imageView.slider.playButton.click()
+        try:
+            self.bridge._fallback()
+        except:
+            self.bridge.disconnect()
+            self.bridge = None
+
+    def _connect_replay_source(self, enable: bool) -> None:
+        """Select the binary file and update the firmware"""
+        if enable:
+            self._connect_H5Cam()
+        else:
+            self._disconnect_H5Cam()
+
+    def _set_bridge(self, cam: TOFcam, _bridge_type: Optional[Type["Base_TOFcam_Bridge"]] = None) -> None:
+        if self.bridge is None:
+            if _bridge_type is None:
+                raise ValueError("Define the bridge GUI specific bridge type!")
+            self.bridge = _bridge_type(cam=cam, gui=self)
+        else:
+            self.bridge._update_cam(cam)
 
 
 def main():
