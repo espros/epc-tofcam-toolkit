@@ -67,15 +67,6 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
 
         self.complete_setup()
 
-    def _set_recording_metadata(self) -> dict[str, object]:
-        """
-        """
-        return {
-            "image_type": self.imageTypeWidget.getSelection(),
-            "roi_width":  self.roiSettings.x2.value() - self.roiSettings.x1.value(),
-            "roi_height": self.roiSettings.y2.value() - self.roiSettings.y1.value(),
-        }
-
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

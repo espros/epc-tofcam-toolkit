@@ -78,13 +78,6 @@ class Base_GUI_TOFcam(QMainWindow):
             self, 'Save png', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
 
-    def _set_recording_metadata(self) -> dict[str, object]:
-        """
-        override by subclasses to supply recording metadata.
-        returns a dict of {metadata_name: value}. Default is empty.
-        """
-        return {}
-
     def _show_splash_screen(self, image_path=importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')):
         splash_pix = QPixmap(image_path)
         self.splash = QSplashScreen(splash_pix)

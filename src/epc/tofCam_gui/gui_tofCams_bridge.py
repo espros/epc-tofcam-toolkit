@@ -11,6 +11,7 @@ from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5Cam
+from copy import copy
 
 
 class Base_TOFcam_Bridge():
@@ -39,7 +40,7 @@ class Base_TOFcam_Bridge():
             self._connect_replay_source)
         self.gui.toolBar.importButton.toggled.connect(self._import_toggled)
 
-        self._meta: Dict[str, Any] = {}
+        self._static_meta: Dict[str, Any] = {}
 
         if cam is not None:
             self._bridge_cam(cam=cam)
@@ -91,16 +92,12 @@ class Base_TOFcam_Bridge():
         self.gui.setDefaultValues()
 
         # Fetch meta
-        self._meta = {
+        self._static_meta = {
             "chipid": chipID,
             "waferid": waferId,
             "chip_infos": (chipID, waferId),
-            "roi": cam.settings.get_roi(),
             "fw_version": fw_version,
         }
-
-        if hasattr(cam, "mod_frequency"):
-            self._meta.update({"mod_frequency": cam.mod_frequency})
 
     def capture(self, mode=0):
         if self.cam is not None:
@@ -258,10 +255,7 @@ class Base_TOFcam_Bridge():
             # initialize the logger
             self.data_logger = HDF5Logger(self.image_type, filepath)
 
-            metadata = self.gui._set_recording_metadata()
-            metadata.update(self._meta)
-            if metadata:
-                self.data_logger.set_metadata(**metadata)
+            self.data_logger.set_metadata(**self.metadata)
             self.data_logger.start()
             self.gui.setSettingsEnabled(False)
             _success = True
@@ -379,3 +373,19 @@ class Base_TOFcam_Bridge():
                 self.gui.imageView.slider.playButton.click()
             self.cam.update_index(val)
             self.capture()
+
+    @property
+    def metadata(self) -> dict[str, object]:
+        # Operation metadata
+        __meta = copy(self._static_meta)
+        __meta["image_type"] = self.image_type
+
+        if self.cam is not None:
+            __meta.update({
+                "image_type": self.image_type,
+                "roi": self.cam.settings.get_roi()})
+
+            if hasattr(self.cam, "mod_frequency"):
+                __meta["mod_frequency"] = self.cam.mod_frequency
+
+        return __meta

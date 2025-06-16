@@ -30,13 +30,7 @@ class GUI_TOFcam611(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.builtInFilter)
 
         self.complete_setup()
-        
-    def _set_recording_metadata(self) -> dict[str, object]:
-        """
-        """
-        return {
-            "image_type": self.imageTypeWidget.getSelection()
-        }
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
