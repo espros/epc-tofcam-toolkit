@@ -1,6 +1,8 @@
 from typing import Optional
 
 import numpy as np
+from epc.tofCam_gui.icon_svg import svg2icon
+from epc.tofCam_lib.h5Cam import H5Cam
 from pyqtgraph import ImageView
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
@@ -10,9 +12,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
                                QStackedWidget, QToolTip, QVBoxLayout, QWidget)
-
-from epc.tofCam_gui.icon_svg import svg2icon
-from epc.tofCam_lib.h5Cam import H5Cam
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -332,3 +331,13 @@ class VideoWidget(QWidget):
 
     def setLevels(self, min, max):
         self.video.setLevels(min, max)
+
+    def reset(self) -> None:
+        """Set the blank screen"""
+        if self.stacked.currentWidget() == self.video:
+            _image = self.video.imageItem.image
+            self.video.setImage(np.zeros_like(_image))
+        else:
+            self.pc.update_point_cloud((np.zeros(3), np.zeros(3)))  # type: ignore
+
+        self.slider.setVisible(False)
