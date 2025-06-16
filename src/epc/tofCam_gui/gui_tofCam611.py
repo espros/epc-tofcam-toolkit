@@ -31,6 +31,9 @@ class GUI_TOFcam611(Base_GUI_TOFcam):
 
         self.complete_setup()
 
+    def _set_bridge(self, cam:"TOFcam") -> None:
+        from epc.tofCam_gui.gui_tofCam611_bridge import TOFcam611_bridge
+        super()._set_bridge(cam=cam, _bridge_type=TOFcam611_bridge)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
