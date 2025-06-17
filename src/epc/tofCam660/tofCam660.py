@@ -490,14 +490,14 @@ class TOFcam660(TOFcam):
         self.settings._store_dll_settings()
         self.settings.set_modulation(3)
         self.settings.set_roi((0, 0, 320, 240))
-        self.settings.set_hdr(2)
+        self.settings.set_hdr(0)
         self.settings.set_modulation(frequency_mhz=3, channel=0)
-        self.settings.set_integration_hdr([25, 40, 400, 2000])
+        self.settings.set_integration_hdr([25, 16, 0, 0])
         integrationTimes = self.settings.get_integration_time()
         assert integrationTimes['grayscaleIntTime'] == 25, "Grayscale integration time not set correctly"
-        assert integrationTimes['lowIntTime'] == 40, "Low integration time not set correctly"
-        assert integrationTimes['midIntTime'] == 400, "Mid integration time not set correctly"
-        assert integrationTimes['highIntTime'] == 2000, "High integration time not set correctly"
+        assert integrationTimes['lowIntTime'] == 16, "Low integration time not set correctly"
+        assert integrationTimes['midIntTime'] == 0, "Mid integration time not set correctly"
+        assert integrationTimes['highIntTime'] == 0, "High integration time not set correctly"
 
 
         self.settings.set_minimal_amplitude(100)
@@ -507,9 +507,8 @@ class TOFcam660(TOFcam):
                                         setAmbientLightCompensation=True,
                                         setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
-        self.get_raw_dcs_images(check_crc=True)  # trigger first image to initialize the camera
         self.settings.set_binning(0)
-        self.settings.set_hdr(0)
+        self.get_raw_dcs_images(check_crc=True)  # trigger first image to initialize the camera
 
     def get_grayscale_image(self, check_crc = False) -> np.ndarray:
         """ "Get a grayscale image from the camera as a 2d numpy array"""

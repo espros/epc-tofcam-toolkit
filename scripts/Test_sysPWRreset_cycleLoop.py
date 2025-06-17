@@ -40,11 +40,11 @@ log.addHandler(file_handler_info)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 4000
+NUMBER_TEST_LOOPS = 10
 POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 0 #5
 INTEGRATION_TIME_CONFIG_LIST = [
-    (4000, 10, 1900, 46667)]
+    (100, 10, 1900, 46667)]
 
 # INTEGRATION_TIME_CONFIG_LIST = [
 #     (4000, 10, 1900, 46667),
@@ -258,7 +258,7 @@ def main():
             camera.__del__()
 
 
-        time.sleep(POWER_ON_SECONDS)
+        #time.sleep(POWER_ON_SECONDS)
 
         try:
             camera = TofCam660HDRDevice(ip_address='10.10.31.180')
