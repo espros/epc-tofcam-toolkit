@@ -1,9 +1,8 @@
 import logging
-import traceback
+from typing import Callable, Optional
+
 import numpy as np
-from typing import Optional, Callable
-from PySide6.QtCore import QThread, Signal, QCoreApplication
-import time
+from PySide6.QtCore import QThread, Signal
 
 log = logging.getLogger('Streamer')
 log.setLevel(logging.DEBUG)
