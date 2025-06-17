@@ -3163,3 +3163,162 @@
 2025-06-16 17:40:45,977 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
 2025-06-16 17:42:25,571 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
 2025-06-16 17:42:30,572 - multi_level_logger - DEBUG - delete camera device
+2025-06-16 17:42:47,343 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-16 17:42:52,345 - multi_level_logger - DEBUG - delete camera device
+2025-06-16 17:43:09,157 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-16 17:43:14,159 - multi_level_logger - DEBUG - delete camera device
+2025-06-16 17:43:31,010 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-16 17:43:36,011 - multi_level_logger - DEBUG - delete camera device
+2025-06-16 17:43:52,798 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-17 08:35:23,778 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-17 08:46:38,448 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 08:46:38,452 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:48:43,368 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 08:49:41,276 - multi_level_logger - ERROR - Failed to initialize camera: No camera found at address 10.10.31.180:50660
+[WinError 10060] Ein Verbindungsversuch ist fehlgeschlagen, da die Gegenstelle nach einer bestimmten Zeitspanne nicht richtig reagiert hat, oder die hergestellte Verbindung war fehlerhaft, da der verbundene Host nicht reagiert hat
+2025-06-17 08:49:51,282 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:50:44,862 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 08:50:54,864 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:52:23,234 - multi_level_logger - ERROR - Failed to initialize camera: No camera found at address 10.10.31.180:50660
+[WinError 10060] Ein Verbindungsversuch ist fehlgeschlagen, da die Gegenstelle nach einer bestimmten Zeitspanne nicht richtig reagiert hat, oder die hergestellte Verbindung war fehlerhaft, da der verbundene Host nicht reagiert hat
+2025-06-17 08:53:13,493 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 08:54:44,330 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 08:54:54,331 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:54:54,339 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:05,384 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:05,780 - multi_level_logger - INFO - camera acquired image number #: 2 as expected, incorrect images #: 0
+2025-06-17 08:55:15,782 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:15,788 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:26,775 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:27,168 - multi_level_logger - INFO - camera acquired image number #: 3 as expected, incorrect images #: 0
+2025-06-17 08:55:37,168 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:37,174 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:48,216 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 08:55:48,611 - multi_level_logger - INFO - camera acquired image number #: 4 as expected, incorrect images #: 0
+2025-06-17 08:55:58,611 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:09:20,980 - multi_level_logger - ERROR - Failed to initialize camera: Failed to receive image data
+2025-06-17 09:12:51,766 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 09:13:01,768 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:25,655 - multi_level_logger - INFO - camera acquired image number #: 1 as expected, incorrect images #: 0
+2025-06-17 09:18:25,657 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:25,661 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:36,692 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:37,082 - multi_level_logger - INFO - camera acquired image number #: 2 as expected, incorrect images #: 0
+2025-06-17 09:18:37,083 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:37,087 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:48,056 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:48,418 - multi_level_logger - INFO - camera acquired image number #: 3 as expected, incorrect images #: 0
+2025-06-17 09:18:48,419 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:48,423 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:59,407 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:59,774 - multi_level_logger - INFO - camera acquired image number #: 4 as expected, incorrect images #: 0
+2025-06-17 09:18:59,774 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:18:59,778 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:10,726 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:11,096 - multi_level_logger - INFO - camera acquired image number #: 5 as expected, incorrect images #: 0
+2025-06-17 09:19:11,097 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:11,100 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:22,072 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:22,436 - multi_level_logger - INFO - camera acquired image number #: 6 as expected, incorrect images #: 0
+2025-06-17 09:19:22,437 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:22,442 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:33,440 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:33,833 - multi_level_logger - INFO - camera acquired image number #: 7 as expected, incorrect images #: 0
+2025-06-17 09:19:33,833 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:33,837 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:44,777 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:45,139 - multi_level_logger - INFO - camera acquired image number #: 8 as expected, incorrect images #: 0
+2025-06-17 09:19:45,140 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:45,144 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:56,112 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:56,485 - multi_level_logger - INFO - camera acquired image number #: 9 as expected, incorrect images #: 0
+2025-06-17 09:19:56,486 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:19:56,490 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:07,501 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:07,851 - multi_level_logger - INFO - camera acquired image number #: 10 as expected, incorrect images #: 0
+2025-06-17 09:20:07,852 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:07,856 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:18,832 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:19,198 - multi_level_logger - INFO - camera acquired image number #: 11 as expected, incorrect images #: 0
+2025-06-17 09:20:19,198 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:19,202 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:30,155 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:30,511 - multi_level_logger - INFO - camera acquired image number #: 12 as expected, incorrect images #: 0
+2025-06-17 09:20:30,512 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:30,516 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:41,495 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:41,858 - multi_level_logger - INFO - camera acquired image number #: 13 as expected, incorrect images #: 0
+2025-06-17 09:20:41,858 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:41,863 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:52,869 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:53,227 - multi_level_logger - INFO - camera acquired image number #: 14 as expected, incorrect images #: 0
+2025-06-17 09:20:53,228 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:20:53,232 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:04,178 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:04,534 - multi_level_logger - INFO - camera acquired image number #: 15 as expected, incorrect images #: 0
+2025-06-17 09:21:04,536 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:04,540 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:15,524 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:15,885 - multi_level_logger - INFO - camera acquired image number #: 16 as expected, incorrect images #: 0
+2025-06-17 09:21:15,885 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:15,890 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:26,833 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:27,292 - multi_level_logger - INFO - camera acquired image number #: 17 as expected, incorrect images #: 0
+2025-06-17 09:21:27,293 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:27,297 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:38,348 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:38,704 - multi_level_logger - INFO - camera acquired image number #: 18 as expected, incorrect images #: 0
+2025-06-17 09:21:38,705 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:38,709 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:49,720 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:50,079 - multi_level_logger - INFO - camera acquired image number #: 19 as expected, incorrect images #: 0
+2025-06-17 09:21:50,080 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:21:50,084 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:01,068 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:01,452 - multi_level_logger - INFO - camera acquired image number #: 20 as expected, incorrect images #: 0
+2025-06-17 09:22:01,452 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:01,457 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:12,495 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:12,857 - multi_level_logger - INFO - camera acquired image number #: 21 as expected, incorrect images #: 0
+2025-06-17 09:22:12,858 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:12,861 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:23,819 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:24,183 - multi_level_logger - INFO - camera acquired image number #: 22 as expected, incorrect images #: 0
+2025-06-17 09:22:24,184 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:24,188 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:35,205 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:35,571 - multi_level_logger - INFO - camera acquired image number #: 23 as expected, incorrect images #: 0
+2025-06-17 09:22:35,572 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:35,577 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:46,560 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:46,926 - multi_level_logger - INFO - camera acquired image number #: 24 as expected, incorrect images #: 0
+2025-06-17 09:22:46,926 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:46,930 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:57,892 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:58,261 - multi_level_logger - INFO - camera acquired image number #: 25 as expected, incorrect images #: 0
+2025-06-17 09:22:58,262 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:22:58,266 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:09,223 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:09,585 - multi_level_logger - INFO - camera acquired image number #: 26 as expected, incorrect images #: 0
+2025-06-17 09:23:09,586 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:09,590 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:20,573 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:20,945 - multi_level_logger - INFO - camera acquired image number #: 27 as expected, incorrect images #: 0
+2025-06-17 09:23:20,945 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:20,949 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:31,887 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:32,246 - multi_level_logger - INFO - camera acquired image number #: 28 as expected, incorrect images #: 0
+2025-06-17 09:23:32,247 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:32,252 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:43,199 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:43,568 - multi_level_logger - INFO - camera acquired image number #: 29 as expected, incorrect images #: 0
+2025-06-17 09:23:43,569 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:43,573 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:54,580 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:55,154 - multi_level_logger - INFO - camera acquired image number #: 30 as expected, incorrect images #: 0
+2025-06-17 09:23:55,155 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:23:55,161 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:24:06,130 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:24:06,498 - multi_level_logger - INFO - camera acquired image number #: 31 as expected, incorrect images #: 0
+2025-06-17 09:24:06,498 - multi_level_logger - DEBUG - delete camera device
+2025-06-17 09:24:06,502 - multi_level_logger - DEBUG - delete camera device

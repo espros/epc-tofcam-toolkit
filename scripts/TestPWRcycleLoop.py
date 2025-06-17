@@ -133,6 +133,19 @@ class TofCam660HDRDevice:
         if frame.topRow != 0:
             log.error(f"Frame top row (RoiY0) mismatch, expected: 0, actual: {frame.topRow}")
             return False
+        integrationTimes = self.tofcam660.settings.get_integration_time()
+        if integrationTimes['lowIntTime'] != integration_time_config[0]:
+            log.error(f"Frame integration time mismatch, expected: {integration_time_config[0]}, actual: {integrationTimes['lowIntTime']}")
+            return False
+        if integrationTimes['midIntTime'] != 0:
+            log.error(f"Frame integration time mismatch, expected: 400us, actual: {integrationTimes['midIntTime']}")
+            return False
+        if integrationTimes['highIntTime'] != 0:
+            log.error(f"Frame integration time mismatch, expected: 2000us, actual: {integrationTimes['highIntTime']}")
+            return False
+        if integrationTimes['grayscaleIntTime'] != 25:
+            log.error(f"Frame integration time mismatch, expected: 25us, actual: {integrationTimes['grayscaleIntTime']}")
+            return False
         if frame.lowIntTime != integration_time_config[0]:
             log.error(f"Frame integration time mismatch, expected: {integration_time_config[0]}, actual: {frame.lowIntTime}")
             return False
@@ -147,6 +160,15 @@ class TofCam660HDRDevice:
             return False
         if np.shape(frame.amplitude) != EXPECTED_SHAPE:
             log.error(f"Frame amplitude shape mismatch, expected: {EXPECTED_SHAPE}, actual: {np.shape(frame.amplitude)}")
+            return False
+        # NOTE: Documentation (v3) states hundredths of degrees Celsius (ie. -1234 = -12.34 C); however, already /100 in parser code, so values are float in Celsius
+        # valid: -50 to 135 C inclusive (given by Espros for TOFcam635, reused for TOFcam660)
+        rounded_temperature_celsius = round(frame.temperature, 2)
+        if rounded_temperature_celsius < -50.0 or rounded_temperature_celsius > 135.00:
+            log.warning(f"Frame temperature out of range, expected: -50 to 135 C, actual: {rounded_temperature_celsius}")
+            return False
+        if frame.dcs is not None:
+            log.warning("Unexpected DCS data in frame")
             return False
         # NOTE: Documentation (v3) states hundredths of degrees Celsius (ie. -1234 = -12.34 C); however, already /100 in parser code, so values are float in Celsius
         # valid: -50 to 135 C inclusive (given by Espros for TOFcam635, reused for TOFcam660)

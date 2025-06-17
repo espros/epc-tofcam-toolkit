@@ -40,9 +40,9 @@ log.addHandler(file_handler_info)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 2000
+NUMBER_TEST_LOOPS = 4000
 POWER_ON_SECONDS = 10 #10 
-POWER_OFF_SECONDS = 5 #5
+POWER_OFF_SECONDS = 0 #5
 INTEGRATION_TIME_CONFIG_LIST = [
     (4000, 10, 1900, 46667)]
 
@@ -132,7 +132,7 @@ class TofCam660HDRDevice:
         if frame.topRow != 0:
             log.error(f"Frame top row (RoiY0) mismatch, expected: 0, actual: {frame.topRow}")
             return False
-        integrationTimes = self.tofcam660.settings.get_integration_times()
+        integrationTimes = self.tofcam660.settings.get_integration_time()
         if integrationTimes['lowIntTime'] != integration_time_config[0]:
             log.error(f"Frame integration time mismatch, expected: {integration_time_config[0]}, actual: {integrationTimes['lowIntTime']}")
             return False
@@ -169,7 +169,14 @@ class TofCam660HDRDevice:
         if frame.dcs is not None:
             log.warning("Unexpected DCS data in frame")
             return False
-
+        rounded_temperature_celsius = round(frame.temperature, 2)
+        if rounded_temperature_celsius < -50.0 or rounded_temperature_celsius > 135.00:
+            log.warning(f"Frame temperature out of range, expected: -50 to 135 C, actual: {rounded_temperature_celsius}")
+            return False
+        if frame.dcs is not None:
+            log.warning("Unexpected DCS data in frame")
+            return False
+        
         return True
 
     def take_measurement(self) -> tuple[bool, int]:
@@ -261,10 +268,12 @@ def main():
             continue
 
         print(camera.take_measurement())
-        camera.__del__()
+
 
         #camera.sys
+        #camera.tofcam660.device.power_reset() # Reset the camera
         time.sleep(POWER_OFF_SECONDS)
+        camera.__del__()
 
 
     # Close all handlers
