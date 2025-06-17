@@ -1,10 +1,13 @@
-import time
-import numpy as np
-from typing import Tuple, Optional, List
-from collections import deque
 import logging
+import time
+from collections import deque
+from typing import Optional, Tuple
+
+import numpy as np
+
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.algorithms import *
+
 logger = logging.getLogger("utils")
 
 MAX_ALLOWED_TEMP_DEVIATION = 0.5  # max allowed deviation during calibration
@@ -19,6 +22,7 @@ def find_int_time_for_mean_amplitude(cam: TOFcam, target_amplitude: int, max_dev
         cam: TOFcam instance
         target_amplitude: Target amplitude to achieve
         max_deviation: Maximum allowed deviation from the target amplitude
+
     Returns:
         int_time_us: Integration time in microseconds that achieves the target amplitude
         mean_amp: Mean amplitude achieved with that integration time
@@ -50,6 +54,9 @@ def find_stable_temperature(cam: TOFcam, n_samples_to_average=10, max_slope=0.00
         cam (TOFcam): TOFcam instance 
         n_samples_to_average (int, optional): Number of samples to use for calculating the slope of the temperature change
         max_slope (float, optional): Maximum allowed slope for the temperature change to be considered stable
+
+    Returns:
+        float: Mean value of the `n_samples_to_average` temperature readings
     """
     temperatures: deque[float] = deque(maxlen=n_samples_to_average)
     logger.info('Warming up camera...')
@@ -83,6 +90,7 @@ def get_needed_dll_steps_for_wraparound(cam: TOFcam, modulation_freq_hz: int, ro
     Args:
         cam (TOFcam): TOFcam instance
         modulation_freq_hz (float): Modulation frequency in Hz
+
     Returns:
         int: Number of steps needed to wrap around the unambiguity range
     """
@@ -116,6 +124,7 @@ def set_chip_temperature(cam: TOFcam, target_temp: float, max_deviation=MAX_ALLO
         cam (TOFcam): TOFcam instance
         target_temp (float): Target temperature in degrees Celsius
         max_deviation (float, optional): Maximum allowed deviation from the target temperature before calibration starts
+
     Returns:
         float: The final temperature deviation
         """
@@ -145,12 +154,14 @@ def set_chip_temperature(cam: TOFcam, target_temp: float, max_deviation=MAX_ALLO
 def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps: int, calib_temp: float, n_frames=50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Collect calibration data for the camera by capturing multiple frames at different DLL steps.
     This function captures a specified number of frames at each DLL step and calculates the distance and amplitude for each frame.
+
     Args:
         cam (TOFcam): TOFcam instance
         modulation_freq_hz (float): Modulation frequency in Hz
         n_dll_steps (int): Number of DLL steps to capture
         calib_temp (float): Target temperature for calibration in degrees Celsius
         n_frames (int, optional): Number of frames to capture at each DLL step. Defaults to 50.
+
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray]: 
             - distances_mm: 4D array of shape (height, width, n_frames, n_dll_steps) containing distance images in mm
@@ -185,9 +196,11 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
 
 def calculate_offset_and_drnu_lut(distances: np.ndarray, modulation_freq_hz: float) -> Tuple[float, np.ndarray, np.ndarray]:
     """ This function calculates the offset and DRNU LUT from distance data collected with `collect_calibration_data()`
+
     Args:
         distances (np.ndarray): 4D array of shape (height, width, n_frames, n_dll_steps) containing distance images in mm
         modulation_freq_hz (float): Modulation frequency in Hz
+
     Returns:
         Tuple[float, np.ndarray]: 
             - offset: Average distance offset in mm
