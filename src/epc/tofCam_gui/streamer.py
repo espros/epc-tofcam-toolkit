@@ -1,9 +1,8 @@
 import logging
-import traceback
+from typing import Callable, Optional
+
 import numpy as np
-from typing import Optional, Callable
-from PySide6.QtCore import QThread, Signal, QCoreApplication
-import time
+from PySide6.QtCore import QThread, Signal
 
 log = logging.getLogger('Streamer')
 log.setLevel(logging.DEBUG)
@@ -21,7 +20,8 @@ def pause_streaming(func):
         try:
             func(self, *args, **kwargs)
         except Exception as e:
-            logging.error(f"running function {func} failed with exception: {e}")
+            logging.error(
+                f"running function {func} failed with exception: {e}")
         if running:
             self.streamer.start_stream()
     return wrapper
@@ -66,7 +66,10 @@ class Streamer(QThread):
             return
         if self.stop_stream_cb:
             log.debug('Running stop_stream_cb')
-            self.stop_stream_cb(**kwargs)
+            try:
+                self.stop_stream_cb(**kwargs)
+            except Exception as e:
+                log.error(f"stop_stream_cb failed with exception: {e}")
         log.info("Stopping stream")
         self.__is_streaming = False
         self.wait()
