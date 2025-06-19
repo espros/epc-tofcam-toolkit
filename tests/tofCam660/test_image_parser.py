@@ -29,10 +29,11 @@ def test_metadata_no_hdr(cam, capture_func):
     assert meta.midIntTime == 0
     assert meta.highIntTime == 0
 
+@pytest.mark.parametrize('execution_number', range(100))
 @pytest.mark.parametrize("capture_func", [
-    "get_distance_image",
-    "get_amplitude_image"])
-def test_metadata_hdr(cam, capture_func):
+                            "get_distance_image",
+                            "get_amplitude_image"])
+def test_metadata_hdr(cam, capture_func, execution_number):
     int_time_grey = random.randint(0, 4000)
     int_time_low = random.randint(0, 4000)
     int_time_mid = random.randint(0, 4000)
@@ -40,7 +41,7 @@ def test_metadata_hdr(cam, capture_func):
     cam.settings.set_hdr(True)
     cam.settings.set_integration_hdr([int_time_grey, int_time_low, int_time_mid, int_time_high])
     getattr(cam, capture_func)()
-    meta = cam.device.get_frame_metadata()
+    meta = cam.frame
 
     assert meta.lowIntTime == int_time_low
     assert meta.midIntTime == int_time_mid

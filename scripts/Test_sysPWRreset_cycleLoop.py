@@ -97,7 +97,8 @@ class TofCam660HDRDevice:
 
     def __del__(self):
         log.debug("delete camera device")
-        self.tofcam660.__del__()
+        if self.tofcam660 is not None:
+            self.tofcam660.__del__()
 
 
     def _is_fw_version_greater_than_or_equal(self, major: int, minor: int) -> bool:
