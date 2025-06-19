@@ -39,7 +39,9 @@ class Interface:
     def is_socket_closed(self) -> bool:
         try:
             # this will try to read bytes without blocking and also without removing them from buffer (peek only)
-            data = self.socket.recv(16, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+            previous_blocking_state = self.socket.getblocking()
+            self.socket.setblocking(False)
+            data = self.socket.recv(16, socket.MSG_PEEK)
             if len(data) == 0:
                 return True
         except BlockingIOError:
@@ -49,6 +51,9 @@ class Interface:
         except Exception as e:
             # unexpected exception when checking if a socket is closed
             return False
+        finally:
+            self.socket.setblocking(previous_blocking_state)
+        
         return False
 
     def transceive(self, command):

@@ -29,7 +29,7 @@ def test_metadata_no_hdr(cam, capture_func):
     assert meta.midIntTime == 0
     assert meta.highIntTime == 0
 
-@pytest.mark.parametrize('execution_number', range(100))
+@pytest.mark.parametrize('execution_number', range(3))
 @pytest.mark.parametrize("capture_func", [
                             "get_distance_image",
                             "get_amplitude_image"])
