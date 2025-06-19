@@ -42,17 +42,17 @@ class Interface:
             previous_blocking_state = self.socket.getblocking()
             self.socket.setblocking(False)
             data = self.socket.recv(16, socket.MSG_PEEK)
+            self.socket.setblocking(previous_blocking_state)
             if len(data) == 0:
                 return True
         except BlockingIOError:
+            self.socket.setblocking(previous_blocking_state)
             return False  # socket is open and reading from it would block
         except ConnectionResetError:
             return True  # socket was closed for some other reason
         except Exception as e:
             # unexpected exception when checking if a socket is closed
-            return False
-        finally:
-            self.socket.setblocking(previous_blocking_state)
+            return True
         
         return False
 
