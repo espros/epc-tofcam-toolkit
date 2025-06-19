@@ -41,7 +41,7 @@ log.addHandler(file_handler_info)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 2
+NUMBER_TEST_LOOPS = 10
 POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 10 #5
 INTEGRATION_TIME_CONFIG_LIST = [
