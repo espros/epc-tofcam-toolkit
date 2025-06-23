@@ -115,6 +115,30 @@ class Interface:
             raise TimeoutError(f'no response within {timeout_s}s')
 
 
+class TcpReceiver:
+    def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 2):
+        self.lock = Lock()
+        self.ipAddress = ipAddress
+        self.port = port
+        self.timeout_s = timeout_s
+        self.data = bytearray()
+
+    def close(self):
+        pass
+
+    def receiveFrame(self):
+        try:
+            with socket.create_connection((self.ipAddress, self.port),self.timeout_s) as conn:
+                conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                totalsize, = struct.unpack(">I",conn.recv(20))
+                frameData = bytearray(conn.recv(totalsize))
+                return frameData, len(frameData)
+        except ConnectionError as e:
+            raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
+        except socket.timeout as to:
+            raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
+
+
 class UdpPacket:
     def __init__(self, data) -> None:
         self.packetHeaderFormat = struct.Struct('!HIHIII')
