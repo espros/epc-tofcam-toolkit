@@ -399,8 +399,10 @@ class TOFcam660(TOFcam):
         self.tcpInterface = Interface(ip_address, tcp_port)
         if rx_interface == "UDP":
             self.rxInterface = UdpInterface(ip_address, udp_port)
+            self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 0}))
         elif rx_interface == "TCP":
             self.rxInterface = TcpReceiver(ip_address, udp_port)
+            self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 1}))
         else:
             raise ValueError(f"{rx_interface} is not a valid rx_interface. Select either \'UDP\' or \'TCP\'")
         self.settings = TOFcam660_Settings(self.tcpInterface)
@@ -591,3 +593,23 @@ class TOFcam660(TOFcam):
 
     def get_crc_status(self):
         return self.is_valid_crc
+
+    def set_data_transfer_protocol(self, transferInterface = Literal["UDP", "TCP"]="UDP"):
+        # If rx protocol is already set, only call Command
+        if isinstance(self.rxInterface, UdpInterface) and transferInterface == "UDP":
+            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol"), {"selectTCP": 0})
+        if isinstance(self.rxInterface, TcpReceiver) and transferInterface == "TCP":
+            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol"), {"selectTCP": 1})
+
+        # Get Sender Address
+        ip = self.rxInterface.ipAddress
+        port = self.rxInterface.port
+
+        # Close and open transfer interface
+        self.rxInterface.close()
+        if transferInterface ==  "UDP":
+            self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 0}))
+            self.rxInterface = UdpInterface(ip,port)
+        if transferInterface ==  "TCP":
+            self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 1}))
+            self.rxInterface = TcpReceiver(ip,port)
