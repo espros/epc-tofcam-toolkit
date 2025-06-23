@@ -2,8 +2,10 @@ import numpy as np
 import logging
 import time
 import atexit
+from typing import Literal
+
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
-from epc.tofCam660.interface import Interface, UdpInterface
+from epc.tofCam660.interface import Interface, TcpReceiver, UdpInterface
 from epc.tofCam660.memory import Memory
 from epc.tofCam660.command import Command
 from epc.tofCam_lib.transformations_3d import Lense_Projection
@@ -392,9 +394,15 @@ class TOFcam660(TOFcam):
         ip_address=DEFAULT_IP_ADDRESS,
         tcp_port=DEFAULT_TCP_PORT,
         udp_port=DEFAULT_UDP_PORT,
+        rx_interface: Literal["UDP", "TCP"]="UDP",
     ):
         self.tcpInterface = Interface(ip_address, tcp_port)
-        self.udpInterface = UdpInterface(ip_address, udp_port)
+        if rx_interface == "UDP":
+            self.rxInterface = UdpInterface(ip_address, udp_port)
+        elif rx_interface == "TCP":
+            self.rxInterface = TcpReceiver(ip_address, udp_port)
+        else:
+            raise ValueError(f"{rx_interface} is not a valid rx_interface. Select either \'UDP\' or \'TCP\'")
         self.settings = TOFcam660_Settings(self.tcpInterface)
         self.device = TOFcam660_Device(self.tcpInterface)
         super().__init__(self.settings, self.device)
@@ -417,15 +425,15 @@ class TOFcam660(TOFcam):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
             self.settings._restore_dll_settings()
             self.tcpInterface.close()
-        if self.udpInterface:
-            self.udpInterface.close()
+        if self.rxInterface:
+            self.rxInterface.close()
 
     def __get_image_date(self, command: Command):
         nBytes = 0
         for i in range(5):
             try:
                 self.tcpInterface.transceive(command)
-                frame_data, nBytes = self.udpInterface.receiveFrame()
+                frame_data, nBytes = self.rxInterface.receiveFrame()
                 break
             except Exception as e:
                 log.error(f"Failed to receive image data: {e}")
