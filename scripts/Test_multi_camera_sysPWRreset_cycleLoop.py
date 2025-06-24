@@ -10,6 +10,8 @@ sys.path.insert(0, 'epc_lib')
 
 from epc.tofCam660 import TOFcam660
 from epc.tofCam660.parser import Frame
+from epc.tofCam660.interface import TraceInterface
+from typing import Optional
 import matplotlib.pyplot as plt
 import datetime
 import time
@@ -43,7 +45,7 @@ log.addHandler(file_handler_info)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 10
+NUMBER_TEST_LOOPS = 4
 POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 10 #5
 INTEGRATION_TIME_CONFIG_LIST = [
@@ -75,16 +77,19 @@ INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST
 TCP_PORT   = 50660  
 TIMEOUT    = 1.0
 DEFAULT_IP        = "10.10.31.180"
-IP_POOL       =     ["10.10.31.170", 
-                    "10.10.31.171", 
-                    "10.10.31.172",  
-                    "10.10.31.173", 
-                    "10.10.31.174", 
-                    "10.10.31.175", 
-                    "10.10.31.176", 
-                    "10.10.31.177", 
-                    "10.10.31.178",
-                    "10.10.31.179"] # ip pool for cameras
+# IP_POOL       =     ["10.10.31.170", 
+#                     "10.10.31.171", 
+#                     "10.10.31.172",  
+#                     "10.10.31.173", 
+#                     "10.10.31.174", 
+#                     "10.10.31.175", 
+#                     "10.10.31.176", 
+#                     "10.10.31.177", 
+#                     "10.10.31.178",
+#                     "10.10.31.179"] # ip pool for cameras
+# N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
+
+IP_POOL       =     ["10.10.31.180"] # ip pool for cameras
 N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
 
 class TofCam660HDRDevice:
@@ -112,6 +117,7 @@ class TofCam660HDRDevice:
         self._hdr_raw_measurements = None
         self._invalid_frame_count = 0
         self._image_counter = 0
+        self._ip_address = ip_address
 
     def __del__(self):
         log.debug("delete camera device")
@@ -244,17 +250,17 @@ class TofCam660HDRDevice:
                     plt.close()
 
                     if self._is_valid_tofcam660_frame(self.tofcam660.frame, integration_time_config):
-                        log.info(f"camera acquired image number #: {image_counter} as expected, incorrect images #: {image_counter_invalid_total}")
+                        log.info(f"IP{self._ip_address} camera acquired image number #: {image_counter} as expected, incorrect images #: {image_counter_invalid_total}")
                         break
                     else:
-                        log.warning(f"Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
-                                    f" attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
+                        log.warning(f"IP{self._ip_address} Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
+                                    f"IP{self._ip_address} attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
                         distance_amplitude_frame = None
                         self._invalid_frame_count += 1
                         image_counter_invalid_total+=1
 
                 if distance_amplitude_frame is None:
-                    log.error(f"Failed to get valid frame for image {image_index}, measurement failure")
+                    log.error(f"IP{self._ip_address} Failed to get valid frame for image {image_index}, measurement failure")
                     return False, self._invalid_frame_count
 
                 #self._hdr.add_measurement(distance_amplitude_frame, integration_time_config, build_noise_barrier, try_index + 1)
@@ -301,15 +307,35 @@ def camera_reachable(ip, port=TCP_PORT):
     finally:
         s.close()
 
+def setLogFile(self, logFile):
+    """Set the log file for the trace interface."""
+    if self.log_file_handler:
+        self.logger.removeHandler(self.log_file_handler)
+    self.log_file_handler = logging.FileHandler(logFile)
+    self.log_file_handler.setLevel(logging.DEBUG)
+    self.log_file_handler.setFormatter(self.log_formatter)
+    self.logger.addHandler(self.log_file_handler)
+
+def startLogging(self, logFile: Optional[str] = None):
+    """Start logging trace data in a separate thread."""
+    if self.logging:
+        self.logger.warning('Trace logging is already running.')
+        return
+    
+    if logFile:
+        self.setLogFile(logFile)
+
 def run_muticamera_measurements():
 
     global image_counter
 
-    for idx, cam_ip in enumerate(IP_POOL[:N_CAMERAS]):
-        print(f"Starting measurements for camera #{idx} at IP {cam_ip}")
+    
+    for loop in range(NUMBER_TEST_LOOPS):
+        image_counter += 1
 
-        for loop in range(NUMBER_TEST_LOOPS):
-            image_counter += 1
+
+        for idx, cam_ip in enumerate(IP_POOL[:N_CAMERAS]):
+            print(f"Starting measurements for camera #{idx} at IP {cam_ip}")
 
             try:
                 camera = TofCam660HDRDevice(cam_ip)
@@ -317,6 +343,11 @@ def run_muticamera_measurements():
                 log.error(f"Failed to initialize camera: {e}")
                 time.sleep(POWER_OFF_SECONDS)
                 continue
+
+
+            interface = TraceInterface(ipAddress=cam_ip)
+            filename_traceInterfaceLog = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
+            interface.startLogging(filename_traceInterfaceLog)
 
             print(camera.take_measurement())
 
@@ -327,19 +358,28 @@ def run_muticamera_measurements():
         # Close all handlers
         for handler in log.handlers:
             handler.close()
+        
+        interface.stopLogging()
+        interface.log_file_handler.close()
             
-        #add device wafer and chip ID into the log name
-        old_name = "logs/debug.log"
-        new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
-        os.rename(old_name, new_name)
-        old_name = "logs/warning.log"
-        new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_warning.log"
-        os.rename(old_name, new_name)
-        old_name = "logs/info.log"
-        new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_info.log"
-        os.rename(old_name, new_name)
+        subprocess.run(["C:\Program Files\Git\git-bash.exe", "copyData.sh"])
 
-        result = subprocess.run(["copyData.sh"], capture_output=True, text=True)
+    #add device wafer and chip ID into the log name
+    timestamp_log = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    if os.path.exists("logs/debug.log"):
+        old_name = "logs/debug.log"
+        new_name = "logs/"+timestamp_log+"_debug.log"
+        os.rename(old_name, new_name)
+    if os.path.exists("logs/warning.log"):
+        old_name = "logs/warning.log"
+        new_name = "logs/"+timestamp_log+"_warning.log"
+        os.rename(old_name, new_name)
+    if os.path.exists("logs/info.log"):
+        old_name = "logs/info.log"
+        new_name = "logs/"+timestamp_log+"_info.log"
+        os.rename(old_name, new_name)
+    
+    subprocess.run(["C:\Program Files\Git\git-bash.exe", "copyData.sh"])
 
 def main():
 

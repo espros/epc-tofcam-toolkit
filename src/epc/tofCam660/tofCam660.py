@@ -409,7 +409,7 @@ class TOFcam660(TOFcam):
 
         # check if CRC enabled FW is running
         fw_version = self.device.get_fw_version()
-        if fw_version not in ('3.32', '3.33', '3.34', '3.36'):
+        if fw_version not in ('3.32', '3.33', '3.34', '3.36','3.37'):
             raise Exception("Incompatible FW version")
 
 
