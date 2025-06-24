@@ -3,6 +3,8 @@ import numpy as np
 
 import sys
 import os
+import subprocess
+
 sys.path.insert(0, 'src')
 sys.path.insert(0, 'epc_lib')
 
@@ -73,8 +75,17 @@ INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST
 TCP_PORT   = 50660  
 TIMEOUT    = 1.0
 DEFAULT_IP        = "10.10.31.180"
-IP_POOL       = ["10.10.31.171", "10.10.31.172"] # ip pool for cameras
-N_CAMERAS     = 2                 # how many cameras to assign in this run
+IP_POOL       =     ["10.10.31.170", 
+                    "10.10.31.171", 
+                    "10.10.31.172",  
+                    "10.10.31.173", 
+                    "10.10.31.174", 
+                    "10.10.31.175", 
+                    "10.10.31.176", 
+                    "10.10.31.177", 
+                    "10.10.31.178",
+                    "10.10.31.179"] # ip pool for cameras
+N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
 
 class TofCam660HDRDevice:
     TOFCAM_HDR_SETTING = 0          # 0: off, 1: spatial HDR, 2: temporal HDR
@@ -327,6 +338,8 @@ def run_muticamera_measurements():
         old_name = "logs/info.log"
         new_name = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_info.log"
         os.rename(old_name, new_name)
+
+        result = subprocess.run(["copyData.sh"], capture_output=True, text=True)
 
 def main():
 
