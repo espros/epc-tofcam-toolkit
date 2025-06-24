@@ -594,12 +594,12 @@ class TOFcam660(TOFcam):
     def get_crc_status(self):
         return self.is_valid_crc
 
-    def set_data_transfer_protocol(self, transferInterface = Literal["UDP", "TCP"]="UDP"):
+    def set_data_transfer_protocol(self, transferInterface: Literal["UDP", "TCP"] = "UDP"):
         # If rx protocol is already set, only call Command
         if isinstance(self.rxInterface, UdpInterface) and transferInterface == "UDP":
-            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol"), {"selectTCP": 0})
+            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 0}))
         if isinstance(self.rxInterface, TcpReceiver) and transferInterface == "TCP":
-            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol"), {"selectTCP": 1})
+            return self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 1}))
 
         # Get Sender Address
         ip = self.rxInterface.ipAddress
