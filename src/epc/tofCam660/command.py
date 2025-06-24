@@ -236,7 +236,7 @@ class GetIntegrationTime(Command):
 class SetDataTransferProtocol(Command):
     commandId = 57
     def dataToBytes(self):
-        return struct.pack('!H', self.data['selectTCP'])
+        return struct.pack('!b', self.data['selectTCP'])
 
 
 commands = {'setRoi': SetRoi,
