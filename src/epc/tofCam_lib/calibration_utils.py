@@ -45,7 +45,7 @@ def find_int_time_for_mean_amplitude(cam: TOFcam, target_amplitude: int, max_dev
     return int_time_us, float(mean_amplitude)
 
 
-def find_stable_temperature(cam: TOFcam, n_samples_to_average=10, max_slope=0.001) -> float:
+def find_stable_temperature(cam: TOFcam, n_samples_to_average=100, max_slope=0.001, minTemp=35.0) -> float:
     """Find a stable running temperature by continuously capturing grayscale images until the temperature stabilizes.
     The temperature is considered stable when the slope of the temperature change is below a specified threshold.
     The user of this function is responsible for setting the correct integration time before calling this function.
@@ -60,15 +60,13 @@ def find_stable_temperature(cam: TOFcam, n_samples_to_average=10, max_slope=0.00
     """
     temperatures: deque[float] = deque(maxlen=n_samples_to_average)
     logger.info('Warming up camera...')
-    nFrames = max(n_samples_to_average, 100)
     cam.settings.set_integration_time_grayscale(1000)
-    for i in range(nFrames):
+    while (cam.device.get_chip_temperature() < minTemp or len(temperatures) < n_samples_to_average):
         cam.get_raw_dcs_images()
-        # Some cameras need a grayscale image to update the temperature
         cam.get_grayscale_image()
         temperatures.append(cam.device.get_chip_temperature())
         print(
-            f"Current frame: {i}/{nFrames}, temperature: {np.mean(temperatures):04.3f}°C\r", end="")
+            f"Current temperature: {np.mean(temperatures):04.3f}°C\r", end="")
 
     slope = max_slope + 1  # Initialize slope to be larger than max_slope
     logger.info(f"wait for temperature to stabilize")
@@ -151,7 +149,7 @@ def set_chip_temperature(cam: TOFcam, target_temp: float, max_deviation=MAX_ALLO
     return temp_diff
 
 
-def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps: int, calib_temp: float, n_frames=50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps: int, calib_temp: float, n_frames=50, K=0.1) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Collect calibration data for the camera by capturing multiple frames at different DLL steps.
     This function captures a specified number of frames at each DLL step and calculates the distance and amplitude for each frame.
 
@@ -160,7 +158,8 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
         modulation_freq_hz (float): Modulation frequency in Hz
         n_dll_steps (int): Number of DLL steps to capture
         calib_temp (float): Target temperature for calibration in degrees Celsius
-        n_frames (int, optional): Number of frames to capture at each DLL step. Defaults to 50.
+        n_frames (int, optional): Number of frames to capture at each DLL step.
+        K (float, optional): Calibration constant for temperature adjustment.
 
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray]: 
@@ -188,8 +187,12 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
             distances_mm[:, :, frame, dll_step] = distance
             amplitudes_dn[:, :, frame, dll_step] = amplitude
             cam.get_grayscale_image()  # get a grayscale image to update the temperature
+            temp = cam.device.get_chip_temperature()
+            temp_error = temp - calib_temp
+            if temp_error > 0:
+                time.sleep(temp_error * K)
             temperatures_deg[frame,
-                             dll_step] = cam.device.get_chip_temperature()
+                             dll_step] = temp
 
     return distances_mm, amplitudes_dn, temperatures_deg
 
