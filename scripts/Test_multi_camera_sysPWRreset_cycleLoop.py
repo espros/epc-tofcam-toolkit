@@ -43,13 +43,14 @@ log.addHandler(file_handler_info)
 
 # Generate timestamp
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+timeStamp_start = datetime.datetime.now()
 image_counter = 0
 image_counter_invalid_total = 0
-NUMBER_TEST_LOOPS = 4
-POWER_ON_SECONDS = 10 #10 
+#NUMBER_TEST_LOOPS = 2
+#POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 10 #5
 INTEGRATION_TIME_CONFIG_LIST = [
-    (100, 10, 1900, 46667)]
+    (4000, 10, 1900, 46667)]
 
 # INTEGRATION_TIME_CONFIG_LIST = [
 #     (4000, 10, 1900, 46667),
@@ -74,24 +75,22 @@ INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
 
 INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST)
 
+MEASUREMENT_DURATION_SECONDS = 180*60
 TCP_PORT   = 50660  
 TIMEOUT    = 1.0
 DEFAULT_IP        = "10.10.31.180"
-# IP_POOL       =     ["10.10.31.170", 
-#                     "10.10.31.171", 
-#                     "10.10.31.172",  
-#                     "10.10.31.173", 
-#                     "10.10.31.174", 
-#                     "10.10.31.175", 
-#                     "10.10.31.176", 
-#                     "10.10.31.177", 
-#                     "10.10.31.178",
-#                     "10.10.31.179"] # ip pool for cameras
-# N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
+IP_POOL       =     ["10.10.31.170",
+                    "10.10.31.171",
+                    "10.10.31.172",
+                    "10.10.31.173",
+                    "10.10.31.174",
+                    "10.10.31.175",
+                    "10.10.31.176",
+                    "10.10.31.177",
+                    "10.10.31.178",
+                    "10.10.31.179"] # ip pool for cameras   #74, #78 didn't work to upload first time
 
-IP_POOL       =     ["10.10.31.180"] # ip pool for cameras
 N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
-
 class TofCam660HDRDevice:
     TOFCAM_HDR_SETTING = 0          # 0: off, 1: spatial HDR, 2: temporal HDR
     TOFCAM_BINNING_SETTING = 0      # 0: None, 1: Vertical, 2: Horizontal, 3: Horizontal + Vertical
@@ -245,8 +244,8 @@ class TofCam660HDRDevice:
                     plt.colorbar(img1, ax=axes[1])
                     # Save figure with timestamp
                     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.png"
-                    plt.savefig(filename, dpi=300)  # Higher dpi for better resolution
+                    filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
+                    plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
                     plt.close()
 
                     if self._is_valid_tofcam660_frame(self.tofcam660.frame, integration_time_config):
@@ -330,23 +329,36 @@ def run_muticamera_measurements():
     global image_counter
 
     
-    for loop in range(NUMBER_TEST_LOOPS):
-        image_counter += 1
+    while(1):
+        current_measurement_time = datetime.datetime.now() - timeStamp_start
+        if current_measurement_time.seconds > MEASUREMENT_DURATION_SECONDS:
+            print("measurement finished")
+            break
 
+        image_counter += 1
 
         for idx, cam_ip in enumerate(IP_POOL[:N_CAMERAS]):
             print(f"Starting measurements for camera #{idx} at IP {cam_ip}")
 
-            try:
-                camera = TofCam660HDRDevice(cam_ip)
-            except Exception as e:
-                log.error(f"Failed to initialize camera: {e}")
-                time.sleep(POWER_OFF_SECONDS)
-                continue
-
+            noTrialConnectToCam = 0
+            while(noTrialConnectToCam<10):
+                noTrialConnectToCam+=1
+                try:
+                    camera = TofCam660HDRDevice(cam_ip)
+                    break
+                except Exception as e:
+                    log.error(f"Failed to initialize camera: {e}")
+                    time.sleep(POWER_OFF_SECONDS)
+            
+            #check if multiple attempt were needed to start the camera
+            if noTrialConnectToCam > 1:
+                log.warning(f"Failed to start up immediately, attempts: {str(noTrialConnectToCam)}")
+                if noTrialConnectToCam==10:
+                    print(f"could not connect to cam {cam_ip}")
+                    break   #don't try to proceed with that camera
 
             interface = TraceInterface(ipAddress=cam_ip)
-            filename_traceInterfaceLog = "logs/"+"waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
+            filename_traceInterfaceLog = "logs/"+"cam"+cam_ip+"_waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
             interface.startLogging(filename_traceInterfaceLog)
 
             print(camera.take_measurement())
@@ -362,7 +374,10 @@ def run_muticamera_measurements():
         interface.stopLogging()
         interface.log_file_handler.close()
             
-        subprocess.run(["C:\Program Files\Git\git-bash.exe", "copyData.sh"])
+        subprocess.run(["C:\Program Files\Git\git-bash.exe", "copyPlots.sh"])
+    
+    for handler in log.handlers:
+        handler.close()
 
     #add device wafer and chip ID into the log name
     timestamp_log = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -399,7 +414,7 @@ def main():
     # take measurements from all connected cameras
     run_muticamera_measurements()
 
-    ### reset the cameras to default ips
+    ### _et the cameras to default ips
     # for ip in IP_POOL:
     #     if camera_reachable(ip):
     #             reset_to_default_ip(ip)

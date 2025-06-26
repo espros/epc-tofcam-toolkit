@@ -16,3 +16,4 @@ tmp
 .pytest_cache
 .mypy_cache
 copyData.sh
+copyPlots.sh

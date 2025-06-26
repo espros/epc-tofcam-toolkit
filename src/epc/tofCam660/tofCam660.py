@@ -409,13 +409,13 @@ class TOFcam660(TOFcam):
 
         # check if CRC enabled FW is running
         fw_version = self.device.get_fw_version()
-        if fw_version not in ('3.32', '3.33', '3.34', '3.36','3.37'):
+        if fw_version not in ('3.32', '3.33', '3.34', '3.36','3.37','3.38'):
             raise Exception("Incompatible FW version")
 
 
     def __del__(self):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
-            self.settings._restore_dll_settings()
+            #self.settings._restore_dll_settings()
             self.tcpInterface.close()
         if self.udpInterface:
             self.udpInterface.close()
