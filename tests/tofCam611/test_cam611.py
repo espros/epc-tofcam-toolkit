@@ -1,5 +1,5 @@
 import pytest
-from epc.tofCam611.camera import Camera as TOFcam611
+from epc.tofCam611 import TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
 
 @pytest.fixture

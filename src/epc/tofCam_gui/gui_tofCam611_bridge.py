@@ -5,7 +5,6 @@ import getopt
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-# from epc.tofCam611.camera import Camera as TOFcam611
 from epc.tofCam611.tofCam611 import TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
 from epc.tofCam_gui import GUI_TOFcam611, GUI_TOFrange611
