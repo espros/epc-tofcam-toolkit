@@ -414,10 +414,10 @@ class TOFcam660(TOFcam):
 
 
     def __del__(self):
-        if self.tcpInterface and not self.tcpInterface.is_socket_closed():
+        if hasattr(self, "tcpInterface") and self.tcpInterface and not self.tcpInterface.is_socket_closed():
             #self.settings._restore_dll_settings()
             self.tcpInterface.close()
-        if self.udpInterface:
+        if hasattr(self, "udpInterface") and self.udpInterface:
             self.udpInterface.close()
 
     def __get_image_date(self, command: Command):

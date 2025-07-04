@@ -98,7 +98,7 @@ class TofCam660HDRDevice:
 
     def __del__(self):
         log.debug("delete camera device")
-        if self.tofcam660 is not None:
+        if hasattr(self, "tofcam660") and self.tofcam660 is not None:
             self.tofcam660.__del__()
 
 
