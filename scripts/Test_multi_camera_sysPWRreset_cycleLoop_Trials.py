@@ -43,16 +43,14 @@ log.addHandler(file_handler_info)
 
 # Generate timestamp
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-timeStamp_start = time.time()
+timeStamp_start = datetime.datetime.now()
 image_counter = 0
 image_counter_invalid_total = 0
 #NUMBER_TEST_LOOPS = 2
 #POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 10 #5
 INTEGRATION_TIME_CONFIG_LIST = [
-    (4000, 10, 1900, 46667),
-    (550, 10, 1900, 46667)
-    ]
+    (4000, 10, 1900, 46667)]
 
 # INTEGRATION_TIME_CONFIG_LIST = [
 #     (4000, 10, 1900, 46667),
@@ -77,8 +75,7 @@ INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
 
 INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST)
 
-MEASUREMENT_DURATION_HOURS = 15
-MEASUREMENT_DURATION_SECONDS = MEASUREMENT_DURATION_HOURS*60 *60
+MEASUREMENT_DURATION_SECONDS = 180*60
 TCP_PORT   = 50660  
 TIMEOUT    = 1.0
 DEFAULT_IP        = "10.10.31.180"
@@ -137,14 +134,6 @@ class TofCam660HDRDevice:
 
     #def _is_valid_tofcam660_frame(self, frame: Frame, integration_time_config: IntegrationTimeConfig = None) -> bool:
     def _is_valid_tofcam660_frame(self, frame: Frame, integration_time_config = None) -> bool:
-        corrupt_data=  False
-        numberOfNonZeroPixel = np.count_nonzero(frame.distance)
-
-        if  numberOfNonZeroPixel > (240*320*1/4):
-            corrupt_data = False
-        else:
-            corrupt_data = True
-
         if frame is None:
             log.error("Frame is None")
             return False
@@ -195,10 +184,6 @@ class TofCam660HDRDevice:
         if np.shape(frame.amplitude) != EXPECTED_SHAPE:
             log.error(f"Frame amplitude shape mismatch, expected: {EXPECTED_SHAPE}, actual: {np.shape(frame.amplitude)}")
             return False
-        if corrupt_data:
-            log.error(f"Frame distance data is corrupt, number of non-zero pixels: {numberOfNonZeroPixel}, expected: less than 2/3 of total pixels")
-            return False
-        
         # NOTE: Documentation (v3) states hundredths of degrees Celsius (ie. -1234 = -12.34 C); however, already /100 in parser code, so values are float in Celsius
         # valid: -50 to 135 C inclusive (given by Espros for TOFcam635, reused for TOFcam660)
         rounded_temperature_celsius = round(frame.temperature, 2)
@@ -216,7 +201,6 @@ class TofCam660HDRDevice:
             log.warning("Unexpected DCS data in frame")
             return False
         
-        
         return True
 
     def take_measurement(self) -> tuple[bool, int]:
@@ -229,60 +213,60 @@ class TofCam660HDRDevice:
         #self._image_counter = 0
 
         for config_list_iteration in range(INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS):
-            # if config_list_iteration < INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS:
-            #     build_noise_barrier = True
-            # else:
-            #     build_noise_barrier = False
+            if config_list_iteration < INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS:
+                build_noise_barrier = True
+            else:
+                build_noise_barrier = False
 
-            #for list_index in range(len(INTEGRATION_TIME_CONFIG_LIST)):
-            integration_time_config = INTEGRATION_TIME_CONFIG_LIST[config_list_iteration]
-            self.tofcam660.settings.set_integration_time(int_time_us=integration_time_config[0])
-            self.tofcam660.settings.set_minimal_amplitude(minimum=integration_time_config[1])
+            for list_index in range(len(INTEGRATION_TIME_CONFIG_LIST)):
+                integration_time_config = INTEGRATION_TIME_CONFIG_LIST[list_index]
+                self.tofcam660.settings.set_integration_time(int_time_us=integration_time_config[0])
+                self.tofcam660.settings.set_minimal_amplitude(minimum=integration_time_config[1])
 
-            image_index = config_list_iteration #config_list_iteration * len(INTEGRATION_TIME_CONFIG_LIST) + config_list_iteration
-            distance_amplitude_frame = None
-            IMAGE_FRAME_TRY_COUNT = 1
-            try_index = -1
-            for try_index in range(IMAGE_FRAME_TRY_COUNT):
-                #self.tofcam660.device.power_reset()
+                image_index = config_list_iteration * len(INTEGRATION_TIME_CONFIG_LIST) + list_index
+                distance_amplitude_frame = None
+                IMAGE_FRAME_TRY_COUNT = 1
+                try_index = -1
+                for try_index in range(IMAGE_FRAME_TRY_COUNT):
+                    self.tofcam660.device.power_reset()
 
-                # start = time.perf_counter_ns()
-                # while time.perf_counter_ns() - start < 100000:  # 100 nanoseconds
-                #     pass
+                    # start = time.perf_counter_ns()
+                    # while time.perf_counter_ns() - start < 100000:  # 100 nanoseconds
+                    #     pass
 
-                distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude(check_crc=True)
-                crc_bool = self.tofcam660.get_crc_status()
-                self._image_counter += 1
-                
-                    # Create subplots
-                fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+                    distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude(check_crc=True)
+                    crc_bool = self.tofcam660.get_crc_status()
+                    self._image_counter += 1
+                    
+                     # Create subplots
+                    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-                img0 = axes[0].imshow(distance_amplitude_frame[0], vmin=0, vmax=4000)
-                axes[0].set_title("Distance Image")
-                plt.colorbar(img0, ax=axes[0])
+                    img0 = axes[0].imshow(distance_amplitude_frame[0], vmin=0, vmax=4000)
+                    axes[0].set_title("Distance Image")
+                    plt.colorbar(img0, ax=axes[0])
 
-                img1 = axes[1].imshow(distance_amplitude_frame[1], vmin=0, vmax=3000)
-                axes[1].set_title("Amplitude Image")
-                plt.colorbar(img1, ax=axes[1])
-                # Save figure with timestamp
-                timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-                filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
-                plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
-                plt.close()
+                    img1 = axes[1].imshow(distance_amplitude_frame[1], vmin=0, vmax=3000)
+                    axes[1].set_title("Amplitude Image")
+                    plt.colorbar(img1, ax=axes[1])
+                    # Save figure with timestamp
+                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
+                    plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
+                    plt.close()
 
-                if self._is_valid_tofcam660_frame(self.tofcam660.frame, integration_time_config):
-                    log.info(f"IP{self._ip_address} camera acquired image number #: {image_counter} as expected, incorrect images #: {image_counter_invalid_total}")
-                    break
-                else:
-                    log.warning(f"IP{self._ip_address} Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
-                                f"IP{self._ip_address} attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
-                    distance_amplitude_frame = None
-                    self._invalid_frame_count += 1
-                    image_counter_invalid_total+=1
+                    if self._is_valid_tofcam660_frame(self.tofcam660.frame, integration_time_config):
+                        log.info(f"IP{self._ip_address} camera acquired image number #: {image_counter} as expected, incorrect images #: {image_counter_invalid_total}")
+                        break
+                    else:
+                        log.warning(f"IP{self._ip_address} Invalid frame for image {image_index} (integration time: {integration_time_config[0]} us), "
+                                    f"IP{self._ip_address} attempt {try_index + 1}/{IMAGE_FRAME_TRY_COUNT}, retrying...")
+                        distance_amplitude_frame = None
+                        self._invalid_frame_count += 1
+                        image_counter_invalid_total+=1
 
-            if distance_amplitude_frame is None:
-                log.error(f"IP{self._ip_address} Failed to get valid frame for image {image_index}, measurement failure")
-                return False, self._invalid_frame_count
+                if distance_amplitude_frame is None:
+                    log.error(f"IP{self._ip_address} Failed to get valid frame for image {image_index}, measurement failure")
+                    return False, self._invalid_frame_count
 
                 #self._hdr.add_measurement(distance_amplitude_frame, integration_time_config, build_noise_barrier, try_index + 1)
 
@@ -352,7 +336,8 @@ def run_muticamera_measurements():
 
     
     while(1):
-        if (time.time() - timeStamp_start) > MEASUREMENT_DURATION_SECONDS:
+        current_measurement_time = datetime.datetime.now() - timeStamp_start
+        if current_measurement_time.seconds > MEASUREMENT_DURATION_SECONDS:
             print("measurement finished")
             break
 
@@ -370,6 +355,8 @@ def run_muticamera_measurements():
                 except Exception as e:
                     log.error(f"Failed to initialize camera: {e}")
                     time.sleep(POWER_OFF_SECONDS)
+
+
             
             #check if multiple attempt were needed to start the camera
             if noTrialConnectToCam > 1:
@@ -378,9 +365,26 @@ def run_muticamera_measurements():
                     print(f"could not connect to cam {cam_ip}")
                     break   #don't try to proceed with that camera
 
-            interface = TraceInterface(ipAddress=cam_ip)
-            filename_traceInterfaceLog = "logs/"+"cam"+cam_ip+"_waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
-            interface.startLogging(filename_traceInterfaceLog)
+            camera.tofcam660.device.power_reset()
+            camera.__del__()
+           
+            start = time.perf_counter_ns()
+            while time.perf_counter_ns() - start < 5000000:  # 100 nanoseconds
+                pass
+            
+            incrementFailConnectAttempts=0
+            while(1):
+                try:
+                    camera = TofCam660HDRDevice(cam_ip)
+                    #time.sleep(1)
+                    break
+                except Exception as e:
+                    incrementFailConnectAttempts+=1
+                    #time.sleep(0.001)
+
+            #interface = TraceInterface(ipAddress=cam_ip)
+            #filename_traceInterfaceLog = "logs/"+"cam"+cam_ip+"_waferID_"+str(camera.tofcamWaferId) + "_chipID_"+str(camera.tofcamChipId)+"_"+timestamp+"_debug.log"
+            #interface.startLogging(filename_traceInterfaceLog)
 
             print(camera.take_measurement())
 
@@ -392,8 +396,8 @@ def run_muticamera_measurements():
         for handler in log.handlers:
             handler.close()
         
-        interface.stopLogging()
-        interface.log_file_handler.close()
+        #interface.stopLogging()
+        #interface.log_file_handler.close()
             
         subprocess.run(["C:\Program Files\Git\git-bash.exe", "copyPlots.sh"])
     
