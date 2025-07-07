@@ -1,11 +1,10 @@
 import select
 import socket
 import struct
-from threading import Lock
+from threading import Lock, Thread
 from epc.tofCam660.response import Response
 import logging
 from typing import Optional
-import threading
 
 
 class NullInterface:
@@ -170,7 +169,7 @@ class TraceInterface:
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         
         # Start logging thread
-        self._thread = threading.Thread(target=self._logTraceData)
+        self._thread = Thread(target=self._logTraceData)
 
     def startLogging(self, logFile: Optional[str] = None):
         """Start logging trace data in a separate thread."""
@@ -184,7 +183,7 @@ class TraceInterface:
         self.socket.connect((self.ipAddress, self.port))
 
         self.logging = True
-        self._thread = threading.Thread(target=self._logTraceData)
+        self._thread = Thread(target=self._logTraceData)
         self._thread.start()
 
     def stopLogging(self):
