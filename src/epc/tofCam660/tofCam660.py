@@ -241,6 +241,12 @@ class TOFcam660_Device(Dev_Infos_Controller):
             Command.create("readRegister", {"address": reg_addr})
         ).data
         return int(reg_value)
+    
+    def _calibrate(self) ->None:
+        """Perform production calibration on the camera."""
+        log.warning("Performing production calibration. Make sure the camera is mounted to the calibration box.")
+        log.info("Performing production calibration")
+        self.interface.transceive(Command.create("calibrateProduction"))
 
     def get_chip_infos(self) -> tuple[int, int]:
         """Returns the chip id and wafer id of the epc660."""
