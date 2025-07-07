@@ -1,8 +1,10 @@
 import select
 import socket
 import struct
-from threading import Lock
+from threading import Lock, Thread
 from epc.tofCam660.response import Response
+import logging
+from typing import Optional
 
 
 class NullInterface:
@@ -149,29 +151,73 @@ class UdpInterface:
             byteCount += p.packetSize
         return frameData, byteCount
 
-    # def receive(self, bytecount):
-    #     self.data = bytearray(bytecount)
-    #     self.index = 0
-    #     while True:
-    #         try:
-    #             udpPacket, (ipAddress, port) = self.udpSocket.recvfrom(4096)
-    #         except socket.timeout:
-    #             print('udp interface timeout')
-    #             break
-    #         if ipAddress == self.ip_address:
-    #             self.appendPacket(udpPacket)
-    #         if self.index >= bytecount:
-    #             break
-    #     return self.data[:bytecount]
+class TraceInterface:
+    def __init__(self, ipAddress='10.10.31.180', port=50661, logFile=None):
+        # Setup logging
+        self.logging = False
+        self.logger = logging.getLogger('tofCam660.trace')
+        self.logger.setLevel(logging.INFO)
+        self.log_formatter = logging.Formatter('%(asctime)s: %(levelname)s - %(message)s')
+        self.log_file_handler = None
+        if logFile:
+            self.setLogFile(logFile)
 
-    # def appendPacket(self, udpPacket):
-    #     # (measurementId,
-    #     #  totalSize,
-    #     #  packetSize,
-    #     #  totalPacketCount,
-    #     #  packetNumber,
-    #     #  offset, ) = self.packetHeaderFormat.unpack(
-    #     #      udpPacket[:self.packetHeaderFormat.size])
-    #     payload = udpPacket[self.packetHeaderFormat.size:]
-    #     self.data[self.index:self.index + len(payload)] = payload
-    #     self.index += len(payload)
+        # Setup connection to the trace interface
+        self.ipAddress = ipAddress
+        self.port = port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        
+        # Start logging thread
+        self._thread = Thread(target=self._logTraceData)
+
+    def startLogging(self, logFile: Optional[str] = None):
+        """Start logging trace data in a separate thread."""
+        if self.logging:
+            self.logger.warning('Trace logging is already running.')
+            return
+        
+        if logFile:
+            self.setLogFile(logFile)
+
+        self.socket.connect((self.ipAddress, self.port))
+
+        self.logging = True
+        self._thread = Thread(target=self._logTraceData)
+        self._thread.start()
+
+    def stopLogging(self):
+        """Stop logging trace data."""
+        if self.logging:
+            self.logging = False
+            self.socket.close()
+            self._thread.join()
+
+    def _logTraceData(self):
+        """ Continuously poll trace data and log it """
+        self.logger.info('Trace logging started.')
+        while True:
+            try:
+                data = self.socket.recv(4096)
+                if not data:
+                    self.logger.warning('Connection closed by the server')
+                    self.logging = False
+                    break
+                trace_data = data.decode('ascii').strip()
+                if trace_data:
+                    self.logger.info(trace_data)
+            except Exception as e:
+                self.logger.error(f'Error while polling trace data: {e}')
+                self.logging = False
+                break
+
+        self.logger.info('Trace logging stopped.')
+
+    def setLogFile(self, logFile):
+        """Set the log file for the trace interface."""
+        if self.log_file_handler:
+            self.logger.removeHandler(self.log_file_handler)
+        self.log_file_handler = logging.FileHandler(logFile)
+        self.log_file_handler.setLevel(logging.DEBUG)
+        self.log_file_handler.setFormatter(self.log_formatter)
+        self.logger.addHandler(self.log_file_handler)
