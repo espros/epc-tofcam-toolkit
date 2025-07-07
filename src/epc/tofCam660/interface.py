@@ -22,13 +22,18 @@ class Interface:
     markerEndBytes = struct.pack('!I', markerEnd)
 
     def __init__(self, ipAddress='10.10.31.180', port=50660):
+        self.ip_address = ipAddress
+        self.port = port
         self.lock = Lock()
+        self.connect()
+
+    def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try: 
-            self.socket.connect((ipAddress, port))
+            self.socket.connect((self.ip_address, self.port))
         except Exception as e:
-            raise ConnectionError(f'No camera found at address {ipAddress}:{port}\n{e}')
+            raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
 
     def close(self):
         self.socket.close()
@@ -105,7 +110,7 @@ class UdpPacket:
 
 class UdpInterface:
     def __init__(self, ipAddress='10.10.31.180', port=45454):
-        self.ipAddress = ipAddress
+        self.ip_address = ipAddress
         self.port = port
         self.packetHeaderFormat = struct.Struct('!HIHIII')
         self.data = bytearray()
@@ -128,7 +133,7 @@ class UdpInterface:
                 print('udp interface timeout')
                 break
 
-            if ipAddress != self.ipAddress:
+            if ipAddress != self.ip_address:
                 continue
             
             packet = UdpPacket(udpPacket)
@@ -153,7 +158,7 @@ class UdpInterface:
     #         except socket.timeout:
     #             print('udp interface timeout')
     #             break
-    #         if ipAddress == self.ipAddress:
+    #         if ipAddress == self.ip_address:
     #             self.appendPacket(udpPacket)
     #         if self.index >= bytecount:
     #             break
