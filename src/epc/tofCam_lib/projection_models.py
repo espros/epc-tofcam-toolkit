@@ -11,7 +11,48 @@ lens_type_map = {
     'Standard Field':  importlib.resources.files('epc.data').joinpath('lense_calibration_standard_field.csv')
 }
 
-DEFAULT_PIXEL_SIZE_MM = 0.0
+DEFAULT_PIXEL_SIZE_MM = 0.02
+
+
+def _project_points(lens_matrix: np.ndarray, depth: np.ndarray, roi_x=0, roi_y=0) -> np.ndarray:
+    """ Project a depth image to 3D points using the radial camera model.
+    Args:
+        lens_matrix (np.ndarray): Lens matrix containing the camera model parameters.
+        depth (np.ndarray): Depth image to be projected, should match the dimensions of the lens matrix.
+        width (int): Width of the image in pixels.
+        height (int): Height of the image in pixels.
+        roi_x (int, optional): Region of interest x-coordinate.
+        roi_y (int, optional): Region of interest y-coordinate.
+    Returns:
+        np.ndarray: Projected 3D points
+    """
+    roi_height, roi_width = depth.shape
+    height, width = lens_matrix.shape[1:3]
+    assert roi_x >= 0 and roi_y >= 0 and \
+        roi_x + roi_width <= width and roi_y + roi_height <= height, \
+        "ROI exceeds image dimensions"
+    points: np.ndarray = lens_matrix[:, roi_y:roi_y + roi_height,
+                                     roi_x:roi_x+roi_width] * depth
+    return points
+
+
+def _create_pixel_field_indices(height: int, width: int, pixel_size_mm: float) -> Tuple[np.ndarray, np.ndarray]:
+    """ Create pixel field indices for the camera projection.
+
+    Args:
+        height (int): Height of the image in pixels.
+        width (int): Width of the image in pixels.
+        pixel_size_mm (float): Size of a pixel in millimeters.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: x and y indices for the pixel field.
+    """
+    y, x = np.indices((height, width))
+    x = x - width / 2 + 0.5
+    y = y - height / 2 + 0.5
+    x *= pixel_size_mm
+    y *= pixel_size_mm
+    return x, -y
 
 
 class PinholeCameraProjector:
@@ -23,25 +64,15 @@ class PinholeCameraProjector:
             focal_length_mm (float): Focal length of the camera in millimeters.
             pixel_size_mm (float): Size of a pixel in millimeters.
         """
-
-        self.focal_length_mm = focal_length_mm
-        self.pixel_size_mm = pixel_size_mm
-
         # Create a grid of indices
-        self.height, self.width = resolution
-        y, x = np.indices((self.height, self.width))
-        x = x - self.width/2 + 0.5
-        y = y - self.height/2 + 0.5
-        x *= self.pixel_size_mm
-        y *= self.pixel_size_mm
+        height, width = resolution
+        x, y = _create_pixel_field_indices(height, width, pixel_size_mm)
 
         # Precalculate Lens Matrix
         dir_matrix = np.stack(
-            (x, -y, np.ones_like(x) * focal_length_mm), axis=0).reshape(3, -1)
+            (x, y, np.ones_like(x) * focal_length_mm), axis=0)
         self._lens_matrix: np.ndarray = dir_matrix / \
             np.linalg.norm(dir_matrix, axis=0)
-        self._lens_matrix = self._lens_matrix.reshape(
-            3, self.height, self.width)
 
     def project(self, depth: np.ndarray, roi_x=0, roi_y=0) -> np.ndarray:
         """ Project a depth image to 3D points using the pinhole camera model.
@@ -54,13 +85,7 @@ class PinholeCameraProjector:
         Returns:
             np.ndarray: Projected 3D points in the format (3, height, width).
         """
-        roi_height, roi_width = depth.shape
-        assert roi_x >= 0 and roi_y >= 0 and \
-            roi_x + roi_width <= self.width and roi_y + roi_height <= self.height, \
-            "ROI exceeds image dimensions"
-        points: np.ndarray = self._lens_matrix[:, roi_y:roi_y + roi_height,
-                                               roi_x:roi_x+roi_width] * depth
-        return points
+        return _project_points(self._lens_matrix, depth, roi_x, roi_y)
 
 
 class RadialCameraProjector:
@@ -73,32 +98,24 @@ class RadialCameraProjector:
             width (int): _width of the image in pixels_
             height (int): _height of the image in pixels_
         """
-        self.angle = np.array(angle)
-        self.rp = np.array(rp)
-        self.height = height
-        self.width = width
-        self.lens_matrix: np.ndarray = np.zeros((3, self.height, self.width))
+        row, col = _create_pixel_field_indices(
+            height, width, pixel_size_mm
+        )
 
-        # Create coordinate grids
-        y_idx, x_idx = np.indices((height, width))
-        row = x_idx - width / 2 + 0.5
-        col = y_idx - height / 2 + 0.5
-        col *= -1  # Invert y-axis for camera coordinates
-
-        rr = np.sqrt(row**2 + col**2)
-        r = pixel_size_mm * rr
+        radius = np.sqrt(row**2 + col**2)
 
         # Interpolate angle for each radius
-        angle_deg = np.interp(r, self.rp, self.angle)
+        angle_deg = np.interp(radius, rp, angle)
         angle_rad = np.deg2rad(angle_deg)
         rUA = np.sin(angle_rad)
 
         # Avoid division by zero
-        rr_safe = np.where(rr == 0, 1, rr)
+        rr_safe = np.where(radius == 0, 1, radius)
 
-        self.lens_matrix[0] = row * rUA / rr_safe
-        self.lens_matrix[1] = col * rUA / rr_safe
-        self.lens_matrix[2] = np.cos(angle_rad)
+        self._lens_matrix: np.ndarray = np.zeros((3, height, width))
+        self._lens_matrix[0] = row * rUA / rr_safe
+        self._lens_matrix[1] = col * rUA / rr_safe
+        self._lens_matrix[2] = np.cos(angle_rad)
 
     @staticmethod
     def from_lens_calibration(lensType: str, width: int, height: int) -> 'RadialCameraProjector':
@@ -142,10 +159,4 @@ class RadialCameraProjector:
         Returns:
             np.ndarray: Projected 3D points in the format (3, width, height).
         """
-        roi_height, roi_width = depth.shape
-        assert roi_x >= 0 and roi_y >= 0 and \
-            roi_x + roi_width <= self.width and roi_y + roi_height <= self.height, \
-            "ROI exceeds image dimensions"
-        points: np.ndarray = self.lens_matrix[:, roi_y:roi_y + roi_height,
-                                              roi_x:roi_x+roi_width] * depth
-        return points
+        return _project_points(self._lens_matrix, depth, roi_x, roi_y)
