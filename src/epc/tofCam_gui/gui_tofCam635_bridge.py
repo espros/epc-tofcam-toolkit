@@ -163,6 +163,7 @@ class TofCam635Bridge(Base_TOFcam_Bridge):
         if imgType == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
             self._get_image_cb = self.cam.get_point_cloud
+            self.image_type = imgType
         else:
             self._set_standard_image_type(imgType)
         self.capture()

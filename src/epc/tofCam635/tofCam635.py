@@ -8,7 +8,7 @@ from epc.tofCam_lib.tofCam import TOFcam, TOF_Settings_Controller, Dev_Infos_Con
 from epc.tofCam_lib.crc import Crc, CrcMode
 from epc.tofCam635.communication import Type as ComType
 from epc.tofCam635.communication import Data as Data_Type
-from epc.tofCam_lib.transformations_3d import Lense_Projection
+from epc.tofCam_lib.projection_models import RadialCameraProjector
 
 from epc.tofCam635.communication import SerialInterface
 from epc.tofCam635.communication import CommandList
@@ -148,8 +148,10 @@ class InterfaceWrapper:
             raise Exception("Failed to get acknowledge")
         self.__lock.release()
 
-    def transceive(self, cmd_id: int, response_id: int, arg=[]):
+    def transceive(self, cmd_id: int, response_id: int, arg=None):
         self.__lock.acquire()
+        if arg is None:
+            arg = []
         arg.insert(0, cmd_id)
         len = 0
         answer = None
@@ -165,7 +167,6 @@ class InterfaceWrapper:
                 self.com.flush_input()
         else:
             raise Exception("Failed to get answer")
-        self.tofWrite(arg)
 
         self.__lock.release()
         return answer
@@ -183,7 +184,7 @@ class TOFcam635_Settings(TOF_Settings_Controller):
         self.interface = interface
         self._capture_mode = 0
         self.max_depth = DEFAULT_MAX_DEPTH
-        self.lensProjection = Lense_Projection.from_lense_calibration(
+        self.projector = RadialCameraProjector.from_lens_calibration(
             lensType='Wide Field', width=self.resolution[0], height=self.resolution[1])
 
     def set_roi(self, roi: tuple[int, int, int, int]) -> None:
@@ -505,14 +506,14 @@ class TOFcam635(TOFcam):
         """returns point cloud information as numpy array of shape (n, 3) with x, y, z coordinates"""
         # capture depth image & corrections
         depth, amplitude = self.get_distance_and_amplitude_image()
-        depth = np.rot90(depth)
-        amplitude = np.rot90(amplitude)
+        # depth = np.rot90(depth)
+        # amplitude = np.rot90(amplitude)
         amplitude[amplitude > DEFAULT_MAX_AMPLITUDE] = 0  # remove error codes
         depth = depth.astype(np.float32)
         depth[depth >= self.settings.max_depth] = np.nan
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.settings.lensProjection.transformImage(depth)
+        points = 1E-3 * self.settings.projector.project(depth)
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
 
