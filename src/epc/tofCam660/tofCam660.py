@@ -386,13 +386,13 @@ class TOFcam660(TOFcam):
         """Returns a tuple holding point cloud from the camera as a 3xN numpy array and the corresponding amplitude values."""
         # capture depth image & corrections
         depth, amplitude = self.get_distance_and_amplitude()
-        depth = np.rot90(depth, 3)
-        amplitude = np.rot90(amplitude)
         amplitude[amplitude>DEFAULT_MAX_AMP] = 0 # remove error codes
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
+        depth = np.flipud(depth)
+        amplitude = np.flipud(amplitude)
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.settings.projector.project(np.flipud(np.fliplr(depth)))
+        points = 1E-3 * self.settings.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
         points = points.reshape(3, -1)
         return points, amplitude.flatten()

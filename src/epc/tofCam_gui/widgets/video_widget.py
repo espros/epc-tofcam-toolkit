@@ -33,7 +33,7 @@ class Gizmo(GLGraphicsItem):
     def __init__(self, arrow_length=0.5, parent=None):
         super().__init__(parent)
         origin = np.array([0, 0, 0])
-        x_axis = np.array([arrow_length, 0, 0])
+        x_axis = np.array([-arrow_length, 0, 0]) # Flip x-axis for OpenGL
         y_axis = np.array([0, arrow_length, 0])
         z_axis = np.array([0, 0, arrow_length])
 
@@ -73,7 +73,8 @@ class Camera(GLGraphicsItem):
         norm_amp = amplitudes / np.max(amplitudes)
         cmap = getFromMatplotlib('turbo')
         colors = cmap.map(norm_amp, 'float')
-
+        
+        points[0] *= -1  # Flip x axis since OpenGL uses right-handed coordinate system
         self._pcd.setData(pos=points.T, color=colors, size=3)
         # print('latest step', points.shape)
         self.view().update()
