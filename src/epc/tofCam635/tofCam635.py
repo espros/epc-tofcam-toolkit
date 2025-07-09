@@ -148,8 +148,10 @@ class InterfaceWrapper:
             raise Exception("Failed to get acknowledge")
         self.__lock.release()
 
-    def transceive(self, cmd_id: int, response_id: int, arg=[]):
+    def transceive(self, cmd_id: int, response_id: int, arg=None):
         self.__lock.acquire()
+        if arg is None:
+            arg = []
         arg.insert(0, cmd_id)
         len = 0
         answer = None
@@ -165,7 +167,6 @@ class InterfaceWrapper:
                 self.com.flush_input()
         else:
             raise Exception("Failed to get answer")
-        self.tofWrite(arg)
 
         self.__lock.release()
         return answer
@@ -505,8 +506,8 @@ class TOFcam635(TOFcam):
         """returns point cloud information as numpy array of shape (n, 3) with x, y, z coordinates"""
         # capture depth image & corrections
         depth, amplitude = self.get_distance_and_amplitude_image()
-        depth = np.rot90(depth)
-        amplitude = np.rot90(amplitude)
+        # depth = np.rot90(depth)
+        # amplitude = np.rot90(amplitude)
         amplitude[amplitude > DEFAULT_MAX_AMPLITUDE] = 0  # remove error codes
         depth = depth.astype(np.float32)
         depth[depth >= self.settings.max_depth] = np.nan
