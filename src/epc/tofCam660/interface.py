@@ -123,9 +123,6 @@ class UdpPacket:
          self.packetNumber, ) = self.packetHeaderFormat.unpack(data[:20])
         self.data = data[20:]
 
-class TcpPacket(UdpPacket):
-    pass
-
 class TcpReceiver:
     def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 2):
         self.lock = Lock()
@@ -138,28 +135,33 @@ class TcpReceiver:
         pass
 
     def receiveFrame(self):
-        packets = []
         try:
-            with socket.create_connection((self.ipAddress, self.port),self.timeout_s) as conn:
-                conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                while True:
-                    tcpPacket, _ = conn.recvfrom(1474)
-                    packet = TcpPacket(tcpPacket)
-                    packets.append(packet)
-                    if packet.packetCount - 1 == packet.packetNumber:
-                        break
+            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+            conn.connect((self.ipAddress, self.port))
+
+            # get first packet and unpack header information
+            first_chunk = conn.recv(8096)
+            buffer_size = struct.unpack('!I',first_chunk[0:4])[0]
+            data_buffer = bytearray(buffer_size)
+            data_buffer[0:len(first_chunk)] = first_chunk
+            received_size = len(first_chunk)
+
+            # Receive remaining data
+            while received_size < buffer_size:
+                chunk = conn.recv(buffer_size - received_size)
+                if not chunk:
+                    break  # Connection closed by the server
+                data_buffer[received_size:received_size + len(chunk)] = chunk
+                received_size += len(chunk)
+
         except ConnectionError as e:
             raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
         except socket.timeout as to:
             raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
-        
-        frameData = bytearray(packets[0].totalSize)
-        byteCount = 0
-        for p in packets:
-            frameData[p.offset:p.offset+p.packetSize] = p.data
-            byteCount += p.packetSize
-        return frameData, byteCount
+        finally:
+            conn.close()
+
+        return data_buffer[4:buffer_size], received_size - 4
 
 class UdpInterface:
     def __init__(self, ipAddress='10.10.31.180', port=45454):
@@ -188,13 +190,13 @@ class UdpInterface:
 
             if ipAddress != self.ipAddress:
                 continue
-            
+
             packet = UdpPacket(udpPacket)
             packets.append(packet)
             
             if packet.packetCount-1 == packet.packetNumber:
                 break
-        
+
         frameData = bytearray(packets[0].totalSize)
         byteCount = 0
         for p in packets:
