@@ -409,13 +409,12 @@ class TOFcam660(TOFcam):
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
 
-        self._calibData = self.device.get_calibration_data()
-        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
-        assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
-
     def close(self):
         if self.tcpInterface.open:
-            self.settings._restore_dll_settings()
+            try:
+                self.settings._restore_dll_settings()
+            except Exception as e:
+                log.warning(f'Failed to restore dll settings during close {e}')
             self.tcpInterface.close()
             self.udpInterface.close()
 
@@ -485,6 +484,9 @@ class TOFcam660(TOFcam):
         return (distance, amplitude, dcs)
 
     def initialize(self):
+        self._calibData = self.device.get_calibration_data()
+        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
+        assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
         self.settings._store_dll_settings()
         self.settings.set_modulation(12)
         self.settings.set_roi((0, 0, 320, 240))
