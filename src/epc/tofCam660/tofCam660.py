@@ -483,10 +483,21 @@ class TOFcam660(TOFcam):
 
         return (distance, amplitude, dcs)
 
+    def _is_fw_version_greater_than_or_equal(self, major: int, minor: int) -> bool:
+        firmware_values = self.device.get_fw_version_values()
+        if firmware_values['major'] > major:
+            return True
+        elif firmware_values['major'] == major:
+            if firmware_values['minor'] >= minor:
+                return True
+        return False
+
     def initialize(self):
-        self._calibData = self.device.get_calibration_data()
-        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
-        assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
+        self._calibData24Mhz = {}
+        if self._is_fw_version_greater_than_or_equal(3, 33):
+            self._calibData = self.device.get_calibration_data()
+            self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
+            assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
         self.settings._store_dll_settings()
         self.settings.set_modulation(12)
         self.settings.set_roi((0, 0, 320, 240))
