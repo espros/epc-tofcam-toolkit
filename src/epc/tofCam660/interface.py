@@ -3,6 +3,8 @@ import socket
 import struct
 from threading import Lock
 from epc.tofCam660.response import Response
+from epc.tofCam660.parser import Parser
+from epc.tofCam660.communicationType import communicationType
 
 
 class NullInterface:
@@ -135,24 +137,33 @@ class TcpReceiver:
         pass
 
     def receiveFrame(self):
+        class HeaderParser(Parser):
+            def parseData(self, frame):
+                pass
+
         try:
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
             conn.connect((self.ipAddress, self.port))
 
             # get first packet and unpack header information
             first_chunk = conn.recv(8096)
-            buffer_size = struct.unpack('!I',first_chunk[0:4])[0]
+            partialFrame = HeaderParser().parse(first_chunk, True)
+            buffer_size = HeaderParser().headerStruct.size + \
+                (
+                    partialFrame.cols * partialFrame.rows * \
+                    communicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
+                )
             data_buffer = bytearray(buffer_size)
             data_buffer[0:len(first_chunk)] = first_chunk
-            received_size = len(first_chunk)
+            byteCount = len(first_chunk)
 
             # Receive remaining data
-            while received_size < buffer_size:
-                chunk = conn.recv(buffer_size - received_size)
+            while byteCount < buffer_size:
+                chunk = conn.recv(buffer_size - byteCount)
                 if not chunk:
                     break  # Connection closed by the server
-                data_buffer[received_size:received_size + len(chunk)] = chunk
-                received_size += len(chunk)
+                data_buffer[byteCount:byteCount + len(chunk)] = chunk
+                byteCount += len(chunk)
 
         except ConnectionError as e:
             raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
@@ -161,7 +172,7 @@ class TcpReceiver:
         finally:
             conn.close()
 
-        return data_buffer[4:buffer_size], received_size - 4
+        return data_buffer, byteCount
 
 class UdpInterface:
     def __init__(self, ipAddress='10.10.31.180', port=45454):
