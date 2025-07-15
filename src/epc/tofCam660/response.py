@@ -121,6 +121,15 @@ class IntegrationTime(Response):
                      'highIntTime': highIntTime,
                      'grayscaleIntTime': gsIntTime,
                     }
+        
+class DataTransferProtocol(Response):
+    def parseDataFromBytes(self, data):
+        protocol_mapping = {
+            0: "UDP",
+            1: "TCP",
+        }
+        proto_raw = struct.unpack('!B', data)[0]
+        self.data = protocol_mapping.get(proto_raw, str(proto_raw)) # show ID if unknown
 
 class NotAcknowledge(Response):
     def isError(self):
@@ -135,5 +144,6 @@ responses = {0: Acknowledge,
              6: ReadRegister,
              9: CalibrationData,
              10: IntegrationTime,
+             12: DataTransferProtocol,
              254: Calibrating,
              255: NotAcknowledge, }

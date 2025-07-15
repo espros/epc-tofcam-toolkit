@@ -237,6 +237,9 @@ class SetDataTransferProtocol(Command):
     commandId = 57
     def dataToBytes(self):
         return struct.pack('!b', self.data['selectTCP'])
+    
+class GetDataTransferProtocol(Command):
+    commandId = 58
 
 
 commands = {'setRoi': SetRoi,
@@ -271,4 +274,5 @@ commands = {'setRoi': SetRoi,
             'setIlluminatorSegments': SetIlluminatorSegments,
             'getIntegrationTime' : GetIntegrationTime,
             'setDataTransferProtocol' : SetDataTransferProtocol,
+            'getDataTransferProtocol' : GetDataTransferProtocol,
             }

@@ -584,6 +584,14 @@ class TOFcam660(TOFcam):
     def get_crc_status(self):
         return self.is_valid_crc
 
+    def get_data_transfer_protocol(self):
+        try:
+            return self.tcpInterface.transceive(Command.create("getDataTransferProtocol")).data
+        except RuntimeError:
+            # log.info('Data transfer selection not supported. UDP is selected.')
+            pass
+        return "UDP"
+
     def set_data_transfer_protocol(self, transferInterface: Literal["UDP", "TCP"] = "UDP"):
         # If rx protocol is already set, only call Command
         if isinstance(self.rxInterface, UdpInterface) and transferInterface == "UDP":
