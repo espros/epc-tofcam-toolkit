@@ -1,7 +1,11 @@
 import numpy as np
 import logging
+import time
+import atexit
+from typing import Literal
+
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
-from epc.tofCam660.interface import Interface, UdpInterface
+from epc.tofCam660.interface import Interface, TcpReceiver, UdpInterface
 from epc.tofCam660.memory import Memory
 from epc.tofCam660.command import Command
 from epc.tofCam_lib.projection_models import RadialCameraProjector
@@ -16,7 +20,7 @@ DEFAULT_IP_ADDRESS = "10.10.31.180"
 DEFAULT_SUBNET_MASK = "255.255.255.0"
 DEFAULT_GATEWAY = "0.0.0.0"
 DEFAULT_TCP_PORT = 50660
-DEFAULT_UDP_PORT = 45454
+DEFAULT_DATA_RX_PORT = 45454
 DEFAULT_MAX_DEPTH = 16000
 DEFAULT_MAX_AMP = 2894
 
@@ -314,25 +318,27 @@ class TOFcam660(TOFcam):
         self,
         ip_address=DEFAULT_IP_ADDRESS,
         tcp_port=DEFAULT_TCP_PORT,
-        udp_port=DEFAULT_UDP_PORT,
+        rx_port=DEFAULT_DATA_RX_PORT
     ):
         self.tcpInterface = Interface(ip_address, tcp_port)
-        self.udpInterface = UdpInterface(ip_address, udp_port)
+        self.rxInterface = UdpInterface(ip_address, rx_port)
         self.settings = TOFcam660_Settings(self.tcpInterface)
         self.device = TOFcam660_Device(self.tcpInterface)
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
 
     def __del__(self):
-        self.tcpInterface.close()
-        self.udpInterface.close()
+        if self.tcpInterface and not self.tcpInterface.is_socket_closed():
+            self.tcpInterface.close()
+        if self.rxInterface:
+            self.rxInterface.close()
 
     def __get_image_date(self, command: Command):
         nBytes = 0
         for i in range(5):
             try:
                 self.tcpInterface.transceive(command)
-                frame_data, nBytes = self.udpInterface.receiveFrame()
+                frame_data, nBytes = self.rxInterface.receiveFrame()
                 break
             except Exception as e:
                 log.error(f"Failed to receive image data: {e}")
@@ -402,3 +408,53 @@ class TOFcam660(TOFcam):
         points = 1E-3 * self.settings.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
+
+    def get_data_transfer_protocol(self):
+        try:
+            return self.tcpInterface.transceive(Command.create("getDataTransferProtocol")).data
+        except RuntimeError:
+            # log.info('Data transfer selection not supported. UDP is selected.')
+            pass
+        return "UDP"
+
+    def set_data_transfer_protocol(self, transferInterface: Literal["UDP", "TCP"] = "UDP"):
+        # If rx protocol is already set, only call Command
+        if isinstance(self.rxInterface, UdpInterface) and transferInterface == "UDP":
+            try:
+                self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 0}))
+            except RuntimeError:
+                # log.info('Data transfer selection not supported. UDP remains selected.')
+                pass
+            finally:
+                return
+        if isinstance(self.rxInterface, TcpReceiver) and transferInterface == "TCP":
+            try:
+                self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 1}))
+                return
+            except RuntimeError:
+                log.error('TCP data transfer not supported by camera, fallback to UDP.')
+                transferInterface = "UDP"
+
+        ip = self.rxInterface.ip_address
+        port = self.rxInterface.port
+
+        # Close previous transfer interface
+        self.rxInterface.close()
+
+        # Open new transfer interface
+        if transferInterface == "TCP":
+            try:
+                self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 1}))
+                self.rxInterface = TcpReceiver(ip, port)
+            except RuntimeError:
+                log.error('TCP data transfer not supported by camera, fallback to UDP.')
+                transferInterface = "UDP"
+        if transferInterface == "UDP":
+            try:
+                self.tcpInterface.transceive(Command.create("setDataTransferProtocol", {"selectTCP": 0}))
+            except RuntimeError:
+                # log.info('Data transfer selection not supported. UDP remains selected.')
+                pass
+            self.rxInterface = UdpInterface(ip, port)
+        if transferInterface != "TCP" and transferInterface != "UDP":
+            raise ValueError(f"{transferInterface} is not a valid rx_interface. Select either \'UDP\' or \'TCP\'")

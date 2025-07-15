@@ -209,6 +209,13 @@ class SetCompensation(Command):
                             self.data['setAmbientLightCompensationEnabled'],
                             self.data['setGrayscaleCompensationEnabled'])
 
+class SetDataTransferProtocol(Command):
+    commandId = 57
+    def dataToBytes(self):
+        return struct.pack('!b', self.data['selectTCP'])
+    
+class GetDataTransferProtocol(Command):
+    commandId = 58
 
 
 commands = {'setRoi': SetRoi,
@@ -238,4 +245,6 @@ commands = {'setRoi': SetRoi,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
+            'setDataTransferProtocol' : SetDataTransferProtocol,
+            'getDataTransferProtocol' : GetDataTransferProtocol,
             }
