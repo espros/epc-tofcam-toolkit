@@ -132,9 +132,26 @@ class TcpReceiver:
         self.port = port
         self.timeout_s = timeout_s
         self.data = bytearray()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.ipAddress, self.port))
+        self.clearInputBuffer()
+
+    def clearInputBuffer(self):
+        """Clear the input buffer of the socket."""
+        try:
+            current_state = self.socket.getblocking()
+            self.socket.setblocking(False)
+            while True:
+                self.socket.recv(4096)
+        except BlockingIOError:
+            pass
+        except ConnectionResetError:
+            raise ConnectionError(f'Connection to camera at {self.ipAddress}:{self.port} was reset.')
+        finally:
+            self.socket.setblocking(current_state)
 
     def close(self):
-        pass
+        self.socket.close()
 
     def receiveFrame(self):
         class HeaderParser(Parser):
@@ -142,11 +159,8 @@ class TcpReceiver:
                 pass
 
         try:
-            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-            conn.connect((self.ipAddress, self.port))
-
             # get first packet and unpack header information
-            first_chunk = conn.recv(8096)
+            first_chunk = self.socket.recv(8096)
             partialFrame = HeaderParser().parse(first_chunk, True)
             buffer_size = HeaderParser().headerStruct.size + \
                 (
@@ -159,7 +173,7 @@ class TcpReceiver:
 
             # Receive remaining data
             while byteCount < buffer_size:
-                chunk = conn.recv(buffer_size - byteCount)
+                chunk = self.socket.recv(buffer_size - byteCount)
                 if not chunk:
                     break  # Connection closed by the server
                 data_buffer[byteCount:byteCount + len(chunk)] = chunk
@@ -169,9 +183,7 @@ class TcpReceiver:
             raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
         except socket.timeout as to:
             raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
-        finally:
-            conn.close()
-
+          
         return data_buffer, byteCount
 
 class UdpInterface:
