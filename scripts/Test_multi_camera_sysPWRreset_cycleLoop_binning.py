@@ -50,8 +50,8 @@ image_counter_invalid_total = 0
 #POWER_ON_SECONDS = 10 #10 
 POWER_OFF_SECONDS = 1 #5
 INTEGRATION_TIME_CONFIG_LIST = [
-    (4000, 10, 1900, 46667),
-    (550, 10, 1900, 46667)
+    (1000, 10, 1900, 46667),
+    (125, 10, 1900, 46667)
     ]
 
 # INTEGRATION_TIME_CONFIG_LIST = [
@@ -96,7 +96,7 @@ IP_POOL       =     ["10.10.31.170",
 N_CAMERAS     = len(IP_POOL)                # how many cameras to assign in this run
 class TofCam660HDRDevice:
     TOFCAM_HDR_SETTING = 0          # 0: off, 1: spatial HDR, 2: temporal HDR
-    TOFCAM_BINNING_SETTING = 0      # 0: None, 1: Vertical, 2: Horizontal, 3: Horizontal + Vertical
+    TOFCAM_BINNING_SETTING = 3      # 0: None, 1: Vertical, 2: Horizontal, 3: Horizontal + Vertical
     TOFCAM_MODULATION_SETTING = 3   # MHz (24, 12, 6, 3, 1.5, 0.75)
 
     def __init__(self, ip_address: str):
@@ -154,7 +154,17 @@ class TofCam660HDRDevice:
         if frame.measurementType != 0:  #  DATA_DISTANCE_AMPLITUDE
             log.error(f"Frame measurement type mismatch, expected: 0 (DATA_DISTANCE_AMPLITUDE), actual: {frame.measurementType}")
             return False
-        EXPECTED_SHAPE = (240, 320)
+        
+        if self.TOFCAM_BINNING_SETTING == 0:
+            EXPECTED_SHAPE = (240, 320)
+        elif self.TOFCAM_BINNING_SETTING == 1:
+            EXPECTED_SHAPE = (120, 320)
+        elif self.TOFCAM_BINNING_SETTING == 2:
+            EXPECTED_SHAPE = (240, 160)
+        elif self.TOFCAM_BINNING_SETTING == 3:
+            EXPECTED_SHAPE = (120, 160)
+
+
         if frame.rows != EXPECTED_SHAPE[0]:
             log.error(f"Frame height/rows mismatch, expected: {EXPECTED_SHAPE[0]}, actual: {frame.rows}")
             return False
@@ -236,7 +246,6 @@ class TofCam660HDRDevice:
 
             #for list_index in range(len(INTEGRATION_TIME_CONFIG_LIST)):
             integration_time_config = INTEGRATION_TIME_CONFIG_LIST[config_list_iteration]
-            self.tofcam660.set_data_transfer_protocol("TCP") # Use TCP for data transfer
             self.tofcam660.settings.set_integration_time(int_time_us=integration_time_config[0])
             self.tofcam660.settings.set_minimal_amplitude(minimum=integration_time_config[1])
 
@@ -267,7 +276,7 @@ class TofCam660HDRDevice:
                 plt.colorbar(img1, ax=axes[1])
                 # Save figure with timestamp
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-                filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
+                filename = f"plots/{crc_bool}_plot_distAmp_binning_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
                 plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
                 plt.close()
 

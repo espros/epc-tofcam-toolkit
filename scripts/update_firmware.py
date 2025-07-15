@@ -5,7 +5,7 @@ import os
 
 IP_ADDRESS = "10.10.31.170"
 PASSWORD = "TOFcam-660"
-FW_BINARY = "scripts/cameraApplication_XiP_3v39.bin"  # Change this to your file path
+FW_BINARY = "scripts/cameraApplication_XiP_3v42.bin"  # Change this to your file path
 
 def update_firmware(ip_address: str, file: str):
     base_url = f"http://{ip_address}"
@@ -15,7 +15,7 @@ def update_firmware(ip_address: str, file: str):
     tof_cam = TOFcam660(ip_address=ip_address)
     print("Enter Bootloader mode...")
     tof_cam.device.jump_to_bootloader()
-    time.sleep(3) # Wait for the device to enter bootloader mode
+    time.sleep(5) # Wait for the device to enter bootloader mode
     print("TOFcam660 now in bootloader mode.")
 
     # Erase Application (GET request)
@@ -42,7 +42,7 @@ def update_firmware(ip_address: str, file: str):
         print("Upload response:", upload_response.status_code)
 
 if __name__ == "__main__":
-    for i in range(175, 179):
+    for i in range(170, 180):
         ip = f"10.10.31.{i}"
         print(f"Starting firmware update for {ip} using file {FW_BINARY}...")
         update_firmware(ip, FW_BINARY)

@@ -232,7 +232,13 @@ class GetCalibrationData(Command):
 
 class GetIntegrationTime(Command):
     commandId = 56
-    
+
+class SetDataTransferProtocol(Command):
+    commandId = 57
+    def dataToBytes(self):
+        return struct.pack('!b', self.data['selectTCP'])
+
+
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
             'getDistanceAndAmplitude': GetDistanceAndAmplitude,
@@ -264,4 +270,5 @@ commands = {'setRoi': SetRoi,
             'getCalibrationData' : GetCalibrationData,
             'setIlluminatorSegments': SetIlluminatorSegments,
             'getIntegrationTime' : GetIntegrationTime,
+            'setDataTransferProtocol' : SetDataTransferProtocol,
             }

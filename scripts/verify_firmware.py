@@ -5,7 +5,7 @@ import os
 
 IP_ADDRESS = "10.10.31.170"
 PASSWORD = "TOFcam-660"
-FW_BINARY = "scripts/cameraApplication_XiP_3v41.bin"  # Change this to your file path
+FW_BINARY = "scripts/cameraApplication_XiP_3v42.bin"  # Change this to your file path
 
 def verify_firmware(ip_address: str, file: str):
     tof_cam = TOFcam660(ip_address=ip_address)
@@ -61,7 +61,7 @@ def update_firmware(ip_address: str, file: str):
         print("Upload response:", upload_response.status_code)
 
 if __name__ == "__main__":
-    for i in range(170, 179):
+    for i in range(170, 180):
         ip = f"10.10.31.{i}"
         print(f"Starting firmware update for {ip} using file {FW_BINARY}...")
         verify_firmware(ip, FW_BINARY)

@@ -3,6 +3,9 @@ import socket
 import struct
 from threading import Lock
 from epc.tofCam660.response import Response
+from epc.tofCam660.parser import Parser
+from epc.tofCam660.communicationType import communicationType
+
 import logging
 from typing import Optional
 import threading
@@ -12,11 +15,9 @@ class NullInterface:
     def close(self):
         pass
 
-
 class NullUdpInterface:
     def close(self):
         pass
-
 
 class Interface:
     markerStart = 0xffffaa55
@@ -116,8 +117,7 @@ class Interface:
             return response
         else:
             raise TimeoutError(f'no response within {timeout_s}s')
-
-
+  
 class UdpPacket:
     def __init__(self, data) -> None:
         self.packetHeaderFormat = struct.Struct('!HIHIII')
@@ -128,6 +128,67 @@ class UdpPacket:
          self.packetCount,
          self.packetNumber, ) = self.packetHeaderFormat.unpack(data[:20])
         self.data = data[20:]
+
+class TcpReceiver:
+    def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 2):
+        self.lock = Lock()
+        self.ipAddress = ipAddress
+        self.port = port
+        self.timeout_s = timeout_s
+        self.data = bytearray()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.ipAddress, self.port))
+        self.clearInputBuffer()
+
+    def clearInputBuffer(self):
+        """Clear the input buffer of the socket."""
+        try:
+            current_state = self.socket.getblocking()
+            self.socket.setblocking(False)
+            while True:
+                self.socket.recv(4096)
+        except BlockingIOError:
+            pass
+        except ConnectionResetError:
+            raise ConnectionError(f'Connection to camera at {self.ipAddress}:{self.port} was reset.')
+        finally:
+            self.socket.setblocking(current_state)
+
+    def close(self):
+        self.socket.close()
+
+    def receiveFrame(self):
+        class HeaderParser(Parser):
+            def parseData(self, frame):
+                pass
+
+        try:
+            # get first packet and unpack header information
+            first_chunk = self.socket.recv(8096)
+            partialFrame = HeaderParser().parse(first_chunk, True)
+            buffer_size = HeaderParser().headerStruct.size + \
+                (
+                    partialFrame.cols * partialFrame.rows * \
+                    communicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
+                )
+            data_buffer = bytearray(buffer_size)
+            data_buffer[0:len(first_chunk)] = first_chunk
+            byteCount = len(first_chunk)
+
+            # Receive remaining data
+            while byteCount < buffer_size:
+                chunk = self.socket.recv(buffer_size - byteCount)
+                if not chunk:
+                    break  # Connection closed by the server
+                data_buffer[byteCount:byteCount + len(chunk)] = chunk
+                byteCount += len(chunk)
+
+        except ConnectionError as e:
+            raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
+        except socket.timeout as to:
+            raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
+          
+        return data_buffer, byteCount
 
 class UdpInterface:
     def __init__(self, ipAddress='10.10.31.180', port=45454):
@@ -156,19 +217,46 @@ class UdpInterface:
 
             if ipAddress != self.ipAddress:
                 continue
-            
+
             packet = UdpPacket(udpPacket)
             packets.append(packet)
             
             if packet.packetCount-1 == packet.packetNumber:
                 break
-        
+
         frameData = bytearray(packets[0].totalSize)
         byteCount = 0
         for p in packets:
             frameData[p.offset:p.offset+p.packetSize] = p.data
             byteCount += p.packetSize
         return frameData, byteCount
+
+    # def receive(self, bytecount):
+    #     self.data = bytearray(bytecount)
+    #     self.index = 0
+    #     while True:
+    #         try:
+    #             udpPacket, (ipAddress, port) = self.udpSocket.recvfrom(4096)
+    #         except socket.timeout:
+    #             print('udp interface timeout')
+    #             break
+    #         if ipAddress == self.ipAddress:
+    #             self.appendPacket(udpPacket)
+    #         if self.index >= bytecount:
+    #             break
+    #     return self.data[:bytecount]
+
+    # def appendPacket(self, udpPacket):
+    #     # (measurementId,
+    #     #  totalSize,
+    #     #  packetSize,
+    #     #  totalPacketCount,
+    #     #  packetNumber,
+    #     #  offset, ) = self.packetHeaderFormat.unpack(
+    #     #      udpPacket[:self.packetHeaderFormat.size])
+    #     payload = udpPacket[self.packetHeaderFormat.size:]
+    #     self.data[self.index:self.index + len(payload)] = payload
+    #     self.index += len(payload)
 
 class TraceInterface:
     def __init__(self, ipAddress='10.10.31.180', port=50661, logFile=None):
