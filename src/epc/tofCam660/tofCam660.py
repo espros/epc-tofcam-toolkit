@@ -58,6 +58,9 @@ class TOFcam660_Settings(TOF_Settings_Controller):
             0x73: 0x00,
             0x8b: 0x00,
             0x93: 0x00        }
+        self.absRegisterSetting = {
+            0x88: 0x00,
+        }
     
     def _clear_dll_settings(self):
         """Clear the DLL settings in the camera."""
@@ -73,6 +76,17 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     def _restore_dll_settings(self):
         """Restore the DLL settings in the camera."""
         for reg, value in self.dllRegisterSettings.items():
+            self.interface.transceive(Command.create("writeRegister", {"address": reg, "value": value}))
+
+    def _store_abs_setting(self):
+        """Store the current camera ABS pixel ramp setting."""
+        for reg in self.absRegisterSetting.keys():
+            regValue = self.interface.transceive(Command.create("readRegister", {"address": reg})).data
+            self.absRegisterSetting[reg] = int(regValue)
+    
+    def _restore_abs_setting(self):
+        """Restore the ABS pixel ramp setting in the camera."""
+        for reg, value in self.absRegisterSetting.items():
             self.interface.transceive(Command.create("writeRegister", {"address": reg, "value": value}))
 
     def set_integration_time(self, int_time_us: int):
@@ -153,7 +167,31 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     def set_binning(self, binning_type):
         log.info(f"Setting binning: {binning_type}")
-        self.interface.transceive(Command.create("setBinning", np.byte(binning_type)))
+
+        if binning_type == 0:
+            # Restore default ABS pixel ramp magnitude if binning is disabled
+            self._restore_abs_setting()
+        else:
+            
+            # Set new ABS pixel ramp magnitude & verify for binning mode
+            newValue = 0x1f
+            for reg in self.absRegisterSetting.keys():
+                self.interface.transceive(Command.create("writeRegister", {"address": reg, "value": newValue}))
+                updatedRegValue = self.interface.transceive(Command.create("readRegister", {"address": reg})).data
+                if newValue != updatedRegValue:
+                    raise ValueError(
+                        f"ABS register mismatch at address 0x{reg:02X}: expected 0x{newValue:02X}, got 0x{updatedRegValue:02X}"
+                    )
+
+        # Try setbinning() and if it fails, revert ABS pixel ramp magnitude to default
+        try:
+            self.interface.transceive(
+                Command.create("setBinning", np.byte(binning_type))
+            )
+        except Exception as e:
+            log.error(f"setBinning failed: {e}. Reverting ABS register to default.")
+            self._restore_abs_setting()
+            raise ValueError(f"setBinning failed: {e}. Reverted ABS register to default.")
 
     def set_dll_step(self, step: int = 0):
         log.info(f"Setting DLL step: {step}")
@@ -489,6 +527,7 @@ class TOFcam660(TOFcam):
 
     def initialize(self):
         self.settings._store_dll_settings()
+        self.settings._store_abs_setting()
         self.settings.set_modulation(3)
         self.settings.set_roi((0, 0, 320, 240))
         self.settings.set_hdr(0)
