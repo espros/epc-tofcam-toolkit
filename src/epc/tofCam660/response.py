@@ -96,6 +96,6 @@ responses = {0: Acknowledge,
              3: ChipInformation,
              4: Temperature,
              6: ReadRegister,
-             12: DataTransferProtocol,
+             11: DataTransferProtocol,
              254: Calibrating,
              255: NotAcknowledge, }

@@ -6,18 +6,14 @@ from epc.tofCam660.response import Response
 import logging
 from typing import Optional
 from epc.tofCam660.parser import Parser
-from epc.tofCam660.communicationType import communicationType
-
 
 class NullInterface:
     def close(self):
         pass
 
-
 class NullUdpInterface:
     def close(self):
         pass
-
 
 class Interface:
     markerStart = 0xffffaa55
@@ -120,7 +116,6 @@ class Interface:
         else:
             raise TimeoutError(f'no response within {timeout_s}s')
 
-
 class UdpPacket:
     def __init__(self, data) -> None:
         self.packetHeaderFormat = struct.Struct('!HIHIII')
@@ -172,7 +167,7 @@ class TcpReceiver:
             buffer_size = HeaderParser().headerStruct.size + \
                 (
                     partialFrame.cols * partialFrame.rows * \
-                    communicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
+                    CommunicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
                 )
             data_buffer = bytearray(buffer_size)
             data_buffer[0:len(first_chunk)] = first_chunk
@@ -233,6 +228,32 @@ class UdpInterface:
             frameData[p.offset:p.offset+p.packetSize] = p.data
             byteCount += p.packetSize
         return frameData, byteCount
+
+class CommunicationType():
+    class Item:
+        def __init__(self, id, bytes_per_pixel, name):
+            self.id = id
+            self.bytes_per_pixel = bytes_per_pixel
+            self.name = name
+
+    items_by_id = {}
+    items_by_name = {}
+
+    def __init__(self):
+        for item in [ self.Item(0x00, 4, "DATA_DISTANCE_AMPLITUDE"),
+            self.Item(0x01, 2, "DATA_DISTANCE"),
+            self.Item(0x02, 2, "DATA_AMPLITUDE"),
+            self.Item(0x03, 2, "DATA_GRAYSCALE"),
+            self.Item(0x04, 8, "DATA_DCS"),
+        ]:
+            self.items_by_id[item.id] = item
+            self.items_by_name[item.name] = item
+
+    def get_item_by_id(self, id: int):
+        return self.items_by_id.get(id)
+
+    def get_item_by_name(self, name: str):
+        return self.items_by_name.get(name)
 
 class TraceInterface:
     def __init__(self, ipAddress='10.10.31.180', port=50661, logFile=None):
