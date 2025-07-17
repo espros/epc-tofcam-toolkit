@@ -76,6 +76,14 @@ class ReadRegister(Response):
 class Calibrating(Response):
     pass
 
+class DataTransferProtocol(Response):
+    def parseDataFromBytes(self, data):
+        protocol_mapping = {
+            0: "UDP",
+            1: "TCP",
+        }
+        proto_raw = struct.unpack('!B', data)[0]
+        self.data = protocol_mapping.get(proto_raw, str(proto_raw)) # show ID if unknown
 
 class NotAcknowledge(Response):
     def isError(self):
@@ -88,5 +96,6 @@ responses = {0: Acknowledge,
              3: ChipInformation,
              4: Temperature,
              6: ReadRegister,
+             11: DataTransferProtocol,
              254: Calibrating,
              255: NotAcknowledge, }
