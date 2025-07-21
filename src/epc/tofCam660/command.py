@@ -270,13 +270,9 @@ commands = {'setRoi': SetRoi,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
             'setCompensation' : SetCompensation,
-<<<<<<< HEAD
             'getCalibrationData' : GetCalibrationData,
             'setIlluminatorSegments': SetIlluminatorSegments,
             'getIntegrationTime' : GetIntegrationTime,
             'setDataTransferProtocol' : SetDataTransferProtocol,
-=======
-            'setDataTransferProtocol' : SetDataTransferProtocol,
             'getDataTransferProtocol' : GetDataTransferProtocol,
->>>>>>> remotes/origin/master
             }

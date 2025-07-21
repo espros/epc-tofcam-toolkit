@@ -1,18 +1,12 @@
 import sys
 
 import qdarktheme
-<<<<<<< HEAD
-from PySide6 import QtWidgets  
-from epc.tofCam_gui.widgets import VideoWidget, FloatInput, GroupBoxSelection, DropDownSetting, SettingsGroup, SpinBoxSetting, RoiSettings, IntegrationTimes
-from epc.tofCam_gui.widgets.filter_widgets import SimpleFilter, TemporalFilter, EdgeFilter, InterferenceFilter
-=======
 from PySide6 import QtWidgets
 
->>>>>>> remotes/origin/master
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.widgets import (DropDownSetting, GroupBoxSelection,
                                     IntegrationTimes, RoiSettings,
-                                    SettingsGroup, SpinBoxSetting, VideoWidget)
+                                    SettingsGroup, SpinBoxSetting, VideoWidget, FloatInput)
 from epc.tofCam_gui.widgets.filter_widgets import (EdgeFilter,
                                                    InterferenceFilter,
                                                    SimpleFilter,
@@ -73,7 +67,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.roiSettings)
 
         self.complete_setup()
-
+        
     def _set_bridge(self, cam:"TOFcam") -> None:
         from epc.tofCam_gui.gui_tofCam660_bridge import TOFcam660_bridge
         super()._set_bridge(cam=cam, _bridge_type=TOFcam660_bridge)
