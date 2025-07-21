@@ -1,17 +1,16 @@
-import ctypes
 import struct
-from enum import Enum
 from sys import platform
-
+import ctypes
+import importlib.resources
 import numpy as np
-
-from epc.tofCam_gui.config import CrcCalc, CrcCalc_darwin, CrcCalc_linux
-
+import zlib
+from enum import Enum
 
 class CrcMode(Enum):
     CRC32_UINT8 = 1
     CRC32_UINT8_LIB = 2
     CRC32_STM32 = 3
+    CRC32_IEEE = 4
 
 
 class Crc:
@@ -32,11 +31,14 @@ class Crc:
     def __loadLib(self):
         try:
             if platform == 'linux':
-                self.lib = ctypes.cdll.LoadLibrary(str(CrcCalc_linux))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_linux.so')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             elif platform == 'win32':
-                self.lib = ctypes.windll.LoadLibrary(str(CrcCalc))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc.dll')
+                self.lib = ctypes.windll.LoadLibrary(str(binaryPath))
             elif platform == 'darwin':
-                self.lib = ctypes.cdll.LoadLibrary(str(CrcCalc_darwin))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_darwin.a')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             else:
                 raise Exception('Platform not supported')
             return True
@@ -73,6 +75,9 @@ class Crc:
         carray = (ctypes.c_uint8*len(data)).from_buffer(data)
 
         return self.lib.calcCrc32_32(carray, len(data), ctypes.c_uint32(self.polynom))
+    
+    def __calcCrc32_IEEE(self, data: bytearray):
+        return zlib.crc32(data) & 0xFFFFFFFF
 
     def calculate(self, data: bytearray) -> bytearray:
         crc = bytearray([])
@@ -83,7 +88,9 @@ class Crc:
                 crc = self.__calcCrc32Uint8_lib(bytearray(data))
             case CrcMode.CRC32_STM32:
                 crc = self.__calcCrc32Uin8_python(data)
-
+            case CrcMode.CRC32_IEEE:
+                crc = self.__calcCrc32_IEEE(data)
+        
         if self.revout:
             crc = struct.unpack('>I', struct.pack('<I', crc))[0]
 

@@ -1,13 +1,16 @@
 
-import sys
 import getopt
+import sys
+
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
+
 from epc.tofCam660.tofCam660 import TOFcam660
-from epc.tofCam_gui import GUI_TOFcam660, Base_TOFcam_Bridge
+from epc.tofCam_gui import Base_TOFcam_Bridge, GUI_TOFcam660
 from epc.tofCam_gui.streamer import pause_streaming
-from epc.tofCam_lib.filters import gradimg, threshgrad, cannyE
+from epc.tofCam_lib.filters import cannyE, gradimg, threshgrad
+
 
 class TOFcam660_bridge(Base_TOFcam_Bridge):
     C = 299792458 # m/s
@@ -57,6 +60,15 @@ class TOFcam660_bridge(Base_TOFcam_Bridge):
         else:
             image = self._get_image_cb()
             return np.rot90(image, 3)
+        
+    def storeImage(self, image):
+        # Restore the rotation before storage
+        if self.image_type == 'Point Cloud':
+            pass
+        else:
+            image = np.rot90(image, 1)
+            
+        super().storeImage(image)
 
     @pause_streaming
     def _set_filter_settings(self):

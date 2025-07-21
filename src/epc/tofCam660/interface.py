@@ -1,15 +1,11 @@
 import select
 import socket
 import struct
-from threading import Lock
+from threading import Lock, Thread
 from epc.tofCam660.response import Response
-from epc.tofCam660.parser import Parser
-from epc.tofCam660.communicationType import communicationType
-
 import logging
 from typing import Optional
-import threading
-
+from epc.tofCam660.parser import Parser
 
 class NullInterface:
     def close(self):
@@ -26,19 +22,41 @@ class Interface:
     markerEndBytes = struct.pack('!I', markerEnd)
 
     def __init__(self, ipAddress='10.10.31.180', port=50660):
+        self.ip_address = ipAddress
+        self.port = port
         self.lock = Lock()
+        self.connect()
+
+    def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.open = False
         try: 
-            self.socket.connect((ipAddress, port))
-            self.open = True
+            self.socket.connect((self.ip_address, self.port))
         except Exception as e:
-            raise ConnectionError(f'No camera found at address {ipAddress}:{port}\n{e}')
+            raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
 
     def close(self):
         self.socket.close()
-        self.open = False
+
+    def is_socket_closed(self) -> bool:
+        try:
+            # this will try to read bytes without blocking and also without removing them from buffer (peek only)
+            previous_blocking_state = self.socket.getblocking()
+            self.socket.setblocking(False)
+            data = self.socket.recv(16, socket.MSG_PEEK)
+            self.socket.setblocking(previous_blocking_state)
+            if len(data) == 0:
+                return True
+        except BlockingIOError:
+            self.socket.setblocking(previous_blocking_state)
+            return False  # socket is open and reading from it would block
+        except ConnectionResetError:
+            return True  # socket was closed for some other reason
+        except Exception as e:
+            # unexpected exception when checking if a socket is closed
+            return True
+        
+        return False
 
     def is_socket_closed(self) -> bool:
         try:
@@ -117,7 +135,6 @@ class Interface:
             return response
         else:
             raise TimeoutError(f'no response within {timeout_s}s')
-  
 class UdpPacket:
     def __init__(self, data) -> None:
         self.packetHeaderFormat = struct.Struct('!HIHIII')
@@ -132,12 +149,12 @@ class UdpPacket:
 class TcpReceiver:
     def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 2):
         self.lock = Lock()
-        self.ipAddress = ipAddress
+        self.ip_address = ipAddress
         self.port = port
         self.timeout_s = timeout_s
         self.data = bytearray()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.ipAddress, self.port))
+        self.socket.connect((self.ip_address, self.port))
         self.clearInputBuffer()
 
     def clearInputBuffer(self):
@@ -150,7 +167,7 @@ class TcpReceiver:
         except BlockingIOError:
             pass
         except ConnectionResetError:
-            raise ConnectionError(f'Connection to camera at {self.ipAddress}:{self.port} was reset.')
+            raise ConnectionError(f'Connection to camera at {self.ip_address}:{self.port} was reset.')
         finally:
             self.socket.setblocking(current_state)
 
@@ -165,11 +182,11 @@ class TcpReceiver:
         try:
             # get first packet and unpack header information
             first_chunk = self.socket.recv(8096)
-            partialFrame = HeaderParser().parse(first_chunk, True)
+            partialFrame = HeaderParser().parse(first_chunk)
             buffer_size = HeaderParser().headerStruct.size + \
                 (
                     partialFrame.cols * partialFrame.rows * \
-                    communicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
+                    CommunicationType().get_item_by_id(id=partialFrame.measurementType).bytes_per_pixel
                 )
             data_buffer = bytearray(buffer_size)
             data_buffer[0:len(first_chunk)] = first_chunk
@@ -184,7 +201,7 @@ class TcpReceiver:
                 byteCount += len(chunk)
 
         except ConnectionError as e:
-            raise ConnectionError(f'No camera found at address {self.ipAddress}:{self.port}\n{e}')
+            raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
         except socket.timeout as to:
             raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
           
@@ -192,7 +209,7 @@ class TcpReceiver:
 
 class UdpInterface:
     def __init__(self, ipAddress='10.10.31.180', port=45454):
-        self.ipAddress = ipAddress
+        self.ip_address = ipAddress
         self.port = port
         self.packetHeaderFormat = struct.Struct('!HIHIII')
         self.data = bytearray()
@@ -215,7 +232,7 @@ class UdpInterface:
                 print('udp interface timeout')
                 break
 
-            if ipAddress != self.ipAddress:
+            if ipAddress != self.ip_address:
                 continue
 
             packet = UdpPacket(udpPacket)
@@ -231,32 +248,31 @@ class UdpInterface:
             byteCount += p.packetSize
         return frameData, byteCount
 
-    # def receive(self, bytecount):
-    #     self.data = bytearray(bytecount)
-    #     self.index = 0
-    #     while True:
-    #         try:
-    #             udpPacket, (ipAddress, port) = self.udpSocket.recvfrom(4096)
-    #         except socket.timeout:
-    #             print('udp interface timeout')
-    #             break
-    #         if ipAddress == self.ipAddress:
-    #             self.appendPacket(udpPacket)
-    #         if self.index >= bytecount:
-    #             break
-    #     return self.data[:bytecount]
+class CommunicationType():
+    class Item:
+        def __init__(self, id, bytes_per_pixel, name):
+            self.id = id
+            self.bytes_per_pixel = bytes_per_pixel
+            self.name = name
 
-    # def appendPacket(self, udpPacket):
-    #     # (measurementId,
-    #     #  totalSize,
-    #     #  packetSize,
-    #     #  totalPacketCount,
-    #     #  packetNumber,
-    #     #  offset, ) = self.packetHeaderFormat.unpack(
-    #     #      udpPacket[:self.packetHeaderFormat.size])
-    #     payload = udpPacket[self.packetHeaderFormat.size:]
-    #     self.data[self.index:self.index + len(payload)] = payload
-    #     self.index += len(payload)
+    items_by_id = {}
+    items_by_name = {}
+
+    def __init__(self):
+        for item in [ self.Item(0x00, 4, "DATA_DISTANCE_AMPLITUDE"),
+            self.Item(0x01, 2, "DATA_DISTANCE"),
+            self.Item(0x02, 2, "DATA_AMPLITUDE"),
+            self.Item(0x03, 2, "DATA_GRAYSCALE"),
+            self.Item(0x04, 8, "DATA_DCS"),
+        ]:
+            self.items_by_id[item.id] = item
+            self.items_by_name[item.name] = item
+
+    def get_item_by_id(self, id: int):
+        return self.items_by_id.get(id)
+
+    def get_item_by_name(self, name: str):
+        return self.items_by_name.get(name)
 
 class TraceInterface:
     def __init__(self, ipAddress='10.10.31.180', port=50661, logFile=None):
@@ -276,7 +292,7 @@ class TraceInterface:
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         
         # Start logging thread
-        self._thread = threading.Thread(target=self._logTraceData)
+        self._thread = Thread(target=self._logTraceData)
 
     def startLogging(self, logFile: Optional[str] = None):
         """Start logging trace data in a separate thread."""
@@ -290,7 +306,7 @@ class TraceInterface:
         self.socket.connect((self.ipAddress, self.port))
 
         self.logging = True
-        self._thread = threading.Thread(target=self._logTraceData)
+        self._thread = Thread(target=self._logTraceData)
         self._thread.start()
 
     def stopLogging(self):

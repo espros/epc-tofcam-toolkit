@@ -59,6 +59,15 @@ class TofCam635Bridge(Base_TOFcam_Bridge):
         else:
             image = self._get_image_cb()
             return np.rot90(image, 3)
+        
+    def storeImage(self, image):
+        # Restore the rotation before storage
+        if self.image_type == 'Point Cloud':
+            pass
+        else:
+            image = np.rot90(image, 1)
+
+        super().storeImage(image)
 
     def __stop_streaming_cb(self):
         self.cam.settings.set_capture_mode(0)
@@ -154,6 +163,7 @@ class TofCam635Bridge(Base_TOFcam_Bridge):
         if imgType == 'Point Cloud':
             self.gui.imageView.setActiveView('pointcloud')
             self._get_image_cb = self.cam.get_point_cloud
+            self.image_type = imgType
         else:
             self._set_standard_image_type(imgType)
         self.capture()
