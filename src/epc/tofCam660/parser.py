@@ -1,7 +1,6 @@
 import abc
 import struct
 import numpy as np
-from epc.tofCam_lib.crc import Crc, CrcMode
 
 
 class Frame:
@@ -22,7 +21,6 @@ class Frame:
         self.amplitude = None
         self.distance = None
         self.dcs = None
-        self.crcValid = None
 
 
 class Parser(abc.ABC):
@@ -30,15 +28,12 @@ class Parser(abc.ABC):
 
     def __init__(self):
         self.bytestream = None
-        self.crc = Crc(mode=CrcMode.CRC32_IEEE)
 
-    def parse(self, bytestream, check_crc):
+    def parse(self, bytestream):
         self.bytestream = bytestream
         frame = Frame()
         self.parseHeader(frame)
         self.parseData(frame)
-        if check_crc:
-            self.checkCRC(frame)
         return frame
 
     def parseHeader(self, frame):
@@ -57,16 +52,6 @@ class Parser(abc.ABC):
          frame.dataOffset] = self.headerStruct.unpack(self.bytestream[:self.headerStruct.size])
         self.bytestream = self.bytestream[self.headerStruct.size:]
         frame.temperature /= 100
-
-    def checkCRC(self, frame):
-        crc_size = 4  
-        data_payload = self.bytestream[: -crc_size]
-        received_crc = struct.unpack('>I',  self.bytestream[-crc_size:])[0]
-        calculated_crc = self.crc.calculate(data_payload)
-        if received_crc == calculated_crc:
-            frame.crcValid = True
-        else:
-            frame.crcValid = False
 
     @abc.abstractmethod
     def parseData(self, frame):

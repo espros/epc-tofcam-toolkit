@@ -444,13 +444,7 @@ class TOFcam660(TOFcam):
         self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
         assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
 
-        self.is_valid_crc = None
         self.frame = None
-
-        # check if CRC enabled FW is running
-        fw_version = self.device.get_fw_version()
-        if fw_version not in ('3.32', '3.33', '3.34', '3.36','3.37','3.38','3.39','3.40', '3.41', '3.42'):
-            raise Exception("Incompatible FW version")
 
     def __del__(self):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
@@ -477,8 +471,7 @@ class TOFcam660(TOFcam):
                                             calibData: dict, 
                                             modFreq_MHz: int, 
                                             int_time_us, 
-                                            minAmp: int = 0, 
-                                            check_crc = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                                            minAmp: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         logging.info(f"get image with modulation frequency {modFreq_MHz} MHz and integration time {int_time_us} us")
         actIntTime = self.settings.intTime_us
 
@@ -486,7 +479,7 @@ class TOFcam660(TOFcam):
         # Could be handled in the camera firmware but for now we do it here
         self.settings.set_integration_time(0)
         self.settings.set_modulation(calibData['modulation(MHz)'], 0)
-        self.get_distance_and_amplitude(check_crc)
+        self.get_distance_and_amplitude()
 
         # adjust integration time relative to calibrated modulation frequency
         # Could be handled in the camera firmware but for now we do it here
@@ -496,7 +489,7 @@ class TOFcam660(TOFcam):
 
         # get dcs at frequency
         self.settings.set_flex_mod_freq(modFreq_MHz, delay=0.01)
-        dcs = self.get_raw_dcs_images(check_crc)
+        dcs = self.get_raw_dcs_images()
 
         temp = self.device.get_chip_temperature()
 
@@ -548,31 +541,29 @@ class TOFcam660(TOFcam):
                                         setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
         self.settings.set_binning(0)
-        self.get_raw_dcs_images(check_crc=True)  # trigger first image to initialize the camera
+        self.get_raw_dcs_images()  # trigger first image to initialize the camera
 
-    def get_grayscale_image(self, check_crc = False) -> np.ndarray:
+    def get_grayscale_image(self) -> np.ndarray:
         """ "Get a grayscale image from the camera as a 2d numpy array"""
         parser = GrayscaleParser()
         get_gray_command = Command.create("getGrayscale", self.settings.captureMode)
         raw_data = self.__get_image_date(get_gray_command)
-        self.frame = parser.parse(raw_data, check_crc)
-        self.is_valid_crc = self.frame.crcValid
+        self.frame = parser.parse(raw_data)
         return self.frame.amplitude
 
-    def get_distance_image(self, check_crc = False) -> np.ndarray:
+    def get_distance_image(self) -> np.ndarray:
         """Get a distance image from the camera as a 2d numpy array. The distance is in mm."""
         if not self.settings.flexMod:
             parser = DistanceParser()
             get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
             raw_data = self.__get_image_date(get_dist_cmd)
-            self.frame = parser.parse(raw_data, check_crc)
-            self.is_valid_crc = self.frame.crcValid
+            self.frame = parser.parse(raw_data)
             return self.frame.distance
         else:
-            dist, _, = self.get_distance_and_amplitude(check_crc)
+            dist, _, = self.get_distance_and_amplitude()
             return dist
 
-    def get_distance_and_amplitude(self, check_crc = False) -> tuple[np.ndarray, np.ndarray]:
+    def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
         if not self.settings.flexMod:
             parser = DistanceAndAmplitudeParser()
@@ -580,35 +571,32 @@ class TOFcam660(TOFcam):
                 "getDistanceAndAmplitude", self.settings.captureMode
             )
             raw_data = self.__get_image_date(get_dist_amp_cmd)
-            self.frame = parser.parse(raw_data, check_crc)
-            self.is_valid_crc = self.frame.crcValid
+            self.frame = parser.parse(raw_data)
             return self.frame.distance, self.frame.amplitude
         else:
             dist, amplitude, _ = self.get_flex_mod_distance_amplitude_dcs(self._calibData24Mhz, 
                                                                           self.settings.flexModFreq_MHz, 
                                                                           self.settings.intTime_us,
-                                                                          self.settings.minAmplitude,
-                                                                          check_crc
+                                                                          self.settings.minAmplitude
                                                                           )
             return dist, amplitude
 
-    def get_amplitude_image(self, check_crc = False) -> np.ndarray:
+    def get_amplitude_image(self) -> np.ndarray:
         """Get an amplitude image from the camera as a 2d numpy array."""
-        return self.get_distance_and_amplitude(check_crc)[1]
+        return self.get_distance_and_amplitude()[1]
 
-    def get_raw_dcs_images(self, check_crc = False) -> np.ndarray:
+    def get_raw_dcs_images(self) -> np.ndarray:
         """Get a DCS image from the camera as a 2d numpy array."""
         parser = DcsParser()
         get_dcs_cmd = Command.create("getDcs", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dcs_cmd)
-        self.frame = parser.parse(raw_data, check_crc)
-        self.is_valid_crc = self.frame.crcValid
+        self.frame = parser.parse(raw_data)
         return self.frame.dcs
     
-    def get_point_cloud(self, check_crc = False) -> np.ndarray:
+    def get_point_cloud(self) -> np.ndarray:
         """Returns a tuple holding point cloud from the camera as a 3xN numpy array and the corresponding amplitude values."""
         # capture depth image & corrections
-        depth, amplitude = self.get_distance_and_amplitude(check_crc)
+        depth, amplitude = self.get_distance_and_amplitude()
         depth = np.rot90(depth, 3)
         amplitude = np.rot90(amplitude)
         amplitude[amplitude>DEFAULT_MAX_AMP] = 0 # remove error codes
@@ -619,9 +607,6 @@ class TOFcam660(TOFcam):
         points = 1E-3 * self.settings.lense_projection.transformImage(np.flipud(np.fliplr(depth)))
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
-
-    def get_crc_status(self):
-        return self.is_valid_crc
 
     def set_data_transfer_protocol(self, transferInterface: Literal["UDP", "TCP"] = "UDP"):
         # If rx protocol is already set, only call Command
