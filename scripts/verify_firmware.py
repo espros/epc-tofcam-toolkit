@@ -1,3 +1,7 @@
+import sys
+sys.path.insert(0, 'src')
+sys.path.insert(0, 'epc_lib')
+
 from epc.tofCam660 import TOFcam660
 import requests
 import time
@@ -5,7 +9,7 @@ import os
 
 IP_ADDRESS = "10.10.31.170"
 PASSWORD = "TOFcam-660"
-FW_BINARY = "scripts/cameraApplication_XiP_3v42.bin"  # Change this to your file path
+FW_BINARY = "scripts/cameraApplication_XiP_3v43.bin"  # Change this to your file path
 
 def verify_firmware(ip_address: str, file: str):
     tof_cam = TOFcam660(ip_address=ip_address)

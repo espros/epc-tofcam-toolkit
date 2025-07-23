@@ -48,7 +48,7 @@ image_counter = 0
 image_counter_invalid_total = 0
 #NUMBER_TEST_LOOPS = 2
 #POWER_ON_SECONDS = 10 #10 
-POWER_OFF_SECONDS = 1 #5
+POWER_OFF_SECONDS =  3 #5
 INTEGRATION_TIME_CONFIG_LIST = [
     (4000, 10, 1900, 46667),
     (550, 10, 1900, 46667)
@@ -81,6 +81,7 @@ MEASUREMENT_DURATION_HOURS = 15
 MEASUREMENT_DURATION_SECONDS = MEASUREMENT_DURATION_HOURS*60 *60
 TCP_PORT   = 50660  
 TIMEOUT    = 1.0
+DATA_TRANSFER_PROTOCOL = "TCP"  # "TCP" or "UDP"
 DEFAULT_IP        = "10.10.31.180"
 IP_POOL       =     ["10.10.31.170",
                     "10.10.31.171",
@@ -236,7 +237,12 @@ class TofCam660HDRDevice:
 
             #for list_index in range(len(INTEGRATION_TIME_CONFIG_LIST)):
             integration_time_config = INTEGRATION_TIME_CONFIG_LIST[config_list_iteration]
-            self.tofcam660.set_data_transfer_protocol("TCP") # Use TCP for data transfer
+            self.tofcam660.device.set_data_transfer_protocol(DATA_TRANSFER_PROTOCOL) # Use TCP for data transfer
+            protocol_configured = self.tofcam660.device.get_data_transfer_protocol()  # Ensure the protocol is set correctly
+            if protocol_configured != DATA_TRANSFER_PROTOCOL:
+                log.error(f"IP{self._ip_address} Failed to set data transfer protocol to {DATA_TRANSFER_PROTOCOL}, current protocol: {protocol_configured}")
+                return False, self._invalid_frame_count
+            
             self.tofcam660.settings.set_integration_time(int_time_us=integration_time_config[0])
             self.tofcam660.settings.set_minimal_amplitude(minimum=integration_time_config[1])
 
@@ -251,8 +257,7 @@ class TofCam660HDRDevice:
                 # while time.perf_counter_ns() - start < 100000:  # 100 nanoseconds
                 #     pass
 
-                distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude(check_crc=True)
-                crc_bool = self.tofcam660.get_crc_status()
+                distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude()
                 self._image_counter += 1
                 
                     # Create subplots
@@ -267,7 +272,7 @@ class TofCam660HDRDevice:
                 plt.colorbar(img1, ax=axes[1])
                 # Save figure with timestamp
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-                filename = f"plots/{crc_bool}_plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
+                filename = f"plots/plot_distAmp_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
                 plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
                 plt.close()
 
@@ -374,9 +379,9 @@ def run_muticamera_measurements():
 
             #check if multiple attempt were needed to start the camera
             if noTrialConnectToCam > 1:
-                log.warning(f"Failed to initialize camera: {e} after {noTrialConnectToCam*POWER_OFF_SECONDS} seconds")
+                log.warning(f"Failed to initialize camera: {cam_ip} after {noTrialConnectToCam*POWER_OFF_SECONDS} seconds")
                 if noTrialConnectToCam==100:
-                    log.error(f"Failed to initialize camera: {e} after {noTrialConnectToCam*POWER_OFF_SECONDS} seconds")
+                    log.error(f"Failed to initialize camera: {cam_ip} after {noTrialConnectToCam*POWER_OFF_SECONDS} seconds")
                     break   #don't try to proceed with that camera
 
             interface = TraceInterface(ipAddress=cam_ip)

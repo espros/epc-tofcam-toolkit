@@ -48,7 +48,7 @@ image_counter = 0
 image_counter_invalid_total = 0
 #NUMBER_TEST_LOOPS = 2
 #POWER_ON_SECONDS = 10 #10 
-POWER_OFF_SECONDS = 1 #5
+POWER_OFF_SECONDS =  3 #5
 INTEGRATION_TIME_CONFIG_LIST = [
     (1000, 10, 1900, 46667),
     (125, 10, 1900, 46667)
@@ -79,8 +79,9 @@ INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST
 
 MEASUREMENT_DURATION_HOURS = 15
 MEASUREMENT_DURATION_SECONDS = MEASUREMENT_DURATION_HOURS*60 *60
-TCP_PORT   = 50660  
+TCP_PORT   = 50660
 TIMEOUT    = 1.0
+DATA_TRANSFER_PROTOCOL  = "TCP"  # "TCP" or "UDP"
 DEFAULT_IP        = "10.10.31.180"
 IP_POOL       =     ["10.10.31.170",
                     "10.10.31.171",
@@ -140,7 +141,7 @@ class TofCam660HDRDevice:
         corrupt_data=  False
         numberOfNonZeroPixel = np.count_nonzero(frame.distance)
 
-        if  numberOfNonZeroPixel > (240*320*1/4):
+        if  numberOfNonZeroPixel > (120*160*1/4):
             corrupt_data = False
         else:
             corrupt_data = True
@@ -246,6 +247,12 @@ class TofCam660HDRDevice:
 
             #for list_index in range(len(INTEGRATION_TIME_CONFIG_LIST)):
             integration_time_config = INTEGRATION_TIME_CONFIG_LIST[config_list_iteration]
+            self.tofcam660.device.set_data_transfer_protocol(DATA_TRANSFER_PROTOCOL) # Use TCP for data transfer
+            protocol_configured = self.tofcam660.device.get_data_transfer_protocol()  # Ensure the protocol is set correctly
+            if protocol_configured != DATA_TRANSFER_PROTOCOL:
+                log.error(f"IP{self._ip_address} Failed to set data transfer protocol to {DATA_TRANSFER_PROTOCOL}, current protocol: {protocol_configured}")
+                return False, self._invalid_frame_count
+            
             self.tofcam660.settings.set_integration_time(int_time_us=integration_time_config[0])
             self.tofcam660.settings.set_minimal_amplitude(minimum=integration_time_config[1])
 
@@ -260,8 +267,7 @@ class TofCam660HDRDevice:
                 # while time.perf_counter_ns() - start < 100000:  # 100 nanoseconds
                 #     pass
 
-                distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude(check_crc=True)
-                crc_bool = self.tofcam660.get_crc_status()
+                distance_amplitude_frame = self.tofcam660.get_distance_and_amplitude()
                 self._image_counter += 1
                 
                     # Create subplots
@@ -276,7 +282,7 @@ class TofCam660HDRDevice:
                 plt.colorbar(img1, ax=axes[1])
                 # Save figure with timestamp
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-                filename = f"plots/{crc_bool}_plot_distAmp_binning_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
+                filename = f"plots/plot_distAmp_binning_{timestamp}_waferID_{str(self.tofcamWaferId)}_chipID_{str(self.tofcamChipId)}.jpg"
                 plt.savefig(filename, dpi=300, format='jpeg')  # Higher dpi for better resolution
                 plt.close()
 
