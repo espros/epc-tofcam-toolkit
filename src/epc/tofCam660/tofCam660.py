@@ -63,6 +63,19 @@ class TOFcam660(TOFcam):
         if nBytes <= 0:
             raise RuntimeError("Failed to receive image data")
         return frame_data
+    
+    def __wait_for_image_data(self):
+        """This function is used to wait until one image is being received from the camera after 
+        hw trigger gpio is used capture a new frame"""
+        nBytes = 0
+        while(True):
+            try:
+                frame_data, nBytes = self.rxInterface.receiveFrame()
+            except Exception as e:
+                continue
+            if nBytes > 0:
+                break
+        return frame_data
 
     def initialize(self):
         self.settings.set_modulation(12)
@@ -125,7 +138,13 @@ class TOFcam660(TOFcam):
         points = 1E-3 * self.settings.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
-
+    
+    def get_hw_triggered_image(self) -> tuple[np.ndarray, np.ndarray]:
+        """Use hw trigger to capture a single distance amplitude frame & return as 2d numpy arrays. The distance is in mm."""
+        parser = DistanceAndAmplitudeParser()
+        raw_data = self. __wait_for_image_data()
+        frame = parser.parse(raw_data)
+        return frame.distance, frame.amplitude
 
 class TOFcam660_Settings(TOF_Settings_Controller):
     """The TOFcam660_Settings class is used to control the settings of the TOFcam660.
