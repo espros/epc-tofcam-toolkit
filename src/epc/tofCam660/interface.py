@@ -154,6 +154,16 @@ class TcpReceiver:
         self.timeout_s = timeout_s
         self.data = bytearray()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # The TCP_QUICKACK setting is transient, so we set it not only here
+        # but also in the receive loop to ensure it remains active.
+        # TCP_QUICKACK is an option that forces an ACK (acknowledgment) packet
+        # to be sent for every individual packet received, rather than delaying
+        # ACKs for multiple packets. Although this may seem counterintuitive,
+        # it can actually improve performance. The reason is that the
+        # system-dependent delay in waiting for new packets to arrive can be
+        # longer than the time it takes to send an ACK immediately.
+        # By using TCP_QUICKACK, we have observed better overall results.
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
         self.socket.connect((self.ip_address, self.port))
         self.clearInputBuffer()
 
@@ -194,6 +204,8 @@ class TcpReceiver:
 
             # Receive remaining data
             while byteCount < buffer_size:
+                # set transient TCP_QUICKACK every time to ensure it remains active
+                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
                 chunk = self.socket.recv(buffer_size - byteCount)
                 if not chunk:
                     break  # Connection closed by the server
