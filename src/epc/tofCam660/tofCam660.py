@@ -447,7 +447,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     def set_flex_mod_freq(self, frequency_mhz: int|float, delay = 0.1):
         self._clear_dll_settings() # Will be implemented in fw in the next release
         cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
-        log.info(f"Setting flex modulation frequency: {frequency_mhz} Hz")
+        log.info(f"Setting flex modulation frequency: {frequency_mhz*1E6} Hz")
         self.cam.tcpInterface.transceive(cmd)
         time.sleep(delay)
         self.flexMod = True

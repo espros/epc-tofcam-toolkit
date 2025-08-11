@@ -16,9 +16,11 @@ from epc.tofCam660.parser import Frame
 # Create logs directory if it doesn't exist
 os.makedirs("logs", exist_ok=True)
 
+protocol = 'UDP'  # Default protocol
+
 # Configure logging to write to a file
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-log_filename = f"logs/Test_FPS_{timestamp}.log"
+log_filename = f"logs/Test_FPS_{protocol}_{timestamp}.log"
 
 logging.basicConfig(
     filename=log_filename,
@@ -34,7 +36,7 @@ file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelnam
 log.addHandler(file_handler)
 
 
-NUMBER_FPS_TEST_LOOPS = 100
+NUMBER_FPS_TEST_LOOPS = 50
 INTEGRATION_TIME_CONFIG_LIST = [(100, 10, 1900, 46667)]
 INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
 INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST)
@@ -72,20 +74,35 @@ class TofCam660HDRDevice:
         return True
 
     def take_measurement(self) -> float:
-        start = time.perf_counter()
         self.tofcam660.settings.set_integration_hdr(INTEGRATION_TIME_CONFIG_LIST[0])
-        self.tofcam660.device.set_data_transfer_protocol('TCP')
+        self.tofcam660.device.set_data_transfer_protocol(protocol)
         self.tofcam660.settings.set_hdr(self.TOFCAM_HDR_SETTING)
-        for frame in range(NUMBER_FPS_TEST_LOOPS):
-            # Alternate protocol every frame
-            # data_protocol = 'TCP' if frame % 2 == 0 else 'UDP'
-            # self.tofcam660.device.set_data_transfer_protocol(data_protocol)
+        FW_version = self.tofcam660.device.get_fw_version()
+        self.tofcam660.settings.captureMode=0  # Set capture mode stream
+        #self.tofcam660.settings.set_flex_mod_freq(3)
+        frame_times = []
+        for frame in range(100):
+            t0 = time.perf_counter()
             self.tofcam660.get_distance_and_amplitude()
-            # log.info(f"Frame {frame}: Protocol={data_protocol}")
+            #self.tofcam660.get_raw_dcs_images()
+            t1 = time.perf_counter()
+            frame_times.append(t1 - t0)
 
-        end = time.perf_counter()
-        fps = NUMBER_FPS_TEST_LOOPS / (end - start)
-        log.info(f"Alternating protocol FPS: {fps:.2f} for {NUMBER_FPS_TEST_LOOPS} frames")
+        fps_list = [1 / t for t in frame_times]
+        fps = sum(fps_list) / len(fps_list)
+        log.info(f"fw version: {FW_version} protocol: {protocol} FPS: {fps:.2f} for {NUMBER_FPS_TEST_LOOPS} frames")
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(fps_list, label='FPS per frame')
+        plt.xlabel('Frame Number')
+        plt.ylabel('FPS')
+        plt.title(f'FPS over {NUMBER_FPS_TEST_LOOPS} frames, protocol: {protocol}, FW: {FW_version}')
+        plt.legend()
+        plt.grid()
+        plt.savefig(f"logs/FPS_plot_{protocol}_{timestamp}.png")
+        self.tofcam660.settings.captureMode=0  # Set capture mode stream
+        #self.tofcam660.get_raw_dcs_images()
+        self.tofcam660.get_distance_and_amplitude()
         return fps
 
 

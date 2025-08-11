@@ -46,7 +46,7 @@ def update_firmware(ip_address: str, file: str):
         print("Upload response:", upload_response.status_code)
 
 if __name__ == "__main__":
-    for i in range(170, 180):
+    for i in range(180, 181):
         ip = f"10.10.31.{i}"
         print(f"Starting firmware update for {ip} using file {FW_BINARY}...")
         update_firmware(ip, FW_BINARY)
