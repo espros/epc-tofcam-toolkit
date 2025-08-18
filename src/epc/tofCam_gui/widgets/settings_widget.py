@@ -1,8 +1,9 @@
 import numpy as np
 from typing import List, Optional, Any
-from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox
-from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QVBoxLayout, QGridLayout
+from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QLineEdit
+from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QGridLayout, QDoubleSpinBox
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QDoubleValidator
 
 
 class CameraSetting(QGroupBox):
@@ -67,6 +68,20 @@ class SpinBoxSetting(CameraSetting):
         self.spinBox.setValue(setting)
         self.spinBox.valueChanged.emit(setting)
 
+class FloatInput(CameraSetting):
+    signal_value_changed = Signal(float)
+    def __init__(self, label: str, minvalue: float, maxValue: float, default: Optional[float]=None, parent=None):
+        super(FloatInput, self).__init__('', [minvalue, maxValue], default, parent)
+        self.input = QLineEdit(parent)
+        self.input.setValidator(QDoubleValidator(minvalue, maxValue, 2))
+        self.label = QLabel(label, self)
+        self.gridLayout.addWidget(self.label, 0, 0)
+        self.gridLayout.addWidget(self.input, 0, 1)
+        self.input.editingFinished.connect(lambda: self.signal_value_changed.emit(float(self.input.text())))
+    
+    def setValue(self, setting: int):
+        self.input.setText(str(setting))
+        # self.spinBox.valueChanged.emit(setting)
 
 class IntegrationTimes(CameraSetting):
     signal_value_changed = Signal(str, int)
