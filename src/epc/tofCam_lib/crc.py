@@ -1,21 +1,24 @@
 import struct
-import ctypes
-from enum import Enum
 from sys import platform
+import ctypes
+import importlib.resources
 import numpy as np
-from epc.tofCam_data.config import CrcCalc, CrcCalc_darwin, CrcCalc_linux
+import zlib
+from enum import Enum
 
 class CrcMode(Enum):
     CRC32_UINT8 = 1
     CRC32_UINT8_LIB = 2
     CRC32_STM32 = 3
+    CRC32_IEEE = 4
+
 
 class Crc:
     def __init__(self, mode: CrcMode = CrcMode.CRC32_UINT8,
-                   polynom=0x04C11DB7,
-                   initvalue=0xFFFFFFFF,
-                   xorout=0x00000000,
-                   revout=False):
+                 polynom=0x04C11DB7,
+                 initvalue=0xFFFFFFFF,
+                 xorout=0x00000000,
+                 revout=False):
         self.polynom = polynom
         self.initvalue = initvalue
         self.revout = revout
@@ -28,18 +31,20 @@ class Crc:
     def __loadLib(self):
         try:
             if platform == 'linux':
-                self.lib = ctypes.cdll.LoadLibrary(str(CrcCalc_linux))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_linux.so')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             elif platform == 'win32':
-                self.lib = ctypes.windll.LoadLibrary(str(CrcCalc))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc.dll')
+                self.lib = ctypes.windll.LoadLibrary(str(binaryPath))
             elif platform == 'darwin':
-                self.lib = ctypes.cdll.LoadLibrary(str(CrcCalc_darwin))
+                binaryPath = importlib.resources.files('epc.tofCam_lib.bin').joinpath('CrcCalc_darwin.a')
+                self.lib = ctypes.cdll.LoadLibrary(str(binaryPath))
             else:
                 raise Exception('Platform not supported')
             return True
         except Exception as e:
             print(e, 'no lib used')
             return False
-
 
     def __calcCrc32_python(self, crc, data):
 
@@ -57,7 +62,7 @@ class Crc:
             else:
                 crc = (crc << 1) & 0xFFFFFFFF
         return crc
-    
+
     def __calcCrc32Uin8_python(self, data: bytearray):
         crc = self.initvalue
         for i in range(len(data)):
@@ -71,6 +76,9 @@ class Crc:
 
         return self.lib.calcCrc32_32(carray, len(data), ctypes.c_uint32(self.polynom))
 
+    def __calcCrc32_IEEE(self, data: bytearray):
+        return zlib.crc32(data) & 0xFFFFFFFF
+
     def calculate(self, data: bytearray) -> bytearray:
         crc = bytearray([])
         match self.mode:
@@ -80,10 +88,12 @@ class Crc:
                 crc = self.__calcCrc32Uint8_lib(bytearray(data))
             case CrcMode.CRC32_STM32:
                 crc = self.__calcCrc32Uin8_python(data)
+            case CrcMode.CRC32_IEEE:
+                crc = self.__calcCrc32_IEEE(data)
 
         if self.revout:
             crc = struct.unpack('>I', struct.pack('<I', crc))[0]
-        
+
         return crc
 
     def verify(self, data: bytearray, crc: bytearray):

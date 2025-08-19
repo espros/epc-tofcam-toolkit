@@ -37,14 +37,13 @@ class TOF_Settings_Controller:
         raise NotImplementedError(
             f"{self.__class__.__name__} has not implemented 'set_integration_time_grayscale' jet")
 
-    def set_dll_step(self, step: int, fine_step=0):
+    def set_dll_step(self, step: int, fine_step = 0):
         raise NotImplementedError(
             f"{self.__class__.__name__} has not implemented 'set_dll_step' jet")
 
     def set_hdr(self, mode: int) -> None:
         raise NotImplementedError(
             f"{self.__class__.__name__} has not implemented 'set_hdr' jet")
-
 
 class Dev_Infos_Controller:
     def __init__(self) -> None:

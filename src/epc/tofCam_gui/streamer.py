@@ -1,15 +1,18 @@
 import logging
-import traceback
-import numpy as np  
-from typing import Optional, Callable
+from typing import Callable, Optional
+
+import numpy as np
 from PySide6.QtCore import QThread, Signal
 
 log = logging.getLogger('Streamer')
+log.setLevel(logging.DEBUG)
+
 
 def pause_streaming(func):
     """Decorator to pause the streaming while the decorated function is running.\n
     Decorated function needs to be a class member function and have an attribute called streamer of type Streamer.
     """
+
     def wrapper(self, *args, **kwargs):
         running = self.streamer.is_streaming()
         if running:
@@ -17,18 +20,21 @@ def pause_streaming(func):
         try:
             func(self, *args, **kwargs)
         except Exception as e:
-            logging.error(f"running function {func} failed with exception: {e}")
+            logging.error(
+                f"running function {func} failed with exception: {e}")
         if running:
             self.streamer.start_stream()
     return wrapper
 
+
 class Streamer(QThread):
     signal_new_frame = Signal(np.ndarray)
-    def __init__(self, get_frame_cb: Optional[Callable[[], np.ndarray]]=None, 
-                       start_stream_cb: Optional[Callable[[], None]]=None, 
-                       stop_stream_cb:  Optional[Callable[[], None]]=None, 
-                       post_start_cb: Optional[Callable[[], None]]=None,
-                       post_stop_cb:  Optional[Callable[[], None]]=None):
+
+    def __init__(self, get_frame_cb: Optional[Callable[[], np.ndarray]] = None,
+                 start_stream_cb: Optional[Callable[[], None]] = None,
+                 stop_stream_cb:  Optional[Callable[[], None]] = None,
+                 post_start_cb: Optional[Callable[[], None]] = None,
+                 post_stop_cb:  Optional[Callable[[], None]] = None):
         super(Streamer, self).__init__()
         self.get_frame_cb = get_frame_cb
         self.start_stream_cb = start_stream_cb
@@ -56,11 +62,15 @@ class Streamer(QThread):
             self.post_start_cb(**kwargs)
 
     def stop_stream(self, **kwargs):
-        if not self.__is_streaming:
+        if not self.is_streaming():
             return
         if self.stop_stream_cb:
             log.debug('Running stop_stream_cb')
-            self.stop_stream_cb(**kwargs)
+            try:
+                self.stop_stream_cb(**kwargs)
+            except Exception as e:
+                log.error(f"stop_stream_cb failed with exception: {e}")
+        log.info("Stopping stream")
         self.__is_streaming = False
         self.wait()
         if self.post_stop_cb:
@@ -79,4 +89,5 @@ class Streamer(QThread):
                 log.error(f"Failed to get frame with exception: {e}")
                 continue
             self.signal_new_frame.emit(image)
+
         log.debug("Streamer stopped")

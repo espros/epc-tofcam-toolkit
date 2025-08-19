@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QMenuBar, QMenu
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu, QMenuBar
 
 
 class MenuBar(QMenuBar):
@@ -13,7 +13,7 @@ class MenuBar(QMenuBar):
         self.fileMenu.addAction(self.savePngAction)
         self.saveRawAction = QAction("Save raw", self)
         self.fileMenu.addAction(self.saveRawAction)
-        
+
         self.viewMenu = QMenu("View", self)
         self.openConsoleAction = QAction("Show console", self)
         self.viewMenu.addAction(self.openConsoleAction)

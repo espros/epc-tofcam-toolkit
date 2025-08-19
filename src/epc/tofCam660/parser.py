@@ -77,6 +77,6 @@ class DistanceAndAmplitudeParser(Parser):
 
 class DcsParser(Parser):
     def parseData(self, frame):
-        data = np.frombuffer(self.bytestream, dtype=np.uint16)
+        data = np.frombuffer(self.bytestream, dtype=np.int16)
         data = data.reshape(4, frame.rows, frame.cols)
-        frame.dcs = np.ndarray.astype(data, np.int16)
+        frame.dcs = data - 2048

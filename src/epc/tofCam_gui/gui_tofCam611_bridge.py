@@ -5,7 +5,6 @@ import getopt
 import numpy as np
 import qdarktheme
 from PySide6.QtWidgets import QApplication
-# from epc.tofCam611.camera import Camera as TOFcam611
 from epc.tofCam611.tofCam611 import TOFcam611
 from epc.tofCam611.serialInterface import SerialInterface
 from epc.tofCam_gui import GUI_TOFcam611, GUI_TOFrange611
@@ -41,8 +40,6 @@ class TOFcam611_bridge:
 
         self.gui.setDefaultValues()
 
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
-
     def _set_streaming(self, enable: bool):
         if enable:
             self.streamer.start_stream()
@@ -73,7 +70,6 @@ class TOFcam611_bridge:
         self.__distance_unambiguity = self.C / (2 * frequency * 1e6)
 
         self.gui.imageView.setLevels(0, self.__distance_unambiguity*1000)
-        self.gui.imageView.pc.set_max_depth(int(self.__distance_unambiguity))
         self.cam.settings.set_modulation(frequency)
         self.capture()
 

@@ -5,7 +5,7 @@ import numpy as np
 from typing import Optional
 from epc.tofCam_lib.tofCam import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.crc import Crc, CrcMode
-from epc.tofCam_lib.transformations_3d import depth_to_3d
+from epc.tofCam_lib.projection_models import PinholeCameraProjector
 from epc.tofCam611.communicationType import communicationType as ComType
 from epc.tofCam611.commandList import commandList as CommandList
 from epc.tofCam611.serialInterface import SerialInterface
@@ -16,6 +16,9 @@ ERROR_MIN_AMPLITUDE = 16001000
 DEVICE_TOFFRAME = 1
 DEVICE_TOFRANGE = 0
 DEFAULT_MAX_DEPTH = 16000
+DEFAULT_MAX_AMPLITUDE = 2896
+DEFAULT_FOCAL_LENGTH_MM = 0.8
+DEFAULT_PIXEL_SIZE_MM = 0.02
 
 log = logging.getLogger('TOFcam611')
 
@@ -121,6 +124,7 @@ class TOFcam611_Settings(TOF_Settings_Controller):
         self.maxDepth = DEFAULT_MAX_DEPTH
         self.roi = self.get_roi()
         self.resolution = (self.roi[2], self.roi[3])
+        self.projector = PinholeCameraProjector(self.resolution, DEFAULT_FOCAL_LENGTH_MM, DEFAULT_PIXEL_SIZE_MM)
 
     def get_roi(self):
         if self._device_type == DEVICE_TOFFRAME:
@@ -323,15 +327,13 @@ class TOFcam611(TOFcam):
         amplitude = np.reshape(amplRaw, self.settings.resolution)
         return distance/10, amplitude
 
-
     def get_point_cloud(self):
-        depth = self.get_distance_image()
+        depth, amplitude = self.get_distance_and_amplitude_image()
         depth  = depth.astype(np.float32)
         depth[depth >= self.settings.maxDepth] = np.nan
+        amplitude[amplitude > DEFAULT_MAX_AMPLITUDE] = 0 # remove error values
 
         # calculate point cloud from the depth image
-        roi = self.settings.get_roi()
-        points = 1E-3 * depth_to_3d(np.fliplr(depth), resolution=(self.settings.resolution), focalLengh=40) # focul lengh in px (0.8 mm)
-        points = np.transpose(points, (1, 2, 0))
-        points = points.reshape(-1, 3)
-        return points
+        points = 1E-3 * self.projector.project(np.fliplr(depth))
+        points = points.reshape(3, -1)
+        return points, amplitude.flatten()

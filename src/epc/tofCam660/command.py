@@ -114,6 +114,11 @@ class SetFilter(Command):
                            self.data['interferenceDetectionUseLastValue'],
                            self.data['interferenceDetectionLimit'])
 
+class SetFlexModFrequency(Command):
+    commandId = 52
+
+    def dataToBytes(self):
+        return struct.pack('!L', self.data)
 
 class SetModulationFrequency(Command):
     commandId = 23
@@ -174,13 +179,6 @@ class SetIlluminatorSegments(Command):
         return struct.pack('!B', dataByte)
 
 
-class SetFlexModFrequency(Command):
-    commandId = 52
-
-    def dataToBytes(self):
-        return struct.pack('!L', self.data)
-
-
 class GetTemperature(Command):
     commandId = 74
 
@@ -219,11 +217,6 @@ class SetGrayscaleIllumination(Command):
 class CalibrateProduction(Command):
     commandId = 31
 
-
-class GetCalibrationData(Command):
-    commandId = 53
-
-
 class SetCompensation(Command):
     commandId = 28
 
@@ -234,6 +227,19 @@ class SetCompensation(Command):
                             self.data['setAmbientLightCompensationEnabled'],
                             self.data['setGrayscaleCompensationEnabled'])
 
+class GetCalibrationData(Command):
+    commandId = 53
+
+class GetIntegrationTime(Command):
+    commandId = 56
+
+class SetDataTransferProtocol(Command):
+    commandId = 57
+    def dataToBytes(self):
+        return struct.pack('!b', self.data['selectTCP'])
+
+class GetDataTransferProtocol(Command):
+    commandId = 58
 
 
 commands = {'setRoi': SetRoi,
@@ -249,6 +255,7 @@ commands = {'setRoi': SetRoi,
             'setMinAmplitude': SetMinAmplitude,
             'setFilter': SetFilter,
             'setModulationFrequency': SetModulationFrequency,
+            'setFlexModFreq': SetFlexModFrequency,
             'setBinning': SetBinning,
             'setHdr': SetHdr,
             'readChipInformation': ReadChipInformation,
@@ -262,8 +269,10 @@ commands = {'setRoi': SetRoi,
             'setCameraMacAddress': SetCameraMacAddress,
             'setGrayscaleIllumination': SetGrayscaleIllumination,
             'calibrateProduction': CalibrateProduction,
-            'getCalibrationData': GetCalibrationData,
             'setCompensation' : SetCompensation,
+            'getCalibrationData' : GetCalibrationData,
             'setIlluminatorSegments': SetIlluminatorSegments,
-            'setFlexModFrequency': SetFlexModFrequency
+            'getIntegrationTime' : GetIntegrationTime,
+            'setDataTransferProtocol' : SetDataTransferProtocol,
+            'getDataTransferProtocol' : GetDataTransferProtocol,
             }

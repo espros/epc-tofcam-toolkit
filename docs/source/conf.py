@@ -8,6 +8,8 @@
 
 import sys
 sys.path.insert(0, '../../src')
+sys.path.insert(0, '../src')
+sys.path.insert(0, 'src')
 from epc._version import __version__
 
 project = 'EPC TOFcam Toolkit'
