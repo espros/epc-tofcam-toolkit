@@ -34,6 +34,7 @@ class Interface:
             self.socket.connect((self.ip_address, self.port))
         except Exception as e:
             raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
+        self.socket.settimeout(1)
 
     def close(self):
         self.socket.close()
@@ -55,16 +56,20 @@ class Interface:
         except Exception as e:
             # unexpected exception when checking if a socket is closed
             return True
-
+        
         return False
 
     def transceive(self, command):
-        self.lock.acquire()
-        self.transmit(command)
-        response = self.receive()
-        self.lock.release()
+        self.lock.acquire(timeout=0.5)
+        try:
+            self.transmit(command)
+            response = self.receive()
+        except TimeoutError:
+            raise TimeoutError(f"Not able to transmit the command \"{command.__class__.__name__}\" successfully")
+        finally:
+            self.lock.release()
         if response.isError():
-            raise RuntimeError(f'command {command} failed with response {response}')
+            raise RuntimeError(f'Command \"{command.__class__.__name__}\" failed with response {response}')
         return response
 
     def transmit(self, command):
@@ -115,6 +120,7 @@ class Interface:
             return response
         else:
             raise TimeoutError(f'no response within {timeout_s}s')
+
 class UdpPacket:
     def __init__(self, data) -> None:
         self.packetHeaderFormat = struct.Struct('!HIHIII')
@@ -127,7 +133,7 @@ class UdpPacket:
         self.data = data[20:]
 
 class TcpReceiver:
-    def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 2):
+    def __init__(self, ipAddress='10.10.31.180', port: int = 45454, timeout_s: int = 1):
         self.lock = Lock()
         self.ip_address = ipAddress
         self.port = port
@@ -135,7 +141,9 @@ class TcpReceiver:
         self.data = bytearray()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.ip_address, self.port))
+        self.turnOffDelayedAck()
         self.clearInputBuffer()
+        self.socket.settimeout(self.timeout_s)
 
     def clearInputBuffer(self):
         """Clear the input buffer of the socket."""
@@ -154,6 +162,24 @@ class TcpReceiver:
     def close(self):
         self.socket.close()
 
+    def turnOffDelayedAck(self):
+        # The TCP_QUICKACK setting is transient, so we set it multiple times,
+        # especially in the receiving loop to ensure it remains active.
+        # TCP_QUICKACK is an option that forces an ACK (acknowledgment) packet
+        # to be sent for every individual packet received, rather than delaying
+        # ACKs for multiple packets. Although this may seem counterintuitive,
+        # it can actually improve performance. The reason is that the
+        # system-dependent delay in waiting for new packets to arrive can be
+        # longer than the time it takes to send an ACK immediately.
+        # By using TCP_QUICKACK, we have observed better overall results.
+        #
+        # The availability of TCP_QUICKACK depends on the platform and python version.
+        # Adapt measures on system level if system does not support it.
+        try:
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+        except (AttributeError, OSError):
+            pass
+
     def receiveFrame(self):
         class HeaderParser(Parser):
             def parseData(self, frame):
@@ -161,6 +187,7 @@ class TcpReceiver:
 
         try:
             # get first packet and unpack header information
+            self.turnOffDelayedAck()
             first_chunk = self.socket.recv(8096)
             partialFrame = HeaderParser().parse(first_chunk)
             buffer_size = HeaderParser().headerStruct.size + \
@@ -174,6 +201,7 @@ class TcpReceiver:
 
             # Receive remaining data
             while byteCount < buffer_size:
+                self.turnOffDelayedAck()
                 chunk = self.socket.recv(buffer_size - byteCount)
                 if not chunk:
                     break  # Connection closed by the server
@@ -182,9 +210,9 @@ class TcpReceiver:
 
         except ConnectionError as e:
             raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
-        except socket.timeout as to:
-            raise TimeoutError(f"Could not receive frame, camera timed out({self.timeout_s} s)")
-
+        except socket.timeout:
+            raise TimeoutError(f"TCP data interface timed out")
+          
         return data_buffer, byteCount
 
 class UdpInterface:
@@ -195,6 +223,25 @@ class UdpInterface:
         self.data = bytearray()
         self.index = 0
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
+        # Important if camera supports large data and streaming modes:
+        #
+        # Read back the buffer size
+        # recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        # print(f"Receive buffer size: {recv_buf_size} bytes")
+        # self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+        # if recv_buf_size < 1024 * 1024:
+        #     #Set receive buffer size to 1MB
+        #     try:
+        #         self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+        #         print("[Unix] Set receive buffer size to 1MB")
+        #     except (AttributeError, OSError):
+        #         # SO_RCVBUF setting may not be available on all platforms
+        #         pass
+        # recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        # print(f"Receive buffer size adjusted: {recv_buf_size} bytes")
+
         self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udpSocket.bind(('', self.port))
         self.udpSocket.settimeout(1)
@@ -209,8 +256,7 @@ class UdpInterface:
             try:
                 udpPacket, (ipAddress, _) = self.udpSocket.recvfrom(4096)
             except socket.timeout:
-                print('udp interface timeout')
-                break
+                raise TimeoutError(f"UDP data interface timed out")
 
             if ipAddress != self.ip_address:
                 continue
@@ -270,7 +316,7 @@ class TraceInterface:
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-
+        
         # Start logging thread
         self._thread = Thread(target=self._logTraceData)
 
@@ -279,7 +325,7 @@ class TraceInterface:
         if self.logging:
             self.logger.warning('Trace logging is already running.')
             return
-
+        
         if logFile:
             self.setLogFile(logFile)
 
