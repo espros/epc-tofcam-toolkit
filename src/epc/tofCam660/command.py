@@ -244,6 +244,9 @@ class GetDataTransferProtocol(Command):
 class SetHwTriggerDataType(Command):
     commandId = 59
 
+class SetRollingMode(Command):
+    commandId = 60
+
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
             'getDistanceAndAmplitude': GetDistanceAndAmplitude,
@@ -278,4 +281,5 @@ commands = {'setRoi': SetRoi,
             'setDataTransferProtocol' : SetDataTransferProtocol,
             'getDataTransferProtocol' : GetDataTransferProtocol,
             'setHwTriggerDataType': SetHwTriggerDataType,
+            'setRollingMode': SetRollingMode, 
             }

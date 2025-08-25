@@ -116,7 +116,7 @@ class TOFcam660(TOFcam):
                                         setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
         self.settings.set_binning(0)
-        self.get_raw_dcs_images()  # trigger first image to initialize the camera
+        #self.get_raw_dcs_images()  # trigger first image to initialize the camera
 
     def get_flex_mod_distance_amplitude_dcs(self, 
                                             calibData: dict, 
@@ -549,6 +549,14 @@ class TOFcam660_Settings(TOF_Settings_Controller):
             raise ValueError(f"Invalid data type: {data_type}")
         log.info(f"Setting HW trigger data type: {data_type}")
         self.cam.tcpInterface.transceive(Command.create("setHwTriggerDataType", data_type))
+
+    def set_rolling_mode(self, enable: bool):
+        """Set camera to the rolling acquisition mode
+        Args:
+            enable (bool): , 0: disbaled, 1: enabled
+        """
+        log.info(f"Setting rolling mode: {enable}")
+        self.cam.tcpInterface.transceive(Command.create("setRollingMode", enable))
 
     def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True,
                                  segment_4_on: bool = True, segment_2_to_4: bool = True):
