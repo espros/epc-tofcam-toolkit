@@ -53,9 +53,9 @@ class TOFcam660(TOFcam):
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
         self._version = self.device.get_fw_version()
-        self._calibData = self.device.get_calibration_data()
-        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
-        assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
+        # self._calibData = self.device.get_calibration_data()
+        # self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
+        # assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
 
         self.frame = None
 
