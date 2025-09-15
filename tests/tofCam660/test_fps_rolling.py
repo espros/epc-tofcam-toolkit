@@ -16,7 +16,7 @@ from epc.tofCam660.parser import Frame
 os.makedirs("logs", exist_ok=True)
 
 protocol = 'UDP'  # Default protocol
-rollingmode = True
+rollingmode = 1   # 0: Disabled, 1: 1DCS Rolling Mode, 2: 2DCS Rolling Mode
 
 # Configure logging to write to a file
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -37,7 +37,7 @@ log.addHandler(file_handler)
 
 
 NUMBER_FPS_TEST_LOOPS = 50
-INTEGRATION_TIME_CONFIG_LIST = [(4000, 10, 1900, 46667)]
+INTEGRATION_TIME_CONFIG_LIST = [(46667, 10, 1900, 4000)]
 INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
 INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST)
 

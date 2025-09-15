@@ -550,13 +550,15 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting HW trigger data type: {data_type}")
         self.cam.tcpInterface.transceive(Command.create("setHwTriggerDataType", data_type))
 
-    def set_rolling_mode(self, enable: bool):
+    def set_rolling_mode(self, mode: int):
         """Set camera to the rolling acquisition mode
         Args:
-            enable (bool): , 0: disbaled, 1: enabled
+            mode (int): 0: disabled, 1: 1DCS Rolling Mode, 2: 2DCS Rolling Mode
         """
-        log.info(f"Setting rolling mode: {enable}")
-        self.cam.tcpInterface.transceive(Command.create("setRollingMode", enable))
+        if mode not in [0, 1, 2]:
+            raise ValueError(f"Invalid Rolling mode value: {mode}")
+        log.info(f"Setting rolling mode: {mode}")
+        self.cam.tcpInterface.transceive(Command.create("setRollingMode", mode))
 
     def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True,
                                  segment_4_on: bool = True, segment_2_to_4: bool = True):
