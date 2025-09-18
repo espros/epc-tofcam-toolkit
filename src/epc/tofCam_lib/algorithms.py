@@ -35,10 +35,23 @@ def diff_dcs(dcs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     if dcs.shape[0] != 4:
         raise ValueError('dcs must have shape (4, height, width)')
 
-    cx = dcs[0] - dcs[2]
-    cy = dcs[1] - dcs[3]
+    cx = dcs[2] - dcs[0]
+    cy = dcs[3] - dcs[1]
 
     return cx, cy
+
+
+def calc_phase(cx: np.ndarray, cy: np.ndarray) -> np.ndarray:
+    """Calculate the phase from cx, cy pair
+
+    Args:
+        cx (np.ndarray): dcs image in x direction
+        cy (np.ndarray): dcs image in y direction
+
+    Returns:
+        np.ndarray: phase image
+    """
+    return np.array(np.arctan2(cy, cx))
 
 
 def calc_distance(cx: np.ndarray, cy: np.ndarray, mod_freq_hz: float) -> np.ndarray:
@@ -52,8 +65,8 @@ def calc_distance(cx: np.ndarray, cy: np.ndarray, mod_freq_hz: float) -> np.ndar
     Returns:
         np.ndarray: distance image in mm
     """
-    phi = np.arctan2(cy, cx)
-    return 1E3 * np.array(phi) * C / (4*np.pi*mod_freq_hz)  # distance in mm
+    phi = calc_phase(cx, cy) + np.pi  # shift phase to [0, 2*pi]
+    return 1E3 * phi * C / (4*np.pi*mod_freq_hz)  # distance in mm
 
 
 def calc_unambiguity_distance(mod_freq_hz: float) -> float:
