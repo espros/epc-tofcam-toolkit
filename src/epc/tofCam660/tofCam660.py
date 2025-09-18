@@ -116,7 +116,7 @@ class TOFcam660(TOFcam):
                                             modFreq_MHz: int, 
                                             minAmp: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Acquire a DCS image with a flexibly chosen modulation frequency and calculate the distance and amplitude images from it."""
-        log.info(f"Get image with modulation frequency {modFreq_MHz} MHz.")
+        log.debug(f"Get image with modulation frequency {modFreq_MHz} MHz.")
         dcs = self.get_raw_dcs_images()
         temp = self.device.get_chip_temperature()
 
