@@ -2,6 +2,7 @@ import numpy as np
 import logging
 import time
 from typing import Literal
+import atexit
 
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.decorator import requires_fw_version
@@ -55,9 +56,14 @@ class TOFcam660(TOFcam):
         self._calibData = self.device.get_calibration_data()
         self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
         assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
+        atexit.register(self.__restore_settings)
 
         self.frame = None
 
+    def __restore_settings(self):
+        if hasattr(self, "settings") and self.settings:
+            self.settings._restore_dll_settings()
+            self.settings._restore_abs_setting()
 
     def __del__(self):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
@@ -104,7 +110,7 @@ class TOFcam660(TOFcam):
         self.settings.set_binning(0)
         self.get_raw_dcs_images()  # trigger first image to initialize the camera
 
-    @requires_fw_version(min_version='3.50')
+    @requires_fw_version(min_version='3.51')
     def get_flex_mod_distance_amplitude_dcs(self, 
                                             calibData: dict, 
                                             modFreq_MHz: int, 
