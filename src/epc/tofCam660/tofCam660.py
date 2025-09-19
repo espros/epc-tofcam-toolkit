@@ -2,6 +2,7 @@ import numpy as np
 import logging
 import time
 from typing import Literal
+import atexit
 
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.decorator import requires_fw_version
@@ -55,9 +56,14 @@ class TOFcam660(TOFcam):
         self._calibData = self.device.get_calibration_data()
         self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
         assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
+        atexit.register(self.__restore_settings)
 
         self.frame = None
 
+    def __restore_settings(self):
+        if hasattr(self, "settings") and self.settings:
+            self.settings._restore_dll_settings()
+            self.settings._restore_abs_setting()
 
     def __del__(self):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
@@ -104,32 +110,20 @@ class TOFcam660(TOFcam):
         self.settings.set_binning(0)
         self.get_raw_dcs_images()  # trigger first image to initialize the camera
 
+    @requires_fw_version(min_version='3.51')
     def get_flex_mod_distance_amplitude_dcs(self, 
                                             calibData: dict, 
                                             modFreq_MHz: int, 
-                                            int_time_us, 
                                             minAmp: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        logging.info(f"get image with modulation frequency {modFreq_MHz} MHz and integration time {int_time_us} us")
-        actIntTime = self.settings.intTime_us
-
-        # prepare camera settings to calibrated temperature
-        # Could be handled in the camera firmware but for now we do it here
-        self.settings.set_integration_time(0)
-        self.settings.set_modulation(calibData['modulation(MHz)'], 0)
-        self.get_distance_and_amplitude()
-
-        # adjust integration time relative to calibrated modulation frequency
-        # Could be handled in the camera firmware but for now we do it here
-        adjusted_int_time_us = int_time_us * (modFreq_MHz / calibData['modulation(MHz)'])
-        self.settings.set_integration_time(int(adjusted_int_time_us))
-        self.settings.intTime_us = actIntTime
-
-        # get dcs at frequency
-        self.settings.set_flex_mod_freq(modFreq_MHz, delay=0.01)
+        """Acquire a DCS image with a flexibly chosen modulation frequency and calculate the distance and amplitude images from it."""
+        log.debug(f"Get image with modulation frequency {modFreq_MHz} MHz.")
         dcs = self.get_raw_dcs_images()
-
         temp = self.device.get_chip_temperature()
 
+        # create masks for certain flags (part 1/2)
+        mask_overflow = np.logical_or.reduce(dcs == 64002)
+        mask_saturation = np.logical_or.reduce(dcs == 64003)
+        
         # filter invalid values
         dcs = dcs.astype(np.float32)
         dcs[dcs >= MAX_DCS_VALUE] = np.nan
@@ -139,6 +133,9 @@ class TOFcam660(TOFcam):
         diff1 = dcs[3] - dcs[1]
         amplitude = np.sqrt(diff0**2 + diff1**2) / 2
 
+        # create masks for certain flags (part 2/2)
+        mask_low_amplitude = amplitude <= minAmp
+        
         # calculate phase
         phi = np.arctan2(diff1, diff0) + np.pi
         phi[amplitude < minAmp] = np.nan 
@@ -151,7 +148,19 @@ class TOFcam660(TOFcam):
         temp_offset = (calibData['calibrated_temperature(mDeg)']/1000 - temp) * TOF_COS_TEMPERATURE_COEFFICIENT
         distance = distance + (6250 - calibData['atan_offset']) + temp_offset + CONST_OFFSET_CORRECTION
         
-        distance %= unambiguity_mm    # handle unambiguity steps
+        # handle unambiguity steps
+        distance %= unambiguity_mm
+
+        # apply the masks for the error codes (keep the order!)
+        amplitude[mask_overflow] = 64002
+        amplitude[mask_saturation] = 64003
+        distance[mask_low_amplitude] = 64001
+        distance[mask_overflow] = 64002
+        distance[mask_saturation] = 64003
+
+        # assign our calculated values to the frame
+        self.frame.amplitude = amplitude
+        self.frame.distance = distance
 
         return (distance, amplitude, dcs)
 
@@ -188,7 +197,6 @@ class TOFcam660(TOFcam):
         else:
             dist, amplitude, _ = self.get_flex_mod_distance_amplitude_dcs(self._calibData24Mhz, 
                                                                           self.settings.flexModFreq_MHz, 
-                                                                          self.settings.intTime_us,
                                                                           self.settings.minAmplitude
                                                                           )
             return dist, amplitude
@@ -635,218 +643,3 @@ class TOFcam660_Device(Dev_Infos_Controller):
             self.cam.rxInterface = UdpInterface(ip, port)
         else: # unknown
             raise ValueError(f"{transferInterface} is not a valid rx_interface. Select either \'UDP\' or \'TCP\'")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
