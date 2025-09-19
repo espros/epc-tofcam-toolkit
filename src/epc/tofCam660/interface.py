@@ -228,19 +228,19 @@ class UdpInterface:
         # Important if camera supports large data and streaming modes:
         #
         # Read back the buffer size
-        # recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-        # print(f"Receive buffer size: {recv_buf_size} bytes")
-        # self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
-        # if recv_buf_size < 1024 * 1024:
-        #     #Set receive buffer size to 1MB
-        #     try:
-        #         self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
-        #         print("[Unix] Set receive buffer size to 1MB")
-        #     except (AttributeError, OSError):
-        #         # SO_RCVBUF setting may not be available on all platforms
-        #         pass
-        # recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-        # print(f"Receive buffer size adjusted: {recv_buf_size} bytes")
+        recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        print(f"Receive buffer size: {recv_buf_size} bytes")
+        self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+        if recv_buf_size < 1024 * 1024:
+            #Set receive buffer size to 1MB
+            try:
+                self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+                print("[Unix] Set receive buffer size to 1MB")
+            except (AttributeError, OSError):
+                # SO_RCVBUF setting may not be available on all platforms
+                pass
+        recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        print(f"Receive buffer size adjusted: {recv_buf_size} bytes")
         
         self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udpSocket.bind(('', self.port))
