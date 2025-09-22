@@ -85,19 +85,6 @@ class TOFcam660(TOFcam):
             raise RuntimeError("Failed to receive image data")
         return frame_data
 
-    def __wait_for_image_data(self):
-        """This function is used to wait until one image is being received from the camera after
-        hw trigger gpio is used capture a new frame"""
-        nBytes = 0
-        while(True):
-            try:
-                frame_data, nBytes = self.rxInterface.receiveFrame()
-            except Exception as e:
-                continue
-            if nBytes > 0:
-                break
-        return frame_data
-
     def _is_fw_version_greater_than_or_equal(self, major: int, minor: int) -> bool:
         firmware_values = self.device.get_fw_version_values()
         if firmware_values['major'] > major:
@@ -258,40 +245,6 @@ class TOFcam660(TOFcam):
         points = 1E-3 * self.settings.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
-
-    def get_hw_trigger_image(self, data_type: int) -> Union[tuple[np.ndarray, np.ndarray], np.ndarray]:
-        """
-        Wait until the hardware trigger data frame is received
-
-        Args:
-            data_type (int):
-                0 → return (distance, amplitude) as tuple[np.ndarray, np.ndarray]
-                1 → return distance as np.ndarray
-                3 → return amplitude (grayscale) as np.ndarray
-                4 → return 4DCS as np.ndarray
-
-        Returns:
-            tuple[np.ndarray, np.ndarray] | np.ndarray:
-        """
-        raw_data = self.__wait_for_image_data()
-        if data_type == 0:
-            parser = DistanceAndAmplitudeParser()
-            frame = parser.parse(raw_data)
-            return frame.distance, frame.amplitude
-        elif data_type == 1:
-            parser = DistanceParser()
-            frame = parser.parse(raw_data)
-            return frame.distance
-        elif data_type == 3:
-            parser = GrayscaleParser()
-            frame = parser.parse(raw_data)
-            return frame.amplitude
-        elif data_type == 4:
-            parser = DcsParser()
-            frame = parser.parse(raw_data)
-            return frame.dcs
-        else:
-            raise ValueError(f"Invalid data_type: {data_type}")
 
 class TOFcam660_Settings(TOF_Settings_Controller):
     """The TOFcam660_Settings class is used to control the settings of the TOFcam660.
@@ -564,16 +517,6 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         """Set the lense type for the camera."""
         log.info(f"Setting lense type: {lense_type}")
         self.projector = RadialCameraProjector.from_lens_calibration(lense_type, self.roi[2], self.roi[3])
-
-    def set_hw_trigger_data_type(self, data_type: int):
-        """Set the data type to acquire using the hardware trigger
-        Args:
-            data_type (int): 0: distance,amplitude, 1: distance, 3: grayscale, 4: dcs
-        """
-        if data_type not in [0, 1, 3, 4]:
-            raise ValueError(f"Invalid data type: {data_type}")
-        log.info(f"Setting HW trigger data type: {data_type}")
-        self.cam.tcpInterface.transceive(Command.create("setHwTriggerDataType", data_type))
 
     def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True,
                                  segment_4_on: bool = True, segment_2_to_4: bool = True):

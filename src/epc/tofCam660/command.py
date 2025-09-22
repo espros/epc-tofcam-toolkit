@@ -241,9 +241,6 @@ class SetDataTransferProtocol(Command):
 class GetDataTransferProtocol(Command):
     commandId = 58
 
-class SetHwTriggerDataType(Command):
-    commandId = 59
-
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
             'getDistanceAndAmplitude': GetDistanceAndAmplitude,
@@ -277,5 +274,4 @@ commands = {'setRoi': SetRoi,
             'getIntegrationTime' : GetIntegrationTime,
             'setDataTransferProtocol' : SetDataTransferProtocol,
             'getDataTransferProtocol' : GetDataTransferProtocol,
-            'setHwTriggerDataType': SetHwTriggerDataType,
             }
