@@ -36,7 +36,7 @@ file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelnam
 log.addHandler(file_handler)
 
 
-NUMBER_FPS_TEST_LOOPS = 50
+NUMBER_FPS_TEST_LOOPS = 100
 INTEGRATION_TIME_CONFIG_LIST = [(46667, 10, 1900, 4000)]
 INTEGRATION_TIME_CONFIG_LIST_NOISE_BARRIER_ITERATIONS = 4
 INTEGRATION_TIME_CONFIG_LIST_TOTAL_ITERATIONS = len(INTEGRATION_TIME_CONFIG_LIST)
@@ -77,8 +77,12 @@ class TofCam660Device:
         # capture distance images with the hw trigger
         self.tofcam660.settings.set_hw_trigger_data_type(1) 
 
+        # Clear any remaining stale UDP data before FPS measurement
+        if hasattr(self.tofcam660.rxInterface, 'clearInputBuffer'):
+            self.tofcam660.rxInterface.clearInputBuffer()
+        
         frame_times = []
-        for frame in range(100):
+        for frame in range(NUMBER_FPS_TEST_LOOPS):
             t0 = time.perf_counter()
             d = self.tofcam660.get_hw_trigger_image(1)
             t1 = time.perf_counter()
