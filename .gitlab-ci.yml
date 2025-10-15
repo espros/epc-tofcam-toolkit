@@ -17,10 +17,12 @@ stages:
   - test
   - deploy
 
-code-analysis:
-  stage: test
+default:
   tags: 
     - shell-executor
+
+code-analysis:
+  stage: test
   allow_failure: true
   script:
     - pip install mypy mypy-gitlab-code-quality
@@ -42,8 +44,6 @@ build-job:
   artifacts:
     paths:
       - dist/*
-  tags: 
-    - shell-executor
 
 test-job:
   stage: test
@@ -57,8 +57,6 @@ test-job:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-  tags: 
-    - shell-executor
 
 test-tox:
   stage: test
@@ -73,8 +71,34 @@ deploy-test-pypi-job:
     - TWINE_PASSWORD=${CI_TEST_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload --repository testpypi dist/*
   only:
     - master
-  tags: 
-    - shell-executor
+
+deploy-devpi-test-job:
+  stage: deploy
+  variables:
+    DEVPI_TEST_INDEX: "http://devpi.espros.com/espros/test"
+    DEVPI_USERNAME: "espros"
+  script:
+    - pip install devpi-client
+    - devpi use $DEVPI_TEST_INDEX
+    - devpi login $DEVPI_USERNAME --password $DEVPI_PASSWORD
+    - devpi upload --formats sdist,wheel dist/*.whl dist/*.tar.gz
+    - devpi logout
+  only:
+    - master
+
+deploy-devpi-prod-job:
+  stage: deploy
+  variables:
+    DEVPI_PROD_INDEX: "http://devpi.espros.com/espros/prod"
+    DEVPI_USERNAME: "espros"
+  script:
+    - pip install devpi-client
+    - devpi use $DEVPI_PROD_INDEX
+    - devpi login $DEVPI_USERNAME --password $DEVPI_PASSWORD
+    - devpi upload --formats sdist,wheel dist/*.whl dist/*.tar.gz
+    - devpi logout
+  only:
+    - tags
 
 deploy-pypi-job:
   stage: deploy
@@ -82,5 +106,3 @@ deploy-pypi-job:
     - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload dist/*
   only:
     - tags
-  tags: 
-    - shell-executor

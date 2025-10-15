@@ -1,0 +1,116 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epc-tofcam-toolkit"
+dynamic = ["version"]
+description = "Toolkit for ESPROS TOFcam's"
+authors = [
+    { name = "Armin Kessler", email = "ake@espros.com" },
+    { name = "Matthias Mullis", email = "mmu@espros.com" },
+    { name = "Niluka Piyasinghe", email = "npi@espros.com" },
+    { name = "Silvio Honegger", email = "sho@espros.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE.txt" }
+keywords = [
+    "TOF",
+    "TOFcam",
+    "ESPROS",
+    "EPC",
+    "Toolkit",
+    "pointcloud",
+    "3D",
+    "time of flight",
+    "TOF camera"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=2.0.0",
+    "opencv-python>=4.10.0.84",
+    "pyserial>=3.5",
+    "scipy>=1.14.1",
+    "h5py",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.8.1,!=6.9.1",  # pyside6 v6.9.1 breaks pyqtgraph
+    "pyqtgraph>=0.13.7",
+    "PyQtDarkTheme-fork==2.3.4",
+    "qtconsole>=5.6.1",
+    "ipython>=8.30.0",
+    "pyopengl>=3.1.7",
+]
+dev = [
+    "matplotlib>=3.10.0",
+    "pytest>=8",
+    "mypy",
+    "tox>=4",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[project.urls]
+Homepage = "https://www.espros.com"
+Documentation = "https://epc-tofcam-toolkit.readthedocs.io/en/latest/"
+Source = "https://github.com/espros/epc-tofcam-toolkit"
+
+[project.scripts]
+tofcam660 = "epc.tofCam_gui.gui_tofCam660_bridge:main"
+tofcam635 = "epc.tofCam_gui.gui_tofCam635_bridge:main"
+tofcam611 = "epc.tofCam_gui.gui_tofCam611_bridge:main"
+tofrange611 = "epc.tofCam_gui.gui_tofCam611_bridge:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"epc.tofCam_lib" = ["bin/*"]
+"epc" = ["data/*"]
+"epc.tofCam_gui" = ["icons/*"]
+
+[tool.setuptools_scm]
+fallback_version = "0.1.1"
+version_scheme = "post-release"
+
+# Pytest configuration
+[tool.pytest.ini_options]
+addopts = '-m "not systemTest"'
+
+# MyPy configuration (optional - if you want to migrate from .mypy.ini)
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Build system configuration for Sphinx
+[tool.sphinx]
+source-dir = "docs/source"
+build-dir = "docs/build"
