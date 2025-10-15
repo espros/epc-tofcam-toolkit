@@ -286,11 +286,11 @@ class CommunicationType():
 
     def __init__(self):
         for item in [ self.Item(0x00, 4, "DATA_DISTANCE_AMPLITUDE"),
-            self.Item(0x01, 2, "DATA_DISTANCE"),
-            self.Item(0x02, 2, "DATA_AMPLITUDE"),
-            self.Item(0x03, 2, "DATA_GRAYSCALE"),
-            self.Item(0x04, 8, "DATA_DCS"),
-        ]:
+                      self.Item(0x01, 2, "DATA_DISTANCE"),
+                      self.Item(0x02, 2, "DATA_AMPLITUDE"),
+                      self.Item(0x03, 2, "DATA_GRAYSCALE"),
+                      self.Item(0x04, 8, "DATA_DCS"),
+                    ]:
             self.items_by_id[item.id] = item
             self.items_by_name[item.name] = item
 
