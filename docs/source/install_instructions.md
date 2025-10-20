@@ -13,14 +13,19 @@ Before you begin, ensure you have met the following requirements:
 To install the ESPROS TOFcam Toolkit follow these steps:
 
 1. Open your terminal.  
-2. "Optional" create a python virtual environment  
+2. "Optional" create a [python virtual environment](https://docs.python.org/3/library/venv.html)
 3. Use the package manager pip to install ESPROS TOFcam Toolkit:
 
 ```bash
 pip install epc-tofcam-toolkit
+
 ```
 
 ## Run the GUIs
+Since the GUI depends on a lot of bigger 3th party python packages, its installation is optional. 
+```bash
+pip install epc-tofcam-toolkit[gui]
+```
 After successfully installing the package with the commands above simple type the following commands in your terminal. 
 
 ```bash
