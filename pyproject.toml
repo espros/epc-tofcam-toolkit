@@ -93,6 +93,7 @@ where = ["src"]
 [tool.setuptools_scm]
 fallback_version = "0.1.1"
 version_scheme = "post-release"
+local_scheme = "no-local-version"
 
 # Pytest configuration
 [tool.pytest.ini_options]
