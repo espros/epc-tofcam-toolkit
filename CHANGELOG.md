@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-10-21
+
 ### TOFcam660
 - Added optional TCP interface for image transmission
 
