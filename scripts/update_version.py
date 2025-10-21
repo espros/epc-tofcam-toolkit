@@ -134,11 +134,11 @@ def determine_version_bump(latest_tag, major, minor, patch):
     for merge in merges:
         sha, message = merge.strip("'").split(' ', 1)
         lower_merge = message.lower()
-        if any(k in lower_merge for k in ['feature', 'dev']):
+        if any(k in lower_merge for k in ['feature/', 'dev/']):
             bump_type = "minor"
             print(f"Processing merge commit: {message} -> bumping minor")
             break  # Minor bump takes precedence
-        elif any(k in lower_merge for k in ['fix', 'refactor']):
+        elif any(k in lower_merge for k in ['fix/', 'refactor/']):
             bump_type = "patch"
             print(f"Processing merge commit: {message} -> bumping patch")
 
