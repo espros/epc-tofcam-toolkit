@@ -1,30 +1,26 @@
 import pytest
 from epc.tofCam611 import TOFcam611
-from epc.tofCam611.serialInterface import SerialInterface
+from ..config import DUT_CONFIG
 
-@pytest.fixture
+
+@pytest.fixture(scope='module')
 def cam():
-    cam = TOFcam611(SerialInterface() )
-    cam.powerOn()
+    # Get the list of configuration values to parametrize over
+    (cam_class, interface) = DUT_CONFIG["dut_TOFcam611"]
+    cam: TOFcam611 = cam_class(**interface)
+    cam.initialize()
     return cam
+
 
 @pytest.mark.systemTest
 class Test_TOFcam611:
-    def test_getChipInfos(self, cam):
-        chipId, waferId = cam.getChipInfo()
-
+    def test_getChipInfos(self, cam: TOFcam611):
+        chipId, waferId = cam.device.get_chip_infos()
         assert chipId != 0
         assert waferId != 0
         assert isinstance(chipId, int)
         assert isinstance(waferId, int)
-        
-
-    def test_getDevice(self, cam):
-        deviceType = cam.getDeviceType()
-
-        assert deviceType == "TOFframe"
-
-    def test_getPointCloud(self, cam):
-        pc = cam.getPointCloud()
-
+    
+    def test_getPointCloud(self, cam: TOFcam611):
+        pc = cam.get_point_cloud()
         assert pc.shape == (8*8, 3)

@@ -1,14 +1,18 @@
 import pytest
 from epc.tofCam660 import TOFcam660
 import time
+from ..config import DUT_CONFIG
+
 
 @pytest.fixture(scope="function")
-def tofCam():
-    tofcam = TOFcam660(ip_address='10.10.31.180')
-    init(tofcam)
-    yield tofcam
-    restart(tofcam)
-    tofcam.__del__()
+def cam():
+    # Get the list of configuration values to parametrize over
+    (cam_class, interface) = DUT_CONFIG["dut_TOFcam660"]
+    cam: TOFcam660 = cam_class(**interface)
+    init(cam)
+    yield cam
+    restart(cam)
+    cam.__del__()
 
 def restart(tofCam: TOFcam660):
     tofCam.device.system_reset()
@@ -31,16 +35,16 @@ def init(tofCam: TOFcam660):
 @pytest.mark.parametrize('execution_number', range(3))
 @pytest.mark.parametrize("capture_func", ["get_distance_and_amplitude"])
 @pytest.mark.parametrize('integration_times', [[12, 34, 56, 78]])
-def test_take_image(tofCam: TOFcam660, capture_func, integration_times, execution_number):
+def test_take_image(cam: TOFcam660, capture_func, integration_times, execution_number):
     # Image settings
-    tofCam.settings.set_integration_hdr(integration_times)
+    cam.settings.set_integration_hdr(integration_times)
 
     # Take image
-    getattr(tofCam, capture_func)()
+    getattr(cam, capture_func)()
 
     # Compare UDP answer of image just taken
-    meta = tofCam.frame
-    int_dict  = tofCam.settings.get_integration_time()
+    meta = cam.frame
+    int_dict  = cam.settings.get_integration_time()
 
     assert int_dict['grayscaleIntTime'] == integration_times[0]
     assert int_dict['lowIntTime'] == integration_times[1]

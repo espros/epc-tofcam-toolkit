@@ -2,17 +2,20 @@ import pytest
 from epc.tofCam660 import TOFcam660
 import time
 from typing import Literal
-
 import datetime
 import os
 import matplotlib.pyplot as plt
+from ..config import DUT_CONFIG
 
 
-@pytest.fixture(scope='module')
-def tofCam():
-    tofcam = TOFcam660()
-    tofcam.initialize()
-    return tofcam
+@pytest.fixture(scope="module")
+def cam():
+    # Get the list of configuration values to parametrize over
+    (cam_class, interface) = DUT_CONFIG["dut_TOFcam660"]
+    cam: TOFcam660 = cam_class(**interface)
+    cam.initialize()
+    return cam
+
 
 # How to run this test:
 #   pytest tests/tofCam660/test_benchmark.py -m manualTest -s
@@ -27,35 +30,35 @@ def tofCam():
 @pytest.mark.parametrize('integration_times', [[100, 10, 1900, 46667]])
 @pytest.mark.parametrize('number_of_captures', [100])
 @pytest.mark.parametrize('protocol', ['TCP', 'UDP',])
-def test_fps(tofCam: TOFcam660,
+def test_fps(cam: TOFcam660,
              protocol: Literal["UDP", "TCP"],
              capture_func: str,
              integration_times: list[int],
              number_of_captures: int):
     
     # setup camera
-    tofCam.settings.set_integration_hdr(integration_times)
-    tofCam.device.set_data_transfer_protocol(protocol)
-    tofCam.settings.set_hdr(False)
-    tofCam.settings.captureMode = 0
+    cam.settings.set_integration_hdr(integration_times)
+    cam.device.set_data_transfer_protocol(protocol)
+    cam.settings.set_hdr(False)
+    cam.settings.captureMode = 0
 
     # clock capturing of the image(s)
     capturing_rate = []
     for _ in range(number_of_captures):
         t0 = time.perf_counter()
-        getattr(tofCam, capture_func)()
+        getattr(cam, capture_func)()
         t1 = time.perf_counter()
         capturing_rate.append(1/(t1 - t0))
 
     # precautionally set protocol to default again
-    tofCam.device.set_data_transfer_protocol("UDP")
+    cam.device.set_data_transfer_protocol("UDP")
 
     # editing
     fps = sum(capturing_rate) / len(capturing_rate)
     print()
     print( "┌────────────────────────────┐")
     print( "│ Measurent setup:           │")
-    print(f"│   FW version :  {tofCam.device.get_fw_version()}       │")
+    print(f"│   FW version :  {cam.device.get_fw_version()}       │")
     print(f"│   Protocol   :  {protocol}        │")
     print(f"│   Sample size : {f'{number_of_captures} frames':<{11}}│")
     print( "├────────────────────────────┤")
@@ -71,7 +74,7 @@ def test_fps(tofCam: TOFcam660,
     plt.plot(capturing_rate, label='FPS per frame')
     plt.xlabel('Frame Number')
     plt.ylabel('FPS')
-    plt.title(f'FPS over {number_of_captures} frames, protocol: {protocol}, FW: {tofCam.device.get_fw_version()}')
+    plt.title(f'FPS over {number_of_captures} frames, protocol: {protocol}, FW: {cam.device.get_fw_version()}')
     plt.legend()
     plt.grid()
     plt.savefig(f"logs/FPS_plot_{protocol}_{timestamp}.png")
