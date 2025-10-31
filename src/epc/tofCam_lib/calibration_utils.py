@@ -4,7 +4,6 @@ from collections import deque
 from typing import Optional, Tuple
 
 import numpy as np
-
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.algorithms import *
 
@@ -38,7 +37,10 @@ def find_int_time_for_mean_amplitude(cam: TOFcam, target_amplitude: int, max_dev
 
         mean_amplitude = np.mean(amplitude)
         error = target_amplitude - mean_amplitude
-        int_time_us += int(int_time_us * error / target_amplitude)
+        # Adjust integration time based on error
+        x = int_time_us * error / target_amplitude
+        int_time_us += np.copysign(np.ceil(abs(x)), x)
+        int_time_us = int(max(int_time_us, 1))
         print(
             f"Integration time: {int_time_us} us, Mean amplitude: {mean_amplitude}, Error: {error}\r", end="")
 
@@ -149,7 +151,7 @@ def set_chip_temperature(cam: TOFcam, target_temp: float, max_deviation=MAX_ALLO
     return temp_diff
 
 
-def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps: int, calib_temp: float, n_frames=50, K=0.1) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps: int, calib_temp: float, n_frames=50, K=0.1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Collect calibration data for the camera by capturing multiple frames at different DLL steps.
     This function captures a specified number of frames at each DLL step and calculates the distance and amplitude for each frame.
 
@@ -165,10 +167,13 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
         Tuple[np.ndarray, np.ndarray, np.ndarray]: 
             - distances_mm: 4D array of shape (height, width, n_frames, n_dll_steps) containing distance images in mm
             - amplitudes_dn: 4D array of shape (height, width, n_frames, n_dll_steps) containing amplitude images in DN
+            - dcs_raw: 5D array of shape (4, height, width, n_frames, n_dll_steps) containing raw DCS images
             - temperatures_deg: 2D array of shape (n_frames, n_dll_steps) containing the chip temperature in degrees Celsius
     """
     x1, y1, x2, y2 = cam.settings.get_roi()
     resolution = (x2 - x1, y2 - y1)  # width, height
+    dcs_raw = np.empty(
+        (4, resolution[1], resolution[0], n_frames, n_dll_steps))
     distances_mm = np.empty(
         (resolution[1], resolution[0], n_frames, n_dll_steps))
     amplitudes_dn = np.empty(
@@ -182,10 +187,12 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
         for frame in np.arange(n_frames):
             print(
                 f"Capturing frame {frame + 1}/{n_frames} at DLL step {dll_step + 1}/{n_dll_steps}...", end="\r")
+            dcs = cam.get_raw_dcs_images()
             distance, amplitude = calc_distance_and_amplitude(
-                cam.get_raw_dcs_images(), modulation_freq_hz)
+                dcs, modulation_freq_hz)
             distances_mm[:, :, frame, dll_step] = distance
             amplitudes_dn[:, :, frame, dll_step] = amplitude
+            dcs_raw[:, :, :, frame, dll_step] = dcs
             cam.get_grayscale_image()  # get a grayscale image to update the temperature
             temp = cam.device.get_chip_temperature()
             temp_error = temp - calib_temp
@@ -194,7 +201,7 @@ def collect_calibration_data(cam: TOFcam, modulation_freq_hz: float, n_dll_steps
             temperatures_deg[frame,
                              dll_step] = temp
 
-    return distances_mm, amplitudes_dn, temperatures_deg
+    return distances_mm, amplitudes_dn, dcs_raw, temperatures_deg
 
 
 def calculate_offset_and_drnu_lut(distances: np.ndarray, modulation_freq_hz: float) -> Tuple[float, np.ndarray, np.ndarray]:
@@ -230,7 +237,8 @@ def calculate_offset_and_drnu_lut(distances: np.ndarray, modulation_freq_hz: flo
         (idx_closest_step_to_unambiguity)
 
     # Calculate DRNU LUT
-    ref_distances = np.arange(0, dll_step_mm * len(distances_dll), dll_step_mm)
+    ref_distances = np.linspace(
+        0, dll_step_mm * (len(distances_dll) - 1), len(distances_dll))
     drnu_lut = distance_corrected.mean(axis=2) - ref_distances
 
     return offset, drnu_lut, dll_step_mm
