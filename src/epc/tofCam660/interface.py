@@ -7,6 +7,8 @@ import logging
 from typing import Optional
 from epc.tofCam660.parser import Parser
 
+log = logging.getLogger('Interface')
+
 class NullInterface:
     def close(self):
         pass
@@ -223,24 +225,22 @@ class UdpInterface:
         self.data = bytearray()
         self.index = 0
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
         
         # Important if camera supports large data and streaming modes:
-        #
-        # Read back the buffer size
+        #  -> Trying to increase the receiving buffer of the UDP interface
+        minRecvBufSize = 1024 * 1024 # ... to 1MB
         recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-        print(f"Receive buffer size: {recv_buf_size} bytes")
-        self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
-        if recv_buf_size < 1024 * 1024:
-            #Set receive buffer size to 1MB
+        log.info(f"Receive buffer size: {recv_buf_size} bytes")
+        self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, minRecvBufSize)
+        if recv_buf_size < minRecvBufSize:
             try:
-                self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
-                print("[Unix] Set receive buffer size to 1MB")
+                self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, minRecvBufSize)
+                log.info(f"[Unix] Set receive buffer size to {minRecvBufSize} bytes")
             except (AttributeError, OSError):
                 # SO_RCVBUF setting may not be available on all platforms
                 pass
         recv_buf_size = self.udpSocket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-        print(f"Receive buffer size adjusted: {recv_buf_size} bytes")
+        log.info(f"Receive buffer size adjusted: {recv_buf_size} bytes")
         
         self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udpSocket.bind(('', self.port))

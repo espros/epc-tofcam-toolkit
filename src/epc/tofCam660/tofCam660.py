@@ -54,14 +54,13 @@ class TOFcam660(TOFcam):
         self.memory = Memory.create(0)
         self._version = self.device.get_fw_version()
         self._calibData = self.device.get_calibration_data()
-        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24), None)
-        assert self._calibData24Mhz is not None, "Calibration data for 24 MHz not found"
+        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24))
         atexit.register(self.__restore_settings)
 
         self.frame = None
 
     def __restore_settings(self):
-        if hasattr(self, "settings") and self.settings:
+        if hasattr(self, "settings") and self.settings and self.tcpInterface and not self.tcpInterface.is_socket_closed():
             self.settings._restore_dll_settings()
             self.settings._restore_abs_setting()
 
@@ -93,13 +92,6 @@ class TOFcam660(TOFcam):
         self.settings.set_hdr(0)
         self.settings.set_modulation(frequency_mhz=3, channel=0)
         self.settings.set_integration_hdr([25, 16, 0, 0])
-        integrationTimes = self.settings.get_integration_time()
-        assert integrationTimes['grayscaleIntTime'] == 25, "Grayscale integration time not set correctly"
-        assert integrationTimes['lowIntTime'] == 16, "Low integration time not set correctly"
-        assert integrationTimes['midIntTime'] == 0, "Mid integration time not set correctly"
-        assert integrationTimes['highIntTime'] == 0, "High integration time not set correctly"
-
-
         self.settings.set_minimal_amplitude(100)
         self.settings.disable_filters()
         self.settings.set_compensations(setDrnuCompensation=True,
@@ -452,6 +444,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info('Disabling filters')
         self.set_filters(False, False, 0, 0, 0, 0, False)
 
+    @requires_fw_version(min_version='3.27')
     def set_flex_mod_freq(self, frequency_mhz: int|float, delay = 0.1):
         self._clear_dll_settings() # Will be implemented in fw in the next release
         cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
@@ -501,6 +494,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Setting lense type: {lense_type}")
         self.projector = RadialCameraProjector.from_lens_calibration(lense_type, self.roi[2], self.roi[3])
 
+    @requires_fw_version(min_version='3.25')
     def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True,
                                  segment_4_on: bool = True, segment_2_to_4: bool = True):
         """Set the illuminator segments for the camera."""
@@ -523,6 +517,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Command: {set_illuminator_cmd.toBytes()}")
         self.cam.tcpInterface.transceive(set_illuminator_cmd)
 
+    @requires_fw_version(min_version='3.36')
     def get_integration_time(self, ) -> list[dict]:
         """Get the integration time(grayscale & 3D) from the camera."""
         log.info(f"Reading integration time")
@@ -608,6 +603,7 @@ class TOFcam660_Device(Dev_Infos_Controller):
             )
         )
 
+    @requires_fw_version(min_version='3.29')
     def get_calibration_data(self, ) -> list[dict]:
         """Get the calibration data(calibrated modulation freq., temperature, atan offset) from the camera."""
         log.info(f"Reading calibration data")
