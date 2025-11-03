@@ -6,6 +6,8 @@ from ..config import DUT_CONFIG
 @pytest.fixture(scope='module')
 def cam():
     # Get the list of configuration values to parametrize over
+    if "dut_TOFcam611" not in DUT_CONFIG:
+        pytest.skip('Camera unavailable for this test.')
     (cam_class, interface) = DUT_CONFIG["dut_TOFcam611"]
     cam: TOFcam611 = cam_class(**interface)
     cam.initialize()
@@ -22,5 +24,6 @@ class Test_TOFcam611:
         assert isinstance(waferId, int)
     
     def test_getPointCloud(self, cam: TOFcam611):
-        pc = cam.get_point_cloud()
-        assert pc.shape == (8*8, 3)
+        points, amplitude = cam.get_point_cloud()
+        assert points.shape == (3, 8 * 8)
+        assert amplitude.shape == (8 * 8,)

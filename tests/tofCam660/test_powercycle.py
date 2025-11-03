@@ -7,6 +7,8 @@ from ..config import DUT_CONFIG
 @pytest.fixture(scope="function")
 def cam():
     # Get the list of configuration values to parametrize over
+    if "dut_TOFcam660" not in DUT_CONFIG:
+        pytest.skip('Camera unavailable for this test.')
     (cam_class, interface) = DUT_CONFIG["dut_TOFcam660"]
     cam: TOFcam660 = cam_class(**interface)
     init(cam)
