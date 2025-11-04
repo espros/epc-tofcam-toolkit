@@ -1,23 +1,16 @@
 import pytest
 import numpy as np
 from epc.tofCam_lib import TOFcam
-from .config import DUT_CONFIG
+from .config import DUT_FIXTURES, cam660, cam635, cam611, camrange
 
 
-# Get the list of configuration values to parametrize over
-CAMERA_NAMES = list(DUT_CONFIG.keys()) 
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def cam(request):
-    cam_class, interface = DUT_CONFIG[request.param]
-    cam: TOFcam = cam_class(**interface)
-    cam.initialize()
-    return cam
+    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.systemTest
-@pytest.mark.parametrize("cam", CAMERA_NAMES, indirect=True)
+@pytest.mark.parametrize("cam", DUT_FIXTURES, indirect=True)
 class Test_general_calls:
     def test_capturing(self, cam: TOFcam):
         gray = cam.get_grayscale_image()

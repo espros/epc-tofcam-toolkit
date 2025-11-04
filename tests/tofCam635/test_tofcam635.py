@@ -1,17 +1,6 @@
 import pytest
 from epc.tofCam635 import TOFcam635
-from ..config import DUT_CONFIG
-
-
-@pytest.fixture(scope='module')
-def cam():
-    # Get the list of configuration values to parametrize over
-    if "dut_TOFcam635" not in DUT_CONFIG:
-        pytest.skip('Camera unavailable for this test.')
-    (cam_class, interface) = DUT_CONFIG["dut_TOFcam635"]
-    cam: TOFcam635 = cam_class(**interface)
-    cam.initialize()
-    return cam
+from ..config import cam635 as cam
 
 
 @pytest.mark.systemTest

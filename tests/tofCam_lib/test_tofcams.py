@@ -3,23 +3,16 @@ from epc.tofCam660 import TOFcam660
 from epc.tofCam635 import TOFcam635
 from epc.tofCam611 import TOFcam611
 from epc.tofCam_lib import TOFcam
-from ..config import DUT_CONFIG
+from ..config import DUT_FIXTURES, cam660, cam635, cam611, camrange
 
 
-# Get the list of configuration values to parametrize over
-CAMERA_NAMES = list(DUT_CONFIG.keys()) 
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def cam(request):
-    cam_class, interface = DUT_CONFIG[request.param]
-    cam: TOFcam = cam_class(**interface)
-    cam.initialize()
-    return cam
+    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.systemTest
-@pytest.mark.parametrize("cam", CAMERA_NAMES, indirect=True)
+@pytest.mark.parametrize("cam", DUT_FIXTURES, indirect=True)
 class Test_general_calls:
     def test_has_attributes(self, cam: TOFcam):
         assert hasattr(cam, 'settings')
@@ -38,7 +31,7 @@ class Test_general_calls:
 
 
 @pytest.mark.systemTest
-@pytest.mark.parametrize("cam", CAMERA_NAMES, indirect=True)
+@pytest.mark.parametrize("cam", DUT_FIXTURES, indirect=True)
 class Test_setting_calls:
     def test_set_roi(self, cam: TOFcam):
         if isinstance(cam, TOFcam611):
@@ -49,7 +42,7 @@ class Test_setting_calls:
         if isinstance(cam, TOFcam635):
             rois = [
                 (0, 0, 160, 60), # l=160px, h=60px
-                (4, 26, 156, 34)  # l=152px, h=8px
+                (4, 4, 156, 12)  # l=152px, h=8px
             ]
         if isinstance(cam, TOFcam660):
             rois = [
@@ -94,7 +87,7 @@ class Test_setting_calls:
 
 
 @pytest.mark.systemTest
-@pytest.mark.parametrize("cam", CAMERA_NAMES, indirect=True)
+@pytest.mark.parametrize("cam", DUT_FIXTURES, indirect=True)
 class Test_device_calls:
     def test_get_chip_informations(self, cam: TOFcam):
         chip_id, wafer_id = cam.device.get_chip_infos()
