@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### TOFcam660
+- Add flexible modulation frequency
+- Add command for controlling illumination segments
+- Add readout of calibration data
+- Add saturation detection
+
 ## [0.2.0] - 2025-10-21
 
 ### TOFcam660
