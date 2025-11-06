@@ -17,3 +17,4 @@ tmp
 .mypy_cache
 copyData.sh
 copyPlots.sh
+.coverage
