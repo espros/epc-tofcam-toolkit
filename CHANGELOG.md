@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-11-07
+
 ### TOFcam660
 - Add flexible modulation frequency
 - Add command for controlling illumination segments
