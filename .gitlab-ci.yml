@@ -61,7 +61,7 @@ test-job:
   stage: test
   script:
     - pip install . 
-    - pytest -m "not systemTest" --cov=src --cov-report term --cov-report xml:coverage.xml --junitxml=test_report.xml
+    - pytest -m "not manualTest" --verbose --tb=short --cov=src --cov-report term --cov-report xml:coverage.xml --junitxml=test_report.xml
   coverage: '/TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     reports:

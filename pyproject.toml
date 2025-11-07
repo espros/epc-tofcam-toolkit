@@ -97,7 +97,12 @@ local_scheme = "no-local-version"
 
 # Pytest configuration
 [tool.pytest.ini_options]
-addopts = '-m "not systemTest"'
+testpaths = "test"
+markers = [
+    "systemTest: test marked as system will need a camera.",
+    "manualTest: test marked as manual will not be carried out in CI/CD pipeline, etc."
+]
+addopts = '-m "not (systemTest or manualTest)"'
 
 # MyPy configuration (optional - if you want to migrate from .mypy.ini)
 [tool.mypy]

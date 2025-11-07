@@ -1,6 +1,8 @@
 import numpy as np
 import logging
+import time
 from typing import Literal
+import atexit
 
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.decorator import requires_fw_version
@@ -23,6 +25,14 @@ DEFAULT_DATA_RX_PORT = 45454
 DEFAULT_MAX_DEPTH = 16000
 DEFAULT_MAX_AMP = 2894
 
+MAX_DCS_VALUE = 64000
+C = 299792458
+TOF_COS_DISTANCE_CHIP_TO_FRONT = 28.0
+TOF_COS_CALIBRATION_BOX_LENGTH = 330.0
+TOF_COS_TEMPERATURE_COEFFICIENT = 12.9 + 4.6
+
+CONST_OFFSET_CORRECTION = TOF_COS_CALIBRATION_BOX_LENGTH-TOF_COS_DISTANCE_CHIP_TO_FRONT - 7/8*12500
+
 log = logging.getLogger('TOFcam660')
 
 class TOFcam660(TOFcam):
@@ -43,6 +53,16 @@ class TOFcam660(TOFcam):
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
         self._version = self.device.get_fw_version()
+        self._calibData = self.device.get_calibration_data()
+        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24))
+        atexit.register(self.__restore_settings)
+
+        self.frame = None
+
+    def __restore_settings(self):
+        if hasattr(self, "settings") and self.settings and self.tcpInterface and not self.tcpInterface.is_socket_closed():
+            self.settings._restore_dll_settings()
+            self.settings._restore_abs_setting()
 
     def __del__(self):
         if self.tcpInterface and not self.tcpInterface.is_socket_closed():
@@ -65,40 +85,113 @@ class TOFcam660(TOFcam):
         return frame_data
 
     def initialize(self):
-        self.settings.set_modulation(12)
+        self.settings._store_dll_settings()
+        self.settings._store_abs_setting()
+        self.settings.set_modulation(3)
         self.settings.set_roi((0, 0, 320, 240))
-        self.settings.set_hdr(2)
-        self.settings.set_modulation(frequency_mhz=12, channel=0)
-        self.settings.set_integration_hdr([25, 40, 400, 2000])
+        self.settings.set_hdr(0)
+        self.settings.set_modulation(frequency_mhz=3, channel=0)
+        self.settings.set_integration_hdr([25, 16, 0, 0])
         self.settings.set_minimal_amplitude(100)
         self.settings.disable_filters()
+        self.settings.set_compensations(setDrnuCompensation=True,
+                                        setTemperatureCompensation=True,
+                                        setAmbientLightCompensation=True,
+                                        setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
+        self.settings.set_binning(0)
+        self.get_raw_dcs_images()  # trigger first image to initialize the camera
+
+    @requires_fw_version(min_version='3.51')
+    def get_flex_mod_distance_amplitude_dcs(self, 
+                                            calibData: dict, 
+                                            modFreq_MHz: int, 
+                                            minAmp: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Acquire a DCS image with a flexibly chosen modulation frequency and calculate the distance and amplitude images from it."""
+        log.debug(f"Get image with modulation frequency {modFreq_MHz} MHz.")
+        dcs = self.get_raw_dcs_images()
+        temp = self.device.get_chip_temperature()
+
+        # create masks for certain flags (part 1/2)
+        mask_overflow = np.logical_or.reduce(dcs == 64002)
+        mask_saturation = np.logical_or.reduce(dcs == 64003)
+        
+        # filter invalid values
+        dcs = dcs.astype(np.float32)
+        dcs[dcs >= MAX_DCS_VALUE] = np.nan
+
+        # calculate amplitude
+        diff0 = dcs[2] - dcs[0]
+        diff1 = dcs[3] - dcs[1]
+        amplitude = np.sqrt(diff0**2 + diff1**2) / 2
+
+        # create masks for certain flags (part 2/2)
+        mask_low_amplitude = amplitude <= minAmp
+        
+        # calculate phase
+        phi = np.arctan2(diff1, diff0) + np.pi
+        phi[amplitude < minAmp] = np.nan 
+
+        # calculate distance
+        unambiguity_mm = (C / (2 * modFreq_MHz * 1E6)) * 1000
+        distance = (phi * unambiguity_mm) / (2 * np.pi)
+
+        # compensate offsets
+        temp_offset = (calibData['calibrated_temperature(mDeg)']/1000 - temp) * TOF_COS_TEMPERATURE_COEFFICIENT
+        distance = distance + (6250 - calibData['atan_offset']) + temp_offset + CONST_OFFSET_CORRECTION
+        
+        # handle unambiguity steps
+        distance %= unambiguity_mm
+
+        # apply the masks for the error codes (keep the order!)
+        amplitude[mask_overflow] = 64002
+        amplitude[mask_saturation] = 64003
+        distance[mask_low_amplitude] = 64001
+        distance[mask_overflow] = 64002
+        distance[mask_saturation] = 64003
+
+        # assign our calculated values to the frame
+        self.frame.amplitude = amplitude
+        self.frame.distance = distance
+
+        return (distance, amplitude, dcs)
 
     def get_grayscale_image(self) -> np.ndarray:
         """ "Get a grayscale image from the camera as a 2d numpy array"""
         parser = GrayscaleParser()
         get_gray_command = Command.create("getGrayscale", self.settings.captureMode)
         raw_data = self.__get_image_date(get_gray_command)
-        amplitude =  parser.parse(raw_data).amplitude
-        return amplitude
+        self.frame = parser.parse(raw_data)
+        return self.frame.amplitude
 
     def get_distance_image(self) -> np.ndarray:
         """Get a distance image from the camera as a 2d numpy array. The distance is in mm."""
-        parser = DistanceParser()
-        get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
-        raw_data = self.__get_image_date(get_dist_cmd)
-        distance =  parser.parse(raw_data).distance
-        return distance
+        if not self.settings.flexMod:
+            parser = DistanceParser()
+            get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
+            raw_data = self.__get_image_date(get_dist_cmd)
+            self.frame = parser.parse(raw_data)
+            return self.frame.distance
+        else:
+            dist, _, = self.get_distance_and_amplitude()
+            return dist
 
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
-        parser = DistanceAndAmplitudeParser()
-        get_dist_amp_cmd = Command.create(
-            "getDistanceAndAmplitude", self.settings.captureMode
-        )
-        raw_data = self.__get_image_date(get_dist_amp_cmd)
-        frame = parser.parse(raw_data)
-        return frame.distance, frame.amplitude
+        if not self.settings.flexMod:
+            parser = DistanceAndAmplitudeParser()
+            get_dist_amp_cmd = Command.create(
+                "getDistanceAndAmplitude", self.settings.captureMode
+            )
+            raw_data = self.__get_image_date(get_dist_amp_cmd)
+            self.frame = parser.parse(raw_data)
+            return self.frame.distance, self.frame.amplitude
+        else:
+            dist, amplitude, _ = self.get_flex_mod_distance_amplitude_dcs(self._calibData24Mhz, 
+                                                                          self.settings.flexModFreq_MHz, 
+                                                                          self.settings.minAmplitude
+                                                                          )
+            return dist, amplitude
 
     def get_amplitude_image(self) -> np.ndarray:
         """Get an amplitude image from the camera as a 2d numpy array."""
@@ -109,8 +202,9 @@ class TOFcam660(TOFcam):
         parser = DcsParser()
         get_dcs_cmd = Command.create("getDcs", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dcs_cmd)
-        return parser.parse(raw_data).dcs
-    
+        self.frame = parser.parse(raw_data)
+        return self.frame.dcs
+
     def get_point_cloud(self) -> np.ndarray:
         """Returns a tuple holding point cloud from the camera as a 3xN numpy array and the corresponding amplitude values."""
         # capture depth image & corrections
@@ -140,6 +234,46 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         self.__hdr_mode = 0
         self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', self.roi[2], self.roi[3])
         self.maxDepth = DEFAULT_MAX_DEPTH
+        self.flexMod = False
+        self.flexModFreq_MHz = 0.0
+        self.intTime_us = 0
+        self.minAmplitude = 0
+        self.dllRegisterSettings = {
+            0x71: 0x00,
+            0x72: 0x00,
+            0x73: 0x00,
+            0x8b: 0x00,
+            0x93: 0x00        }
+        self.absRegisterSetting = {
+            0x88: 0x00,
+        }
+    
+    def _clear_dll_settings(self):
+        """Clear the DLL settings in the camera."""
+        for reg, value in self.dllRegisterSettings.items():
+            self.cam.tcpInterface.transceive(Command.create("writeRegister", {"address": reg, "value": 0x00}))
+
+    def _store_dll_settings(self):
+        """Store the current DLL settings in the camera."""
+        for reg in self.dllRegisterSettings.keys():
+            regValue = self.cam.tcpInterface.transceive(Command.create("readRegister", {"address": reg})).data
+            self.dllRegisterSettings[reg] = int(regValue)
+    
+    def _restore_dll_settings(self):
+        """Restore the DLL settings in the camera."""
+        for reg, value in self.dllRegisterSettings.items():
+            self.cam.tcpInterface.transceive(Command.create("writeRegister", {"address": reg, "value": value}))
+
+    def _store_abs_setting(self):
+        """Store the current camera ABS pixel ramp setting."""
+        for reg in self.absRegisterSetting.keys():
+            regValue = self.cam.tcpInterface.transceive(Command.create("readRegister", {"address": reg})).data
+            self.absRegisterSetting[reg] = int(regValue)
+    
+    def _restore_abs_setting(self):
+        """Restore the ABS pixel ramp setting in the camera."""
+        for reg, value in self.absRegisterSetting.items():
+            self.cam.tcpInterface.transceive(Command.create("writeRegister", {"address": reg, "value": value}))
 
     def set_integration_time(self, int_time_us: int):
         """Set the integration time for standard mode in us."""
@@ -176,6 +310,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         )
         self.__int_time_grayscale = int_times[0]
         self.__int_time_low = int_times[1]
+        self.intTime_us = self.__int_time_low
 
     def set_roi(self, roi: tuple[int, int, int, int]):
         """Set the region of interest.
@@ -218,7 +353,29 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     def set_binning(self, binning_type):
         log.info(f"Setting binning: {binning_type}")
-        self.cam.tcpInterface.transceive(Command.create("setBinning", np.byte(binning_type)))
+        if binning_type == 0:
+            # Restore default ABS pixel ramp magnitude if binning is disabled
+            self._restore_abs_setting()
+        else:          
+            # Set new ABS pixel ramp magnitude & verify for binning mode
+            newValue = 0x1f
+            for reg in self.absRegisterSetting.keys():
+                self.cam.tcpInterface.transceive(Command.create("writeRegister", {"address": reg, "value": newValue}))
+                updatedRegValue = self.cam.tcpInterface.transceive(Command.create("readRegister", {"address": reg})).data
+                if newValue != updatedRegValue:
+                    raise ValueError(
+                        f"ABS register mismatch at address 0x{reg:02X}: expected 0x{newValue:02X}, got 0x{updatedRegValue:02X}"
+                    )
+
+        # Try setbinning() and if it fails, revert ABS pixel ramp magnitude to default
+        try:
+            self.cam.tcpInterface.transceive(
+                Command.create("setBinning", np.byte(binning_type))
+            )
+        except Exception as e:
+            log.error(f"setBinning failed: {e}. Reverting ABS register to default.")
+            self._restore_abs_setting()
+            raise ValueError(f"setBinning failed: {e}. Reverted ABS register to default.")
 
     def set_dll_step(self, step: int = 0):
         log.info(f"Setting DLL step: {step}")
@@ -228,6 +385,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         """Set minimal amplitude needed to be considered a valid distance estimation."""
         log.info(f"Setting minimum amplitude: {minimum}")
         self.cam.tcpInterface.transceive(Command.create("setMinAmplitude", minimum))
+        self.minAmplitude = minimum
 
     def set_grayscale_illumination(self, enable=True):
         """Enable or disable the illumination during grayscale capture."""
@@ -286,8 +444,20 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info('Disabling filters')
         self.set_filters(False, False, 0, 0, 0, 0, False)
 
+    @requires_fw_version(min_version='3.27')
+    def set_flex_mod_freq(self, frequency_mhz: int|float, delay = 0.1):
+        self._clear_dll_settings() # Will be implemented in fw in the next release
+        cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
+        log.info(f"Setting flex modulation frequency: {frequency_mhz*1E6} Hz")
+        self.cam.tcpInterface.transceive(cmd)
+        time.sleep(delay)
+        self.flexMod = True
+        self.flexModFreq_MHz = frequency_mhz
+
     def set_modulation(self, frequency_mhz: float, channel=0):
         """Set the modulation frequency and channel for the TOFcam."""
+        self._restore_dll_settings()
+        
         freq_table = {
             12: 0,
             24: 1,
@@ -309,6 +479,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         )
         log.info(f"Setting modulation frequency: {frequency_mhz} MHz, channel: {channel}")
         self.cam.tcpInterface.transceive(set_mod_cmd)
+        self.flexMod = False
 
     def get_modulation_frequencies(self) -> list[float]:
         """Returns a list of available modulation frequencies in MHz."""
@@ -322,6 +493,35 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         """Set the lense type for the camera."""
         log.info(f"Setting lense type: {lense_type}")
         self.projector = RadialCameraProjector.from_lens_calibration(lense_type, self.roi[2], self.roi[3])
+
+    @requires_fw_version(min_version='3.25')
+    def set_illuminator_segments(self, segment_1_on: bool = True, segment_2_on: bool = True, segment_3_on: bool = True,
+                                 segment_4_on: bool = True, segment_2_to_4: bool = True):
+        """Set the illuminator segments for the camera."""
+        log.info(f"Setting illuminator segments: ("
+                 f"1:{'ON' if segment_1_on else 'OFF'}, 2:{'ON' if segment_2_on else 'OFF'}, "
+                 f"3:{'ON' if segment_3_on else 'OFF'}, 4:{'ON' if segment_4_on else 'OFF'}, "
+                 f"2-4:{'ON' if segment_2_to_4 else 'OFF'})")
+        set_illuminator_cmd = Command.create(
+            "setIlluminatorSegments",
+            {
+                "segment1": segment_1_on,
+                "segment2": segment_2_on,
+                "segment3": segment_3_on,
+                "segment4": segment_4_on,
+                # Control segments 2, 3, and 4 (R100=0R needs to be assembled)
+                "segment_2_to_4": segment_2_to_4,
+            },
+        )
+        log.info(f"Command data: {set_illuminator_cmd.dataToBytes()}")
+        log.info(f"Command: {set_illuminator_cmd.toBytes()}")
+        self.cam.tcpInterface.transceive(set_illuminator_cmd)
+
+    @requires_fw_version(min_version='3.36')
+    def get_integration_time(self, ) -> list[dict]:
+        """Get the integration time(grayscale & 3D) from the camera."""
+        log.info(f"Reading integration time")
+        return self.cam.tcpInterface.transceive(Command.create("getIntegrationTime")).data
 
 
 class TOFcam660_Device(Dev_Infos_Controller):
@@ -403,6 +603,13 @@ class TOFcam660_Device(Dev_Infos_Controller):
             )
         )
 
+    @requires_fw_version(min_version='3.29')
+    def get_calibration_data(self, ) -> list[dict]:
+        """Get the calibration data(calibrated modulation freq., temperature, atan offset) from the camera."""
+        log.info(f"Reading calibration data")
+        calibration_data = self.cam.tcpInterface.transceive(Command.create("getCalibrationData")).data
+        return calibration_data
+    
     @requires_fw_version(min_version='3.43')
     def get_data_transfer_protocol(self):
         return self.cam.tcpInterface.transceive(Command.create("getDataTransferProtocol")).data
