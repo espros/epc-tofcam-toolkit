@@ -6,7 +6,7 @@ from PySide6 import QtWidgets
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.widgets import (DropDownSetting, GroupBoxSelection,
                                     IntegrationTimes, RoiSettings,
-                                    SettingsGroup, SpinBoxSetting, VideoWidget)
+                                    SettingsGroup, SpinBoxSetting, VideoWidget, FloatInput)
 from epc.tofCam_gui.widgets.filter_widgets import (EdgeFilter,
                                                    InterferenceFilter,
                                                    SimpleFilter,
@@ -34,10 +34,11 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         # Create the video widget
         self.imageTypeWidget = GroupBoxSelection('Image Type', ['Distance', 'Amplitude', 'Grayscale', 'DCS', 'Point Cloud'])
         self.guiFilterGroupBox = GroupBoxSelection('GUI Filters', ['None', 'Canny', 'Gradient'])
-        self.hdrModeDropDown = DropDownSetting('HDR Mode', ['HDR Off', 'HDR Spatial', 'HDR Temporal'], default='HDR Temporal')
+        self.hdrModeDropDown = DropDownSetting('HDR Mode', ['HDR Off', 'HDR Spatial', 'HDR Temporal'], default='HDR Off')
         self.modulationChannel = DropDownSetting('Modulation Channel', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'])
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['24 MHz', '12 MHz', '6 MHz', '3 MHz', '1.5 MHz', '0.75 MHz'], default='12 MHz')
-        self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.modulationChannel, self.hdrModeDropDown])
+        self.flexModFrequency = FloatInput('Modulation Frequency MHz', 0.25, 28.0, default=0.0)
+        self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.modulationChannel, self.hdrModeDropDown, self.flexModFrequency])
         self.lensType = DropDownSetting('Lens Type', ['Wide Field', 'Narrow Field', 'Standard Field'])
         self.pointCloudSettings = SettingsGroup('Point Cloud Settings', [self.lensType])
         self.pointCloudSettings.setEnabled(False)
@@ -66,7 +67,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.roiSettings)
 
         self.complete_setup()
-
+        
     def _set_bridge(self, cam:"TOFcam") -> None:
         from epc.tofCam_gui.gui_tofCam660_bridge import TOFcam660_bridge
         super()._set_bridge(cam=cam, _bridge_type=TOFcam660_bridge)

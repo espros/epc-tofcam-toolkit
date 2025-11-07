@@ -74,9 +74,21 @@ class DistanceAndAmplitudeParser(Parser):
         frame.distance = data[::2].reshape(frame.rows, frame.cols)
         frame.amplitude = data[1::2].reshape(frame.rows, frame.cols)
 
-
 class DcsParser(Parser):
     def parseData(self, frame):
-        data = np.frombuffer(self.bytestream, dtype=np.int16)
+        data = np.frombuffer(self.bytestream, dtype=np.uint16)
         data = data.reshape(4, frame.rows, frame.cols)
-        frame.dcs = data - 2048
+
+        # create masks for the error codes
+        mask_overflow = data == 64002
+        mask_saturation = data == 64003
+
+        # change data type such that the data is aligned around zero
+        data = data.astype(np.int32)
+        data = data - 2048
+
+        # apply masks to reintroduce the error codes
+        data[mask_overflow] = 64002
+        data[mask_saturation] = 64003
+
+        frame.dcs = data

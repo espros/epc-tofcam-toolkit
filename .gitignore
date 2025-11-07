@@ -5,10 +5,16 @@ build
 doc/build
 scripts/data/*
 scripts/plots/*
+scripts/logs/*
 dist
 tmp
+**.png
+**.log
 **/__pycache__
 .pytest_cache
 **/*.egg-info
 .pytest_cache
 .mypy_cache
+copyData.sh
+copyPlots.sh
+.coverage
