@@ -41,9 +41,9 @@ tofrange611 --port COM3
 
 ## Installation for development
 
-Clone this repository and cd into it
+Clone this repository and cd into it.
 
-Create a virtual environment and activate it
+Create a virtual environment and activate it:
 ```bash
 python -m venv .venv  
 
@@ -54,7 +54,12 @@ source .venv/bin/activate
 .\.venv\Scripts\activate
 ```
 
-Install the package in editable mode
+Install only the basic API in editable mode:
 ```bash
 pip install -e .
+```
+
+Or install the whole development environment including GUI in editable mode:
+```bash
+pip install --editable ".[dev,gui,doc]"
 ```
