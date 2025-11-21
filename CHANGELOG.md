@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### TOFcam660
+- Fix: Only load calibration data when necessary
+
 ## [0.3.0] - 2025-11-07
 
 ### TOFcam660
