@@ -53,8 +53,8 @@ class TOFcam660(TOFcam):
         super().__init__(self.settings, self.device)
         self.memory = Memory.create(0)
         self._version = self.device.get_fw_version()
-        self._calibData = self.device.get_calibration_data()
-        self._calibData24Mhz: dict = next((item for item in self._calibData if item['modulation(MHz)'] == 24))
+        self._calibData: list[dict] = None # This will be loaded on flex mode enabling
+        self._calibData24Mhz: dict = None
         atexit.register(self.__restore_settings)
 
         self.frame = None
@@ -446,6 +446,12 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     @requires_fw_version(min_version='3.27')
     def set_flex_mod_freq(self, frequency_mhz: int|float, delay = 0.1):
+        # For this mode, the calibration data will be needed. Load them now if not available yet.
+        if self.cam._calibData is None:
+            self.cam._calibData = self.cam.device.get_calibration_data()
+        if self.cam._calibData24Mhz is None:
+            self.cam._calibData24Mhz = next((item for item in self.cam._calibData if item['modulation(MHz)'] == 24))
+
         self._clear_dll_settings() # Will be implemented in fw in the next release
         cmd = Command.create("setFlexModFreq", int(frequency_mhz*1E6))
         log.info(f"Setting flex modulation frequency: {frequency_mhz*1E6} Hz")
