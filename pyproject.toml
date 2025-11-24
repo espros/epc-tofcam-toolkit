@@ -55,9 +55,9 @@ gui = [
     "qtconsole>=5.6.1",
     "ipython>=8.30.0",
     "pyopengl>=3.1.7",
+    "matplotlib>=3.10.0",
 ]
 dev = [
-    "matplotlib>=3.10.0",
     "pytest>=8",
     "mypy",
     "tox>=4",
