@@ -3,10 +3,11 @@ import logging
 import time
 from typing import Literal
 import atexit
+from typing import Union
 
 from epc.tofCam_lib import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.decorator import requires_fw_version
-from epc.tofCam660.interface import Interface, TcpReceiver, UdpInterface
+from epc.tofCam660.interface import DataType, Interface, TcpReceiver, UdpInterface
 from epc.tofCam660.memory import Memory
 from epc.tofCam660.command import Command
 from epc.tofCam_lib.projection_models import RadialCameraProjector
@@ -58,6 +59,7 @@ class TOFcam660(TOFcam):
         atexit.register(self.__restore_settings)
 
         self.frame = None
+        self.hw_trigger_data_type: DataType = DataType.DISTANCE # data type for gpio trigger based acquisition
 
     def __restore_settings(self):
         if hasattr(self, "settings") and self.settings and self.tcpInterface and not self.tcpInterface.is_socket_closed():
@@ -83,6 +85,19 @@ class TOFcam660(TOFcam):
         if nBytes <= 0:
             raise RuntimeError("Failed to receive image data")
         return frame_data
+    
+    def __wait_for_image_data(self):
+        """This function is used to wait until one image is being received from the camera after 
+        hw trigger gpio is used capture a new frame"""
+        nBytes = 0
+        while(True):
+            try:
+                frame_data, nBytes = self.rxInterface.receiveFrame()
+            except Exception as e:
+                continue
+            if nBytes > 0:
+                break
+        return frame_data
 
     def initialize(self):
         self.settings._store_dll_settings()
@@ -100,7 +115,6 @@ class TOFcam660(TOFcam):
                                         setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
         self.settings.set_binning(0)
-        self.get_raw_dcs_images()  # trigger first image to initialize the camera
 
     @requires_fw_version(min_version='3.51')
     def get_flex_mod_distance_amplitude_dcs(self, 
@@ -219,7 +233,39 @@ class TOFcam660(TOFcam):
         points = 1E-3 * self.settings.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
+    
+    def get_hw_trigger_image(self) -> Union[tuple[np.ndarray, np.ndarray], np.ndarray]:
+        """
+        Wait until the hardware trigger data frame is received
 
+        Returns:
+            tuple[np.ndarray, np.ndarray] | np.ndarray:
+                DataType.DISTANCE_AMPLITUDE → (distance, amplitude) as tuple[np.ndarray, np.ndarray]
+                DataType.DISTANCE → distance as np.ndarray
+                DataType.GRAYSCALE → grayscale as np.ndarray
+                DataType.DCS → 4DCS as np.ndarray
+        """
+        raw_data = self.__wait_for_image_data()
+
+        match self.hw_trigger_data_type:
+            case DataType.DISTANCE_AMPLITUDE:
+                parser = DistanceAndAmplitudeParser()
+                frame = parser.parse(raw_data)
+                return frame.distance, frame.amplitude
+            case DataType.DISTANCE:
+                parser = DistanceParser()
+                frame = parser.parse(raw_data)
+                return frame.distance
+            case DataType.GRAYSCALE:
+                parser = GrayscaleParser()
+                frame = parser.parse(raw_data)
+                return frame.amplitude
+            case DataType.DCS:
+                parser = DcsParser()
+                frame = parser.parse(raw_data)
+                return frame.dcs
+            case _:
+                raise ValueError(f"Invalid data_type: {self.hw_trigger_data_type}")
 
 class TOFcam660_Settings(TOF_Settings_Controller):
     """The TOFcam660_Settings class is used to control the settings of the TOFcam660.
@@ -523,12 +569,53 @@ class TOFcam660_Settings(TOF_Settings_Controller):
         log.info(f"Command: {set_illuminator_cmd.toBytes()}")
         self.cam.tcpInterface.transceive(set_illuminator_cmd)
 
+    @requires_fw_version(min_version='3.48')
+    def set_hw_trigger_data_type(self, data_type: DataType):
+        """Set the data type to acquire using the hardware trigger."""
+        log.info(f"Setting HW trigger data type: {data_type.name}")
+        self.cam.hw_trigger_data_type = data_type
+        self.cam.tcpInterface.transceive(Command.create("setHwTriggerDataType", data_type.value))
+
     @requires_fw_version(min_version='3.36')
     def get_integration_time(self, ) -> list[dict]:
         """Get the integration time(grayscale & 3D) from the camera."""
         log.info(f"Reading integration time")
         return self.cam.tcpInterface.transceive(Command.create("getIntegrationTime")).data
 
+
+    @requires_fw_version(min_version='3.48')
+    def set_rolling_mode(self, mode: Literal["None", "1DCS", "2DCS"]):
+        """Set camera to the rolling acquisition mode
+        Args:
+            mode: "None" (disabled), "1DCS" (1DCS Rolling Mode), or "2DCS" (2DCS Rolling Mode)
+        """
+        mode_map = {"None": 0, "1DCS": 1, "2DCS": 2}
+        mode_value = mode_map.get(mode)
+        if mode_value is None:
+            raise ValueError(f"Invalid Rolling mode value: {mode}")
+        log.info(f"Setting rolling mode: {mode}")
+        self.cam.tcpInterface.transceive(Command.create("setRollingMode", mode_value))
+
+    @requires_fw_version(min_version='3.57')
+    def set_eye_safety_mode(self, mode: int, fps: int):
+        """Set the camera into eye safety mode
+        Args:
+            mode (int): 0: eye-safety mode disabled, 1: eye-safety mode enabled, 2: camera runs on given fps
+            fps (int): fps to run the camera(only used when mode=2)
+        """
+        if mode not in [0, 1, 2]:
+            raise ValueError(f"Invalid eye safety mode value: {mode}")
+        log.info(f"Setting eye safety mode: {mode}")
+        self.cam.tcpInterface.transceive(Command.create("setEyeSafety", {"mode": mode, "fps": fps}))
+
+    @requires_fw_version(min_version='3.57')
+    def set_modulation_clock_jitter(self, enable: bool):
+        """Enable/disable modulation jitter fuctionality
+        Args:
+            enable (bool): True : enable mod clk jitter, False: disable mod clk jitter
+        """
+        log.info(f"set modulation clock jitter: {enable}")
+        self.cam.tcpInterface.transceive(Command.create("setModClkJitter", int(enable)))
 
 class TOFcam660_Device(Dev_Infos_Controller):
     """The TOFcam660_Device class is used to get and set device information's of the TOFcam660.
@@ -645,3 +732,4 @@ class TOFcam660_Device(Dev_Infos_Controller):
             self.cam.rxInterface = UdpInterface(ip, port)
         else: # unknown
             raise ValueError(f"{transferInterface} is not a valid rx_interface. Select either \'UDP\' or \'TCP\'")
+        

@@ -230,6 +230,9 @@ class SetCompensation(Command):
 class GetCalibrationData(Command):
     commandId = 53
 
+class SetModClkJitter(Command):
+    commandId = 54
+    
 class GetIntegrationTime(Command):
     commandId = 56
 
@@ -241,6 +244,19 @@ class SetDataTransferProtocol(Command):
 class GetDataTransferProtocol(Command):
     commandId = 58
 
+class SetHwTriggerDataType(Command):
+    commandId = 59
+
+class SetRollingMode(Command):
+    commandId = 60
+
+class SetEyeSafety(Command):
+    commandId = 61
+
+    def dataToBytes(self):
+        return struct.pack('!BB',
+                           self.data['mode'],
+                           self.data['fps'])
 
 commands = {'setRoi': SetRoi,
             'setIntTimes': SetIntTimes,
@@ -275,4 +291,8 @@ commands = {'setRoi': SetRoi,
             'getIntegrationTime' : GetIntegrationTime,
             'setDataTransferProtocol' : SetDataTransferProtocol,
             'getDataTransferProtocol' : GetDataTransferProtocol,
+            'setHwTriggerDataType': SetHwTriggerDataType,
+            'setRollingMode': SetRollingMode, 
+            'setEyeSafety': SetEyeSafety,
+            'setModClkJitter': SetModClkJitter,
             }

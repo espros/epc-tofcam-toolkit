@@ -29,6 +29,45 @@ class Test_setting_calls:
         except NotImplementedError as e:
             NotImplementedError_Helper("3.25", "setting illumination segments", str(e.args))
 
+    def test_set_eye_safety_mode(self, cam: TOFcam660):
+        # Test valid modes
+        valid_modes = [(0, 0), (1, 0), (2, 10)]
+        for mode, fps in valid_modes:
+            try:
+                cam.settings.set_eye_safety_mode(mode=mode, fps=fps)
+                # No way to test success here, as the camera always reports ACK
+            except NotImplementedError as e:
+                NotImplementedError_Helper("3.57", "setting eye safety mode", str(e.args))
+        
+        # Test invalid mode
+        with pytest.raises(ValueError, match="Invalid eye safety mode value"):
+            cam.settings.set_eye_safety_mode(mode=3, fps=10)
+
+    def test_set_rolling_mode(self, cam: TOFcam660):
+        # Test valid modes
+        valid_modes = ["None", "1DCS", "2DCS"]
+        for mode in valid_modes:
+            try:
+                cam.settings.set_rolling_mode(mode=mode)
+                # No way to test success here, as the camera always reports ACK
+            except NotImplementedError as e:
+                NotImplementedError_Helper("3.48", "setting rolling mode", str(e.args))
+        
+        # Test invalid mode
+        with pytest.raises(ValueError, match="Invalid Rolling mode value"):
+            cam.settings.set_rolling_mode(mode="Invalid")
+
+    def test_set_modulation_clock_jitter(self, cam: TOFcam660):
+        jitter_modes = [True, False]
+        for enable in jitter_modes:
+            try:
+                cam.settings.set_modulation_clock_jitter(enable=enable)
+                # Command succeeded
+            except NotImplementedError as e:
+                NotImplementedError_Helper("3.57", "setting modulation clk jitter", str(e.args))
+            except RuntimeError as e:
+                # Camera sent NACK 
+                pytest.fail(f"set modulation clk jitter received NACK: {e} for enable={enable} ")
 
 @pytest.mark.systemTest
 class Test_device_calls:
