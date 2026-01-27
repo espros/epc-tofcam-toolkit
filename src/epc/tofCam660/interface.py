@@ -1,11 +1,13 @@
 import select
 import socket
 import struct
+import time
 from threading import Lock, Thread
 from epc.tofCam660.response import Response
 import logging
 from typing import Optional
 from epc.tofCam660.parser import Parser
+from enum import IntEnum
 
 log = logging.getLogger('Interface')
 
@@ -36,7 +38,7 @@ class Interface:
             self.socket.connect((self.ip_address, self.port))
         except Exception as e:
             raise ConnectionError(f'No camera found at address {self.ip_address}:{self.port}\n{e}')
-        self.socket.settimeout(1)
+        self.socket.settimeout(5)
 
     def close(self):
         self.socket.close()
@@ -61,18 +63,33 @@ class Interface:
         
         return False
 
+
+
     def transceive(self, command):
-        self.lock.acquire(timeout=0.5)
+        if not self.lock.acquire(timeout=5): 
+            raise TimeoutError(f"Failed to acquire lock for command \"{command.__class__.__name__}\"")
+        
+        # try few times to send the command and receive a valid response
+        max_retries = 5  
         try:
-            self.transmit(command)
-            response = self.receive()
-        except TimeoutError:
-            raise TimeoutError(f"Not able to transmit the command \"{command.__class__.__name__}\" successfully")
+            for attempt in range(max_retries):
+                try:
+                    self.transmit(command)
+                    response = self.receive()
+                    if response.isError():
+                        raise RuntimeError(f'Command \"{command.__class__.__name__}\" failed with response {response}')
+                    return response
+                except (TimeoutError, socket.timeout) as e:
+                    if attempt < max_retries - 1:
+                        logging.warning(f"TCP timeout attempt {attempt + 1}/{max_retries} for {command.__class__.__name__}")
+                        time.sleep(0.2)  
+                        continue
+                    else:
+                        raise TimeoutError(f"Not able to transmit the command \"{command.__class__.__name__}\" after {max_retries} attempts")
+                except Exception as e:
+                    raise RuntimeError(f"Unexpected error in command \"{command.__class__.__name__}\": {e}")
         finally:
             self.lock.release()
-        if response.isError():
-            raise RuntimeError(f'Command \"{command.__class__.__name__}\" failed with response {response}')
-        return response
 
     def transmit(self, command):
         message = self._assembleMessage(command)
@@ -249,8 +266,24 @@ class UdpInterface:
     def close(self):
         self.udpSocket.close()
 
+    def clearInputBuffer(self):
+        """Clear the input buffer of the UDP socket to remove stale data."""
+        was_blocking = self.udpSocket.getblocking()
+        try:
+            self.udpSocket.setblocking(False)  
+            
+            while True:
+                try:
+                    self.udpSocket.recvfrom(4096) 
+                except BlockingIOError:
+                    break 
+        finally:
+            self.udpSocket.setblocking(was_blocking)
+            
     def receiveFrame(self):
         packets = []
+        expected_packets = None
+        received_packet_numbers = set()
         
         while True:
             try:
@@ -262,17 +295,46 @@ class UdpInterface:
                 continue
 
             packet = UdpPacket(udpPacket)
-            packets.append(packet)
             
-            if packet.packetCount-1 == packet.packetNumber:
+            # check if already received this packet (duplicate)
+            if packet.packetNumber in received_packet_numbers:
+                continue
+                
+            packets.append(packet)
+            received_packet_numbers.add(packet.packetNumber)
+            
+            # set expected packet count from first packet
+            if expected_packets is None:
+                expected_packets = packet.packetCount
+            
+            # check if received all packets
+            if len(received_packet_numbers) == expected_packets:
                 break
+
+        # verify we received all expected packets
+        expected_packet_numbers = set(range(expected_packets))
+        if received_packet_numbers != expected_packet_numbers:
+            missing_packets = expected_packet_numbers - received_packet_numbers
+            raise ValueError(f"Missing UDP packets: {sorted(missing_packets)}")
 
         frameData = bytearray(packets[0].totalSize)
         byteCount = 0
         for p in packets:
             frameData[p.offset:p.offset+p.packetSize] = p.data
             byteCount += p.packetSize
+            
+        # verify total size
+        if byteCount != packets[0].totalSize:
+            raise ValueError(f"Frame size mismatch: expected {packets[0].totalSize}, got {byteCount}")
+            
         return frameData, byteCount
+
+class DataType(IntEnum):
+    DISTANCE_AMPLITUDE = 0x00
+    DISTANCE = 0x01
+    #AMPLITUDE = 0x02 # not supported yet from TOFCAM660
+    GRAYSCALE = 0x03
+    DCS = 0x04
 
 class CommunicationType():
     class Item:
@@ -285,11 +347,10 @@ class CommunicationType():
     items_by_name = {}
 
     def __init__(self):
-        for item in [ self.Item(0x00, 4, "DATA_DISTANCE_AMPLITUDE"),
-                      self.Item(0x01, 2, "DATA_DISTANCE"),
-                      self.Item(0x02, 2, "DATA_AMPLITUDE"),
-                      self.Item(0x03, 2, "DATA_GRAYSCALE"),
-                      self.Item(0x04, 8, "DATA_DCS"),
+        for item in [ self.Item(DataType.DISTANCE_AMPLITUDE, 4, DataType.DISTANCE_AMPLITUDE.name),
+                      self.Item(DataType.DISTANCE, 2, DataType.DISTANCE.name),
+                      self.Item(DataType.GRAYSCALE, 2, DataType.GRAYSCALE.name),
+                      self.Item(DataType.DCS, 8, DataType.DCS.name),
                     ]:
             self.items_by_id[item.id] = item
             self.items_by_name[item.name] = item
