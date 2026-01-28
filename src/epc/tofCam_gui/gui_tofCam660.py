@@ -39,7 +39,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.modulationFrequency = DropDownSetting('Modulation Frequency', ['24 MHz', '12 MHz', '6 MHz', '3 MHz', '1.5 MHz', '0.75 MHz'], default='12 MHz')
         self.flexModFrequency = FloatInput('Modulation Frequency MHz', 0.25, 28.0, default=0.0)
         self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.modulationChannel, self.hdrModeDropDown, self.flexModFrequency])
-        self.lensType = DropDownSetting('Lens Type', ['Wide Field', 'Narrow Field', 'Standard Field'])
+        self.lensType = DropDownSetting('Lens Type', ['Narrow Field', 'Standard Field', 'Wide Field', 'Wide Wide Field', 'Ultra Wide Field'])
         self.pointCloudSettings = SettingsGroup('Point Cloud Settings', [self.lensType])
         self.pointCloudSettings.setEnabled(False)
         self.integrationTimes = IntegrationTimes(['Low', 'Mid', 'High', 'Grayscale'], [40, 400, 2000, 25], [4000, 4000, 4000, 44000])
@@ -67,7 +67,7 @@ class GUI_TOFcam660(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.roiSettings)
 
         self.complete_setup()
-        
+
     def _set_bridge(self, cam:"TOFcam") -> None:
         from epc.tofCam_gui.gui_tofCam660_bridge import TOFcam660_bridge
         super()._set_bridge(cam=cam, _bridge_type=TOFcam660_bridge)

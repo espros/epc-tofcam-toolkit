@@ -6,9 +6,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 lens_type_map = {
-    'Wide Field': importlib.resources.files('epc.data').joinpath('lense_calibration_wide_field.csv'),
-    'Narrow Field':  importlib.resources.files('epc.data').joinpath('lense_calibration_narrow_field.csv'),
-    'Standard Field':  importlib.resources.files('epc.data').joinpath('lense_calibration_standard_field.csv')
+    'Narrow Field':  importlib.resources.files('epc.data').joinpath('lens_calibration_narrow_field_p100596.csv'),
+    'Standard Field':  importlib.resources.files('epc.data').joinpath('lens_calibration_standard_field_p100843.csv'),
+    'Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_wide_field_p100506.csv'),
+    'Wide Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_wide_wide_field_p101152.csv'),
+    'Ultra Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_ultra_wide_field_p101156.csv')
 }
 
 DEFAULT_PIXEL_SIZE_MM = 0.02
@@ -122,7 +124,7 @@ class RadialCameraProjector:
         """ Create a RadialCameraProjector from a known lens type.
 
         Args:
-            lensType (str): _Description of the lens type, e.g., 'Wide Field', 'Narrow Field', 'Standard Field'_
+            lensType (str): _Description of the lens type, e.g., 'Narrow Field', 'Standard Field', 'Wide Field', 'Wide Wide Field', 'Ultra Wide Field'_
             width (int): _width of the image in pixels_
             height (int): _height of the image in pixels_
 
