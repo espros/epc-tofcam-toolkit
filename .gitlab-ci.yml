@@ -79,7 +79,6 @@ test-tox:
 
 check-changelog-updated:
   stage: test
-  allow_failure: true
   script:
     - echo "Checking if CHANGELOG.md has been updated in this merge request..."
     - |
@@ -145,7 +144,6 @@ deploy-pypi-job:
     - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload dist/*
   only:
     - tags
-  when: manual
 
 trigger-release-job:
   stage: release

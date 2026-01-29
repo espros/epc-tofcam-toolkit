@@ -1,10 +1,22 @@
 # Changelog
 
 ## [Unreleased]
+- Fix CI/CD pipeline for to deploy the python package to pypi
 
 ## [0.5.0] - 2026-01-28
 
+### TOFcam660
+- Adding additional ultra wide field lenses calibration data for point-cloud projection.
+
 ## [0.4.0] - 2026-01-27
+
+### TOFcam660
+- Bugfix on Ethernet interface to handle stale UDP data dn TCP timeouts
+- Added the following commands for compatibility with FW version >= 
+  - setHwTriggerDataType: 
+  - setRollingMode: Enable Rolling Mode for Data Acquisition
+  - setEyeSafety: 
+  - setModClkJitter: Enable/Disable Modulation Clock Jitter
 
 ## [0.3.2] - 2025-11-24
 
