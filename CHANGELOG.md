@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.5.1] - 2026-01-29
 - Fix CI/CD pipeline for to deploy the python package to pypi
 
 ## [0.5.0] - 2026-01-28
