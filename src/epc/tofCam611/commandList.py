@@ -1,7 +1,7 @@
 class commandList():
   # setup commands
   COMMAND_SET_INTEGRATION_TIME_3D = 0x00                      #Command to set the integration time for 3D operation
-  COMMAND_SET_INTEGRATION_TIMER_GRAYSCALE = 0x01              #Command to set the integration time for grayscale
+  COMMAND_SET_INTEGRATION_TIME_GRAYSCALE = 0x01              #Command to set the integration time for grayscale
   COMMAND_SET_ROI = 0x02                                      #Command to set the region of interest
   COMMAND_SET_BINNING = 0x03                                  #Command to set the binning
   COMMAND_SET_MODE = 0x04                                     #Command to set the mode

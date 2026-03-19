@@ -142,6 +142,13 @@ class TOFcam611_Settings(TOF_Settings_Controller):
         log.info(f"set integration time to {int_time_us} us")
         self.interface.transmit(CommandList.COMMAND_SET_INTEGRATION_TIME_3D, [0 , int_time_us &0xff, (int_time_us>>8)&0xff])
 
+    def set_integration_time_grayscale(self, int_time_us: int):
+        if 0 > int_time_us > MAX_INTEGRATION_TIME:
+            raise ValueError(f"integration time must be between 0 and {MAX_INTEGRATION_TIME} us")
+        log.info(f"set integration time to {int_time_us} us")
+        self.interface.transmit(CommandList.COMMAND_SET_INTEGRATION_TIME_GRAYSCALE, [0 , int_time_us &0xff, (int_time_us>>8)&0xff])
+
+
     def get_integration_time(self):
         response = self.interface.transceive(CommandList.COMMAND_GET_INTEGRATION_TIME_3D, ComType.DATA_INTEGRATION_TIME)
         return response[0]+response[1]*0x100
@@ -334,6 +341,6 @@ class TOFcam611(TOFcam):
         amplitude[amplitude > DEFAULT_MAX_AMPLITUDE] = 0 # remove error values
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.projector.project(np.fliplr(depth))
+        points = 1E-3 * self.settings.projector.project(np.fliplr(depth))
         points = points.reshape(3, -1)
         return points, amplitude.flatten()

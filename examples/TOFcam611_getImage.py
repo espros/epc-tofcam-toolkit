@@ -6,14 +6,8 @@ import time
 cam = TOFcam611()
 cam.initialize()
 
-# print chip information
-chipID, waferID = cam.device.get_chip_infos()
-print(f'Chip ID: {chipID}')
-print(f'Wafer ID: {waferID}')
-
 # change some settings
 cam.settings.set_integration_time(50)
-time.sleep(3) 
 
 # get distance image
 distance = cam.get_distance_image()

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### TOFcam611
+- solve pcd cloud visualization issue
+- add command for setting grayscale integration time
+
 ## [0.5.1] - 2026-01-29
 - Fix CI/CD pipeline for to deploy the python package to pypi
 
