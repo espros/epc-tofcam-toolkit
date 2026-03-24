@@ -35,7 +35,6 @@ class CommandList():
   # general commands
   COMMAND_WRITE_REGISTER = 0x4C
   COMMAND_READ_REGISTER = 0x4d
-  COMMAND_IDENTIFY = 0x47
   COMMAND_IDENTIFY = 0x47                                     #Command to identify
   COMMAND_GET_CHIP_INFORMATION = 0x48                         #Command to read the chip information
   COMMAND_GET_FIRMWARE_RELEASE = 0x49                         #Command to read the firmware release
@@ -45,3 +44,4 @@ class CommandList():
   COMMAND_GET_REGISTER = 0x5D                                 #Command to write register
   COMMAND_GET_TEMPERATURE = 0x4A                              #Command to read the temperature
   COMMAND_SYSTEM_RESET = 0x6d
+  COMMAND_SET_ILLU_SEGMENT = 0x6E                             #Command to set active illumination segments
