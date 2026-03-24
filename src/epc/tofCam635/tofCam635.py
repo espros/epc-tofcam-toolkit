@@ -1,9 +1,11 @@
+from __future__ import annotations
 import struct
 import logging
 import time
 from threading import Lock
 import numpy as np
 from typing import Optional
+from epc.tofCam_lib.decorator import requires_fw_version
 from epc.tofCam_lib.tofCam import TOFcam, TOF_Settings_Controller, Dev_Infos_Controller
 from epc.tofCam_lib.crc import Crc, CrcMode
 from epc.tofCam635.communication import Type as ComType
@@ -176,12 +178,13 @@ class TOFcam635_Settings(TOF_Settings_Controller):
     """This class is used to control the settings of the TOFcam635 camera.
     """
 
-    def __init__(self, interface: InterfaceWrapper) -> None:
+    def __init__(self, cam: TOFcam635) -> None:
         super().__init__()
         self.roi = DEFAULT_ROI
         self.resolution = (self.roi[2] - self.roi[0],
                            self.roi[3] - self.roi[1])
-        self.interface = interface
+        self.cam = cam
+        self.interface = cam.interface
         self._capture_mode = 0
         self.max_depth = DEFAULT_MAX_DEPTH
         self.projector = RadialCameraProjector.from_lens_calibration(
@@ -330,14 +333,30 @@ class TOFcam635_Settings(TOF_Settings_Controller):
         self.interface.transmit(CommandList.COMMAND_SET_INTERFERENCE_DETECTION, [
                                 int(enable), int(useLast), limit & 0xff, (limit >> 8) & 0xff])
 
+    @requires_fw_version(min_version='3.49')
+    def set_illuminator_segments(self, illumination: int) -> None:
+        """Set the active illumination segments in the ToFCAM635-B2
+
+        Args:
+            illumination (int): Illumination mode.
+                0: Disabled
+                1: WF enabled
+                2: NF enabled
+                3: WF & NF enabled
+        """
+        if illumination not in [0, 1, 2, 3]:
+            raise ValueError(f"Invalid illumination value: {illumination}. Must be 0, 1, 2, or 3.")
+        log.info(f"Setting illumination segments to {illumination}")
+        self.interface.transmit(CommandList.COMMAND_SET_ILLU_SEGMENT, [illumination])
+
 
 class TOFcam635_Device(Dev_Infos_Controller):
     """This class is used to control the device information of the TOFcam635 camera.
     """
 
-    def __init__(self, interface: InterfaceWrapper) -> None:
+    def __init__(self, cam: TOFcam635) -> None:
         super().__init__()
-        self.interface = interface
+        self.interface = cam.interface
 
     def get_chip_infos(self) -> tuple[int, int]:
         """returns chip information
@@ -347,6 +366,7 @@ class TOFcam635_Device(Dev_Infos_Controller):
         """
         data = self.interface.transceive(
             CommandList.COMMAND_GET_CHIP_INFORMATION, ComType.DATA_CHIP_INFORMATION)
+        
         response = list(struct.unpack('<'+'H'*2, data))
         return (response[0], response[1])
 
@@ -419,9 +439,10 @@ class TOFcam635(TOFcam):
 
     def __init__(self, port: Optional[str] = None) -> None:
         self.interface = InterfaceWrapper(port)
-        self.settings = TOFcam635_Settings(self.interface)
-        self.device = TOFcam635_Device(self.interface)
+        self.settings = TOFcam635_Settings(self)
+        self.device = TOFcam635_Device(self)
         super().__init__(self.settings, self.device)
+        self._version = self.device.get_fw_version()
 
     def __del__(self):
         if hasattr(self, 'interface'):

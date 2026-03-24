@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### TOFcam635
+- added setIlluminatorSegments command
+
 ### TOFcam611
 - solve pcd cloud visualization issue
 - add command for setting grayscale integration time

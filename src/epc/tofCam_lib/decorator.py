@@ -1,5 +1,41 @@
 import functools
 
+
+def requires_device_type(device_type: int):
+    """
+    A decorator to restrict method/function execution based on camera device type.
+
+    Args:
+        device_type (int): The device type that supports executing this method.
+
+    Raises:
+        Error: If the current device type does not match the required device type,
+                             or if the device type cannot be determined.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if hasattr(self, "_device_type"):
+                current_device_type = self._device_type
+            elif hasattr(self, "cam") and hasattr(self.cam, "_device_type"):
+                current_device_type = self.cam._device_type
+            else:
+                raise NotImplementedError(
+                    f"Method '{func.__name__}' requires device type {device_type}, "
+                    f"but the device type is unknown."
+                )
+
+            if current_device_type != device_type:
+                raise NotImplementedError(
+                    f"Method '{func.__name__}' is not supported for device type "
+                    f"{current_device_type}. Required device type: {device_type}."
+                )
+
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def requires_fw_version(min_version: str = None, max_version: str = None):
     def decorator(func):
         """
