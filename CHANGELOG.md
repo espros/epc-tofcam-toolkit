@@ -4,7 +4,7 @@
 
 ### General
 - use pyproject.toml for all dependency management
-- improved readme.md
+- improved README.md
 
 ## [0.6.0] - 2026-03-24
 
