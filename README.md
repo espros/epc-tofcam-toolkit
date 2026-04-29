@@ -43,23 +43,39 @@ tofrange611 --port COM3
 
 Clone this repository and cd into it.
 
-Create a virtual environment and activate it:
-```bash
-python -m venv .venv  
+### 1. Create and activate a virtual environment
 
-# linux
+```bash
+python -m venv .venv
+
+# linux / macOS
 source .venv/bin/activate
 
 # windows
 .\.venv\Scripts\activate
 ```
 
-Install only the basic API in editable mode:
+### 2. Install modules and dependencies
+
+All dependencies are managed using the `pyproject.toml` and installed via `pip`. Choose the install option that fits your use case:
+
+**Option A — Core API** (no GUI, dev tools):
+
+Install only the epc-tofcam-toolkit API and dependencies to control the camera.
+
 ```bash
 pip install -e .
 ```
 
-Or install the whole development environment including GUI in editable mode:
+**Option B — Full development environment**:
 ```bash
 pip install --editable ".[dev,gui,doc]"
 ```
+
+Installs the full development environment including the GUI and all dependency groups:
+
+| Group | Purpose |
+|-------|---------|
+| `gui` | Required to run the GUI applications |
+| `dev` | Required for testing and type checking |
+| `doc` | Required for compiling documentation |

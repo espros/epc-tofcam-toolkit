@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### General
+- use pyproject.toml for all dependency management
+
 ## [0.6.0] - 2026-03-24
 
 ### TOFcam635

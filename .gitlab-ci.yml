@@ -10,7 +10,7 @@ before_script:
   - if [ ! -d ".venv" ]; then python3 -m venv .venv; fi # only create a new venv if there is none
   - source .venv/bin/activate
   - pip install --upgrade pip
-  - pip install -r requirements.txt
+  - pip install ".[dev]"
 
 stages:
   - build
@@ -37,7 +37,7 @@ code-analysis:
   stage: test
   allow_failure: true
   script:
-    - pip install mypy mypy-gitlab-code-quality
+    - pip install mypy-gitlab-code-quality
     - mypy src/epc/tofCam_lib src/epc/tofCam_gui --no-error-summary > mypy-out.txt
   after_script:
     - echo "Collecting mypy results:"
