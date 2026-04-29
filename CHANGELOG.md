@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-04-29
+
 ### General
 - use pyproject.toml for all dependency management
 - improved README.md
