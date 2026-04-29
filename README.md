@@ -59,7 +59,7 @@ source .venv/bin/activate
 
 All dependencies are managed using the `pyproject.toml` and installed via `pip`. Choose the install option that fits your use case:
 
-**Option A — Core API** (no GUI, dev tools):
+**Option A — Core API**:
 
 Install only the epc-tofcam-toolkit API and dependencies to control the camera.
 
@@ -67,12 +67,12 @@ Install only the epc-tofcam-toolkit API and dependencies to control the camera.
 pip install -e .
 ```
 
-**Option B — Full development environment**:
+**Option B — Core API & Full development environment inlcuding the GUI**:
 ```bash
 pip install --editable ".[dev,gui,doc]"
 ```
 
-Installs the full development environment including the GUI and all dependency groups:
+Installs the full development environment and all dependency groups:
 
 | Group | Purpose |
 |-------|---------|
