@@ -2,7 +2,7 @@ import importlib.metadata
 import importlib.resources
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
+from PySide6.QtGui import QAction, QFont, QIcon, QPixmap, QKeySequence
 from PySide6.QtWidgets import QLabel, QSizePolicy, QToolBar, QWidget
 
 from epc.tofCam_gui.icon_svg import svg2icon
@@ -62,6 +62,8 @@ class ToolBar(QToolBar):
         self.addAction(self.recordButton)
         self.addAction(self.importButton)
 
+        self.playButton.setShortcut(QKeySequence(Qt.Key.Key_Space))
+
         self.addWidget(left_spacer)
         self.addWidget(self.versionInfo)
         self.addWidget(self.chipInfo)
@@ -70,7 +72,7 @@ class ToolBar(QToolBar):
         self.addWidget(self.logo)
 
     def setFPS(self, fps) -> None:
-        self.fpsInfo.setText(f'FPS: {fps:5.1f}')
+        self.fpsInfo.setText(f'FPS: {round(fps)}')
 
     def _playButtonToggled(self) -> None:
         self.__setOnOffIcons(

@@ -57,6 +57,9 @@ gui = [
     "pyopengl>=3.1.7",
     "matplotlib>=3.10.0",
 ]
+native = [
+    "epc-tofcam-native>=0.2.1",
+]
 dev = [
     "pytest>=8",
     "mypy",
@@ -73,6 +76,7 @@ Documentation = "https://epc-tofcam-toolkit.readthedocs.io/en/latest/"
 Source = "https://github.com/espros/epc-tofcam-toolkit"
 
 [project.scripts]
+tofcam670 = "epc.tofCam_gui.gui_tofCam670_bridge:main"
 tofcam660 = "epc.tofCam_gui.gui_tofCam660_bridge:main"
 tofcam635 = "epc.tofCam_gui.gui_tofCam635_bridge:main"
 tofcam611 = "epc.tofCam_gui.gui_tofCam611_bridge:main"

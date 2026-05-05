@@ -45,6 +45,8 @@ class Base_GUI_TOFcam(QMainWindow):
         self.topMenuBar.savePngAction.triggered.connect(self._save_png)
         self.topMenuBar.setDefaultValuesAction.triggered.connect(
             self.setDefaultValues)
+        self.topMenuBar.quitAppAction.triggered.connect(self.close)
+        self.topMenuBar.toggleFullScreenAction.triggered.connect(self._toggle_fullscreen)
         self.toolBar.importButton.toggled.connect(self._import_toggled)
         self.toolBar.importButton.triggered.connect(
             self._connect_replay_source)
@@ -96,6 +98,12 @@ class Base_GUI_TOFcam(QMainWindow):
             self, 'Save png', filter='*.png')
         self.imageView.video.getImageItem().save(filePath + '.png')
 
+    def _toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
     def _show_splash_screen(self, image_path=importlib.resources.files('epc.tofCam_gui.icons').joinpath('epc-logo.png')):
         splash_pix = QPixmap(image_path)
         self.splash = QSplashScreen(splash_pix)
@@ -109,6 +117,14 @@ class Base_GUI_TOFcam(QMainWindow):
         super().show()
         self.splash.finish(self)
 
+    def showFullScreen(self) -> None:
+        super().showFullScreen()
+        self.splash.finish(self)
+
+    def showMaximized(self) -> None:
+        super().showMaximized()
+        self.splash.finish(self)
+
     def closeEvent(self, event: QCloseEvent) -> None:
         self.console.close()
         return super().closeEvent(event)
@@ -117,24 +133,21 @@ class Base_GUI_TOFcam(QMainWindow):
         self.__filter_cb = filter_cb
 
     def updateImage(self, image):
-        time_diff = time.time() - self.time_last_frame
-        t_update_diff = time.time() - self.time_last_update
-        if time_diff != 0:
-            fps = round(1 / time_diff)
-            if fps < 100:
-                self._fps = 0.2 * self._fps + 0.8 * fps  # low pass filter fps
-            self.toolBar.setFPS(self._fps)
-        self.time_last_frame = time.time()
-
-        # prevent gui from freezing on high fps
-        if t_update_diff < 0.2:
-            return
-        self.time_last_update = time.time()
 
         if self.__filter_cb:
             image = self.__filter_cb(image)
-        self.imageView.setImage(image, autoRange=False,
-                                autoHistogramRange=False, autoLevels=False)
+
+        if self.topMenuBar.outOfRangeClipAction.isChecked() and isinstance(image, np.ndarray):
+            lower, upper = self.imageView.video.getLevels()
+            image = np.clip(image, lower, upper)
+
+        if self.topMenuBar.outOfRangeZeroAction.isChecked() and isinstance(image, np.ndarray):
+            lower, upper = self.imageView.video.getLevels()
+            image = np.where(image > lower, image, 0)
+            image = np.where(image < upper, image, 0)
+        
+        self.imageView.setImage(image, autoRange=False, autoHistogramRange=False,
+                                autoLevels=self.topMenuBar.outOfRangeAutoAction.isChecked())
 
     def _connect_H5Cam(self) -> Optional[H5Cam]:
         """Connect the source h5 file to interract with"""

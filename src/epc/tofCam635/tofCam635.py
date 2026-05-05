@@ -29,8 +29,12 @@ log = logging.getLogger('TOFcam635')
 class InterfaceWrapper:
     def __init__(self, port: Optional[str] = None) -> None:
         self.com = SerialInterface(port)
-        # old self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
-        self.crc = Crc(mode=CrcMode.CRC32_UINT8, revout=False)
+        try:
+            self.crc = Crc(mode=CrcMode.CRC32_UINT8_LIB, revout=False)
+        except:
+            log.warning("Fallback to python implementation for crc calculation (SLOW!)")
+            self.crc = Crc(mode=CrcMode.CRC32_UINT8, revout=False)
+
         self.header = TofCam635Header()
         self.__lock = Lock()
         self.__answer_table = {

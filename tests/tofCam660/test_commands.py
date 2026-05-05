@@ -45,7 +45,7 @@ class Test_setting_calls:
 
     def test_set_rolling_mode(self, cam: TOFcam660):
         # Test valid modes
-        valid_modes = ["None", "1DCS", "2DCS"]
+        valid_modes = ["1DCS", "2DCS", "None"]
         for mode in valid_modes:
             try:
                 cam.settings.set_rolling_mode(mode=mode)

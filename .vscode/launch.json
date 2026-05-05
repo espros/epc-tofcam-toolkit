@@ -65,6 +65,19 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam660.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "TOFcam670_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam670_bridge.py"
+        },
+        {
+            "name": "TOFcam670_Standalone_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam670.py",
+            "console": "integratedTerminal"
         }
     ]
 }
