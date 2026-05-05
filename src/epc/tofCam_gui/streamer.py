@@ -1,8 +1,9 @@
 import logging
+import threading
 from typing import Callable, Optional
 
 import numpy as np
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, QTimer, Signal
 
 log = logging.getLogger('Streamer')
 log.setLevel(logging.DEBUG)
@@ -42,6 +43,16 @@ class Streamer(QThread):
         self.post_start_cb = post_start_cb
         self.post_stop_cb = post_stop_cb
         self.__is_streaming = False
+        self._fps = 0.0
+        self._frame_count = 0
+        self._frame_count_lock = threading.Lock()
+        self._fps_interval_s = 0.6
+        self._fps_timer = QTimer()
+        self._fps_timer.setInterval(int(self._fps_interval_s * 1000))
+        self._fps_timer.timeout.connect(self._update_fps)
+
+    def getFPS(self):
+        return self._fps
 
     def is_streaming(self):
         return self.__is_streaming
@@ -51,11 +62,14 @@ class Streamer(QThread):
             logging.warning("Already streaming")
             return
         if not self.get_frame_cb:
-            logging.error("Starting stream")
+            logging.error("Cannot start stream: no get_frame_cb set")
             return
         if self.start_stream_cb:
             log.debug('Running start_stream_cb')
             self.start_stream_cb(**kwargs)
+        self._fps = 0.0
+        self._frame_count = 0
+        self._fps_timer.start()
         self.start()
         if self.post_start_cb:
             log.debug('Running post_start_cb')
@@ -73,11 +87,21 @@ class Streamer(QThread):
         log.info("Stopping stream")
         self.__is_streaming = False
         self.wait()
+        self._fps_timer.stop()
+        self._fps = 0.0
         if self.post_stop_cb:
             log.debug('Running post_stop_cb')
             self.post_stop_cb(**kwargs)
 
+    def _update_fps(self):
+        """Called by the QTimer every _fps_interval_s seconds to compute FPS."""
+        with self._frame_count_lock:
+            count = self._frame_count
+            self._frame_count = 0
+        self._fps = count / self._fps_interval_s
+
     def run(self):
+        self.setPriority(QThread.Priority.LowestPriority)
         self.__is_streaming = True
         if not self.get_frame_cb:
             raise ValueError("No get_frame_cb set")
@@ -88,6 +112,9 @@ class Streamer(QThread):
             except Exception as e:
                 log.error(f"Failed to get frame with exception: {e}")
                 continue
+
+            with self._frame_count_lock:
+                self._frame_count += 1
             self.signal_new_frame.emit(image)
 
         log.debug("Streamer stopped")

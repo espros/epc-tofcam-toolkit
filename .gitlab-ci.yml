@@ -142,6 +142,7 @@ deploy-pypi-job:
   stage: deploy
   script:
     - TWINE_PASSWORD=${CI_PYPI_TOCKEN} TWINE_USERNAME=__token__ twine upload dist/*
+  when: manual
   only:
     - tags
 

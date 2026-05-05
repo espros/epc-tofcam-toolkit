@@ -115,6 +115,10 @@ class TOFcam660(TOFcam):
                                         setGrayscaleCompensation=True)
         self.settings.set_lense_type('Wide Field')
         self.settings.set_binning(0)
+        try: 
+            self.settings.set_rolling_mode(mode='None')
+        except NotImplementedError:
+            pass
 
     @requires_fw_version(min_version='3.51')
     def get_flex_mod_distance_amplitude_dcs(self, 

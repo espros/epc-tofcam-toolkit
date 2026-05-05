@@ -9,7 +9,12 @@ from epc.tofCam_gui.data_logger import HDF5Logger
 from epc.tofCam_gui.streamer import Streamer
 from epc.tofCam_lib import TOFcam
 from epc.tofCam_lib.h5Cam import H5Cam
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMessageBox
+import logging
+
+logger = logging.getLogger('TOFcams_bridge')
+logger.setLevel(logging.DEBUG)
 
 
 class Base_TOFcam_Bridge():
@@ -31,6 +36,7 @@ class Base_TOFcam_Bridge():
         self.data_logger: Optional[HDF5Logger] = None
 
         self.image_type = 'Distance'
+        self.unit_scaling_factor = 1.0
         self._distance_unambiguity = None  # needs to be overwritten by the derived class
         self.streamer = Streamer(lambda: np.ndarray([]))
 
@@ -40,6 +46,7 @@ class Base_TOFcam_Bridge():
         self.gui.imageView.slider.playButton.clicked.connect(
             self._set_replay_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
+        self.gui.topMenuBar.unitsGroup.triggered.connect(self._set_units)
 
         self._static_meta: Dict[str, Any] = {}
         self.fallback_cam: Optional[TOFcam] = None
@@ -124,6 +131,7 @@ class Base_TOFcam_Bridge():
     def updateImage(self, image):
         if self.streamer.is_streaming():
             self.gui.updateImage(image)
+        self.gui.toolBar.setFPS(self.streamer.getFPS())
 
     def storeImage(self, image):
         if self.data_logger is not None:
@@ -167,6 +175,10 @@ class Base_TOFcam_Bridge():
         image = self._combine_dcs(dcs)
         return image
 
+    def get_scaled_distance(self):
+        distance = self.cam.get_distance_image()
+        return distance * self.unit_scaling_factor
+
     def _set_streaming(self, enable: bool) -> None:
         if enable:
             self.streamer.start_stream()
@@ -194,9 +206,9 @@ class Base_TOFcam_Bridge():
         if image_type == 'Distance':
             assert self._distance_unambiguity is not None
             self.gui.imageView.setActiveView('image')
-            self._get_image_cb = self.cam.get_distance_image
+            self._get_image_cb = self.get_scaled_distance
             self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
-            self.gui.imageView.setLevels(0, self._distance_unambiguity*1000)
+            self.gui.imageView.setLevels(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
             self._get_image_cb = self.cam.get_amplitude_image
@@ -214,6 +226,17 @@ class Base_TOFcam_Bridge():
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)
         else:
             raise ValueError(f"Image type '{image_type}' is not supported")
+
+    def _set_units(self, unit: QAction) -> None:   
+        if unit.text() == 'cm':
+            self.unit_scaling_factor = 1.0 / 10.0
+        elif unit.text() == 'Inches':
+            self.unit_scaling_factor = 1.0 / 25.4
+        else:
+            self.unit_scaling_factor = 1.0        
+
+        # trigger adjustment of colorbar limits
+        self._set_standard_image_type(self.image_type)
 
     def _start_recording(self) -> None:
         _success = False
@@ -295,3 +318,4 @@ class Base_TOFcam_Bridge():
             __meta["mod_frequency"] = self.cam.mod_frequency
 
         return __meta
+    

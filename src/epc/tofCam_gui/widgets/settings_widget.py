@@ -1,8 +1,8 @@
 import numpy as np
 from typing import List, Optional, Any
-from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QLineEdit
+from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QLineEdit, QSlider
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QGridLayout, QDoubleSpinBox
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QDoubleValidator
 
 
@@ -83,6 +83,33 @@ class FloatInput(CameraSetting):
         self.input.setText(str(setting))
         # self.spinBox.valueChanged.emit(setting)
 
+class SliderSetting(CameraSetting):
+    signal_value_changed = Signal(int)
+    def __init__(self, label: str, minvalue: int, maxValue: int, default: Optional[int]=None, parent=None, valueFormat="{:<4d}"):
+        super(SliderSetting, self).__init__('', [minvalue, maxValue], default, parent)
+        self.slider = QSlider(Qt.Horizontal, parent)
+        self.slider.setRange(minvalue, maxValue)
+        self.label = QLabel(label, self)
+        self.valueFormat = valueFormat
+        self.spinBox = QSpinBox(self)
+        self.spinBox.setRange(minvalue, maxValue)
+        if default is not None:
+            self.spinBox.setValue(default)
+        self.gridLayout.addWidget(self.label, 0, 0)
+        self.gridLayout.addWidget(self.slider, 0, 1)
+        self.gridLayout.addWidget(self.spinBox, 0, 2)
+        # Keep slider and spinbox in sync
+        self.slider.valueChanged.connect(self.spinBox.setValue)
+        self.spinBox.valueChanged.connect(self.slider.setValue)
+        self.slider.valueChanged.connect(self.signal_value_changed)
+
+    def value(self) -> int:
+        return self.slider.value()
+
+    def setValue(self, setting: int):
+        self.slider.setValue(setting)
+        self.slider.valueChanged.emit(setting)
+
 class IntegrationTimes(CameraSetting):
     signal_value_changed = Signal(str, int)
     def __init__(self, labels=[], defaults=[], limits=[], min_value=0, parent=None):
@@ -90,39 +117,36 @@ class IntegrationTimes(CameraSetting):
         self.autoMode = QCheckBox('Auto', parent)
         self.autoMode.stateChanged.connect(lambda x: self.signal_value_changed.emit('auto', int(self.autoMode.isChecked())))
         self.gridLayout.addWidget(self.autoMode, 0, 0)
-        self.spinBoxes = []
+        self.sliders = []
         self.labels = labels
 
         for i, entry in enumerate(labels):
-            label = QLabel(entry, parent)
-            spbox = QSpinBox(parent)
-            spbox.setRange(min_value, limits[i])
-            spbox.setValue(defaults[i])
-            spbox.valueChanged.connect(self.__emit_signal)
-            self.spinBoxes.append(spbox) 
-            self.gridLayout.addWidget(label, i+1, 0)
-            self.gridLayout.addWidget(spbox, i+1, 1)
+            slider = SliderSetting(entry, min_value, limits[i], defaults[i], parent)
+            slider.setValue(defaults[i])
+            slider.signal_value_changed.connect(self.__emit_signal)
+            self.sliders.append(slider) 
+            self.gridLayout.addWidget(slider, i+1, 1)
 
     def __emit_signal(self, value: int):
         sender = self.sender()
-        for index, sp in enumerate(self.spinBoxes):
-            if sp == sender:
-                self.signal_value_changed.emit(self.labels[index], self.spinBoxes[index].value())
+        for index, slider in enumerate(self.sliders):
+            if slider == sender:
+                self.signal_value_changed.emit(self.labels[index], self.sliders[index].value())
         
     def setTimeEnabled(self, index: int, enabled: bool):
-        self.spinBoxes[index].setEnabled(enabled)
+        self.sliders[index].setEnabled(enabled)
 
     def getTimeAtIndex(self, index: int) -> int:
-        return self.spinBoxes[index].value()
+        return self.sliders[index].value()
     
     def setValue(self, index: int, value: int):
-        self.spinBoxes[index].setValue(value)
-        self.spinBoxes[index].valueChanged.emit(value)
+        self.sliders[index].setValue(value)
+        self.sliders[index].slider.valueChanged.emit(value)
 
     def setDefaultValue(self):
-        for i, spinBox in enumerate(self.spinBoxes):
-            spinBox.setValue(self.default[i])
-            spinBox.valueChanged.emit(self.default[i])
+        for i, slider in enumerate(self.sliders):
+            slider.setValue(self.default[i])
+            slider.slider.valueChanged.emit(self.default[i])
 
 class SettingsGroup(QGroupBox):
     def __init__(self, label='', settings: List=[]):

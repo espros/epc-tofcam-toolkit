@@ -73,7 +73,8 @@ class Camera(GLGraphicsItem):
         norm_amp = amplitudes / np.max(amplitudes)
         cmap = getFromMatplotlib('turbo')
         colors = cmap.map(norm_amp, 'float')
-        
+
+        points = np.astype(points, np.float64)
         points[0] *= -1  # Flip x axis since OpenGL uses right-handed coordinate system
         self._pcd.setData(pos=points.T, color=colors, size=3)
         # print('latest step', points.shape)
@@ -91,12 +92,24 @@ class PointCloudWidget(GLViewWidget):
         self.grid.translate(0, -0.5, 0)
         self.addItem(self.grid)
 
-        self.setCameraPosition(distance=4, pos=QVector3D(
-            0, 1, 1), rotation=QQuaternion.fromEulerAngles(0, 180, 0))
+        self.reset_btn = QPushButton("Reset View", self)
+        self.reset_btn.resize(100, 30)
+        self.reset_btn.clicked.connect(self.reset_view)
+
+        self.reset_view()
         self.setMouseTracking(True)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        margin = 10
+        self.reset_btn.move(margin, self.height() - self.reset_btn.height() - margin)
 
     def update_point_cloud(self, points: np.ndarray):
         self.camera.update_point_cloud(points[0], points[1])
+
+    def reset_view(self):
+        self.setCameraPosition(distance=4, pos=QVector3D(
+            0, 1, 1), rotation=QQuaternion.fromEulerAngles(0, 180, 0))
 
 
 class VideoSlider(QWidget):
@@ -266,16 +279,22 @@ class VideoSlider(QWidget):
             raise ValueError("cam is None! Set the for convenient access")
         return self._get_time_str(self.cam.time_passed)
 
-
 class VideoWidget(QWidget):
     GRAYSCALE_CMAP = ColorMap(pos=np.linspace(
         0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None,  max_display_fps=30):
 
         super(VideoWidget, self).__init__(parent)
+        self._pending: Optional[tuple] = None  
+        self._render_timer = QTimer(self)
+        self._render_timer.setInterval(max(1, int(1000 / max_display_fps)))
+        self._render_timer.timeout.connect(self._flush_pending)
+        self._render_timer.start()
+
         self.video = ImageView(self)
+        self.video.ui.roiBtn.setText("Scope")
         self.pc = PointCloudWidget(self)
         self.slider = VideoSlider(parent=self)
 
@@ -320,11 +339,20 @@ class VideoWidget(QWidget):
         elif view == 'pointcloud':
             self.stacked.setCurrentWidget(self.pc)
 
+    def _flush_pending(self) -> None:
+        if self._pending is not None:
+            args, kwargs = self._pending
+            self._pending = None
+            self._updateView(*args, **kwargs)
+
     def setImage(self, *args, **kwargs):
+        self._pending = (args, kwargs)
+
+    def _updateView(self, *args, **kwargs):
         data = args[0]
-        if self.stacked.currentWidget() == self.video:
+        if self.stacked.currentWidget() == self.video and isinstance(data, np.ndarray):
             self.video.setImage(*args, **kwargs)
-        else:
+        elif self.stacked.currentWidget() == self.pc and isinstance(data, tuple):
             self.pc.update_point_cloud(data)
 
     def setColorMap(self, cmap):

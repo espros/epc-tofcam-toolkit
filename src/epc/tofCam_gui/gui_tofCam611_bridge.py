@@ -19,7 +19,7 @@ class TOFcam611_bridge:
         self.__get_image_cb = cam.get_distance_image
         self.__distance_unambiguity = 7.5 # m 
         self.streamer = Streamer(self.get_image)
-        self.streamer.signal_new_frame.connect(self.gui.updateImage)
+        self.streamer.signal_new_frame.connect(self.updateImage)
         
         # update chip information
         chipID, waferId = cam.device.get_chip_infos()
@@ -94,6 +94,11 @@ class TOFcam611_bridge:
 
     def get_image(self):
          return self.__get_image_cb()
+
+    def updateImage(self, image):
+        if self.streamer.is_streaming():
+            self.gui.updateImage(image)
+        self.gui.toolBar.setFPS(self.streamer.getFPS())
     
     def capture(self, mode=0):
         image = self.get_image()
