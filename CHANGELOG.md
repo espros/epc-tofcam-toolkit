@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### TOFcam670
+- Fix missing 24MHz setting in GUI
 
 ## [0.7.0] - 2026-05-05
 ### TOFcam670
