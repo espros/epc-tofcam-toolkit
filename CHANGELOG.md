@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.8.0] - 2026-05-13
 ### TOFcam670
 - Added support for the TOFcam670 on native Linux platforms (e.g. Raspberry Pi)
 
