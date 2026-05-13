@@ -49,3 +49,84 @@ class MinAmplitudeFilter():
         filtered_distance = np.copy(distance)
         filtered_distance[amplitude < self.min_amplitude] = 0
         return filtered_distance
+
+class KalmanVideoDenoiser:
+    """Pixelwise 1D strong tracking Kalman filter that masks pixels with high uncertainty"""
+
+    def __init__(self, uncertainty_threshold=200, process_noise=100, forgetting_factor=0.5):
+        self.uncertainty_threshold = uncertainty_threshold
+        self.beta = forgetting_factor
+        self.q = process_noise
+        self.x = np.array(0)  # estimate image
+        self.p = np.array(0)  # estimate variance image
+        self.innov_cov_est = np.array(0)  # innovation variance estimate image
+        self.initialized = False
+
+    def __call__(self, frame: np.ndarray, amplitude: np.ndarray):
+        frame = np.asarray(frame).astype(float)
+        amplitude = np.asarray(amplitude).astype(float)
+
+        if not self.initialized:
+            self.x = frame
+            self.p = np.ones_like(frame)
+            self.innov_cov_est = np.ones_like(frame)
+            self.initialized = True
+            return frame
+
+        innovation = frame - self.x
+        r = (22500 / (amplitude + 2.9)) ** 2 # measurement noise estimation from calibration fit
+
+        # standard Kalman "predict" step
+        self.p = self.p + self.q
+
+        # forgetting factor beta for innovation covariance estimate (1=never forget)
+        self.innov_cov_est = self.beta * self.innov_cov_est + (1 - self.beta) * (innovation ** 2)
+
+        # lambda for boosting Kalman gains in fast-moving pixels (strong tracking filter)
+        lam = (self.innov_cov_est - r) / self.p
+        lam[lam < 1] = 1 # clip to values > 1
+        self.p *= lam
+
+        # Kalman gain
+        k = self.p / (self.p + r)
+
+        # standard Kalman "predict" step
+        self.x += k * innovation
+        self.p *= 1 - k
+
+        # guard against NaN values
+        self.x = np.nan_to_num(self.x, nan=frame)
+        self.p = np.nan_to_num(self.p, nan=1.0)
+        self.innov_cov_est = np.nan_to_num(self.innov_cov_est, nan=1.0)
+
+        # mask pixels with high "uncertainty" (high estimate standard deviation)
+        return np.where(np.sqrt(self.p) < self.uncertainty_threshold, self.x, np.nan)
+
+
+class TemporalFilter:
+    "Exponential moving average filter with jump detection"
+    
+    def __init__(self, alpha=0.2, threshold=300):
+        self.alpha = alpha
+        self.threshold = threshold
+        self.state = np.array(0)
+
+    def __call__(self, frame: np.ndarray):
+        diff = frame - self.state
+        result = self.alpha * frame + (1-self.alpha) * self.state
+        result = np.where(np.abs(diff) < self.threshold, result, frame)
+        
+        self.state = result
+        return result
+
+class EMAFilter:
+    "Exponential moving average filter"
+    
+    def __init__(self, alpha=0.2):
+        self.alpha = alpha
+        self.state = np.array(np.nan)
+
+    def __call__(self, img: np.ndarray):
+        self.state = self.alpha * img + (1 - self.alpha) * self.state
+        self.state = np.where(np.isnan(self.state), img, self.state)
+        return self.state

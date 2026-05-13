@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QCheckBox, QLabel, QSpinBox, QDoubleSpinBox, QGroupBox, QVBoxLayout
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QCheckBox, QLabel, QSpinBox, QDoubleSpinBox, QGroupBox, QVBoxLayout, QSlider
+from PySide6.QtCore import Signal, Qt
 
 class SimpleFilter(QWidget):
     signal_filter_changed = Signal(bool)
@@ -132,4 +132,49 @@ class InterferenceFilter(SimpleFilter):
         self.checkBox.setChecked(self.default_on)
         self.limit.setValue(self.defaultLimit)
         self.useLastValue.setChecked(self.defaultUseLastOn)
+        self.__emit_signal()
+
+class KalmanFilter(SimpleFilter):
+    signal_filter_changed = Signal(bool, float)
+    def __init__(self, name='Kalman Filter', default_value=200.0, default_on=False):
+        super(KalmanFilter, self).__init__(name, default_on)
+
+        self.slider_default = default_value
+        self.default_on = default_on
+
+        self.label = QLabel('Max. Uncertainty [mm]', self)
+        self.slider = QSlider(Qt.Horizontal, self)
+        self.sbox = QSpinBox(self)
+        self.slider.setRange(10, 200)
+        self.sbox.setRange(10, 200)
+        self.slider.setValue(self.slider_default)
+        self.sbox.setValue(self.slider_default)
+
+        layout = self.layout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.slider)
+        layout.addWidget(self.sbox)
+
+        self.sbox.valueChanged.connect(self.slider.setValue)
+        self.slider.valueChanged.connect(self.sbox.setValue)
+        self.slider.valueChanged.connect(lambda: self.__emit_signal())
+        self.checkBox.stateChanged.disconnect()
+        self.checkBox.stateChanged.connect(self.__set_active)
+        self.__set_active(False)
+
+    def isChecked(self) -> bool:
+        return self.checkBox.isChecked()
+
+    def __emit_signal(self):
+        self.signal_filter_changed.emit(self.checkBox.isChecked(), self.slider.value())
+
+    def __set_active(self, enable: bool):
+        self.label.setEnabled(enable)
+        self.slider.setEnabled(enable)
+        self.sbox.setEnabled(enable)
+        self.signal_filter_changed.emit(enable, self.slider.value())
+
+    def setDefaultValue(self):
+        self.checkBox.setChecked(self.default_on)
+        self.slider.setValue(self.slider_default)
         self.__emit_signal()

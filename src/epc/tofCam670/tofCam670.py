@@ -1,11 +1,13 @@
 from epc.tofCam_lib.tofCam import TOFcam, Dev_Infos_Controller, TOF_Settings_Controller
 from epc.tofCam_lib.projection_models import RadialCameraProjector
+from epc.tofCam_lib.filters import KalmanVideoDenoiser, TemporalFilter
 from epc_tofcam_native import TOFCam as libcam
 from epc_tofcam_native import TOFControl, TOFFrame, FrameType, AcquisitionMode
 import numpy as np
 import logging
 import subprocess
-from scipy.ndimage import median_filter, uniform_filter
+import warnings
+from scipy.ndimage import median_filter, uniform_filter, vectorized_filter
 
 DEFAULT_MAX_AMP = 2894
 DEFAULT_MAX_DEPTH = 16000
@@ -103,6 +105,10 @@ class TOFcam670(TOFcam):
         self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
         self.medianFilterOn = False
         self.averageFilterOn = False
+        self.temporalFilterOn = False
+        self.temporalFilter = TemporalFilter()
+        self.kalmanFilterOn = False
+        self.kalmanFilter = KalmanVideoDenoiser()
         self.latestMetadata = None
 
     def __del__(self):
@@ -120,17 +126,35 @@ class TOFcam670(TOFcam):
 
     def get_distance_image(self):
         frame = self.__capture_frame()
-        distance = frame.get(FrameType.DISTANCE)
-        result = np.where(distance < self.settings.maxDepth, distance, 0)
+        distance = frame.get(FrameType.DISTANCE).astype(float)
+        amplitude = frame.get(FrameType.AMPLITUDE).astype(float)
+        result = distance
+        result[distance > self.settings.maxDepth] = np.nan
+        if (self.temporalFilterOn):
+            result = self.temporalFilter(result)
+        if (self.kalmanFilterOn):
+            result = self.kalmanFilter(result, amplitude)
         if (self.medianFilterOn):
             result = median_filter(result, size=3)
         if (self.averageFilterOn):
-            result = uniform_filter(result, size=3)
+            # use np.nanmean because scipy uniformfilter cannot handle NaN values
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 'Mean of empty slice')
+                result = vectorized_filter(result, function=np.nanmean, size=3)
+
+        # images with only NaN values would crash
+        if np.all(np.isnan(result)):
+            result = np.zeros_like(result)
+
         return result
 
     def get_amplitude_image(self):
         frame = self.__capture_frame()
         amplitude = frame.get(FrameType.AMPLITUDE)
+        if (self.temporalFilterOn):
+            amplitude = self.temporalFilter(amplitude)
+        if (self.kalmanFilterOn):
+            amplitude = self.kalmanFilter(amplitude, 1000)
         if (self.medianFilterOn):
             amplitude = median_filter(amplitude, size=3)
         if (self.averageFilterOn):
@@ -140,6 +164,14 @@ class TOFcam670(TOFcam):
     def get_grayscale_image(self):
         frame = self.__capture_frame()
         grayscale = frame.get(FrameType.GRAYSCALE)
+        if (self.temporalFilterOn):
+            grayscale = self.temporalFilter(grayscale)
+        if (self.kalmanFilterOn):
+            grayscale = self.kalmanFilter(grayscale, 1000)
+        if (self.medianFilterOn):
+            grayscale = median_filter(grayscale, size=3)
+        if (self.averageFilterOn):
+            grayscale = uniform_filter(grayscale, size=3)
         return grayscale
 
     def get_raw_dcs_images(self):
@@ -153,16 +185,21 @@ class TOFcam670(TOFcam):
 
     def get_point_cloud(self):
         frame = self.__capture_frame()
-        depth = frame.get(FrameType.DISTANCE)
-        amplitude = frame.get(FrameType.AMPLITUDE)
-        if (self.medianFilterOn):
-            depth = median_filter(depth, size=3)
-        if (self.averageFilterOn):
-            depth = uniform_filter(depth, size=3)
+        depth = frame.get(FrameType.DISTANCE).astype(float)
+        amplitude = frame.get(FrameType.AMPLITUDE).astype(float)
 
-        amplitude[amplitude>DEFAULT_MAX_AMP] = 0 # remove error codes
-        depth  = depth.astype(np.float32)
-        depth[depth >= self.settings.maxDepth] = np.nan
+        depth[depth >= self.settings.maxDepth] = np.nan # remove error codes
+        amplitude[amplitude>DEFAULT_MAX_AMP] = np.nan # remove error codes
+
+        if (self.temporalFilterOn):
+            depth = self.temporalFilter(depth)
+        if (self.kalmanFilterOn):
+            depth = self.kalmanFilter(depth, amplitude)
+        if (self.medianFilterOn):
+            depth = vectorized_filter(depth, function=np.median, size=3)
+        if (self.averageFilterOn):
+            depth = vectorized_filter(depth, function=np.mean, size=3)
+
         depth = np.flipud(depth)
         amplitude = np.flipud(amplitude)
 
