@@ -1,6 +1,14 @@
 # Changelog
 
 ## [Unreleased]
+### TOFcam670
+- Added support for the TOFcam670 on native Linux platforms (e.g. Raspberry Pi)
+
+### General GUI
+- Improved GUI responsiveness
+- Added keyboard shortcuts for common actions
+- Added unit selection menu (mm, cm, inch)
+- Improved clipping behavior for data outside the selected range
 
 ## [0.7.1] - 2026-05-07
 ### TOFcam670
