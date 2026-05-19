@@ -3,14 +3,12 @@ import getopt
 import sys
 
 import numpy as np
-import qdarktheme
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from epc.tofCam670.tofCam670 import TOFcam670, AcquisitionMode
 from epc.tofCam_gui import Base_TOFcam_Bridge, GUI_TOFcam670
 from epc.tofCam_gui.streamer import pause_streaming
-from epc.tofCam_lib.filters import cannyE, gradimg, threshgrad
 
 
 class TOFcam670_bridge(Base_TOFcam_Bridge):
@@ -113,33 +111,32 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         print(f"Setting modulation frequency to {frequency} MHz")
         if self.gui.imageTypeWidget.getSelection() == 'Distance':
             self._distance_unambiguity = self.C / (2 * frequency * 1e6)
-            self.gui.imageView.video.ui.histogram.setHistogramRange(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
+            histogram = self.gui.imageView.getHistogramWidget()
+            histogram.setHistogramRange(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
         self.cam.settings.set_modulation(frequency)
         self.capture()
 
     def _set_standard_image_type(self, image_type):
         super(TOFcam670_bridge, self)._set_standard_image_type(image_type)
-        if image_type == 'Distance':
+        histogram = self.gui.imageView.getHistogramWidget()
+        if image_type in ['Distance', 'Point Cloud']:
             self.gui.imageView.setLevels(200*self.unit_scaling_factor, 2500*self.unit_scaling_factor)  # override default levels
-            self.gui.imageView.video.ui.histogram.setHistogramRange(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
+            histogram.setHistogramRange(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
         elif image_type == 'DCS':
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)  # override default levels
-            self.gui.imageView.video.ui.histogram.setHistogramRange(self.MIN_DCS, self.MAX_DCS)
+            histogram.setHistogramRange(self.MIN_DCS, self.MAX_DCS)
         else:
             levels = self.gui.imageView.video.getLevels()
-            self.gui.imageView.video.ui.histogram.setHistogramRange(*levels)
+            histogram.setHistogramRange(*levels)
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
         self.image_type = image_type
         self.gui.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
-        if image_type == 'Point Cloud':
-            self.gui.imageView.setActiveView('pointcloud')
-            self._get_image_cb = self.cam.get_point_cloud
-        else:
-            self._set_standard_image_type(image_type)
+
+        self._set_standard_image_type(image_type)
         
-        if image_type == 'Distance' or image_type == 'Amplitude' or image_type == 'Point Cloud':
+        if image_type in ['Distance', 'Amplitude', 'Point Cloud']:
             if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
                 self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP_HDR)
                 self.cam.settings.set_hdr(2)

@@ -43,10 +43,12 @@ class Base_TOFcam_Bridge():
         # connect signals
         self.gui.toolBar.captureButton.triggered.connect(self.capture)
         self.gui.toolBar.playButton.triggered.connect(self._set_streaming)
-        self.gui.imageView.slider.playButton.clicked.connect(
-            self._set_replay_streaming)
+        self.gui.imageView.slider.playButton.clicked.connect(self._set_replay_streaming)
         self.gui.toolBar.recordButton.triggered.connect(self._set_recording)
         self.gui.topMenuBar.unitsGroup.triggered.connect(self._set_units)
+        self.gui.imageView.pc.color_map_selector.currentIndexChanged.connect(self.capture)
+        self.gui.imageView.pc.histogram.item.sigLevelsChanged.connect(self._hist_levels_changed_handler)
+        self.gui.imageView.pc.histogram.item.sigLookupTableChanged.connect(self.capture)
 
         self._static_meta: Dict[str, Any] = {}
         self.fallback_cam: Optional[TOFcam] = None
@@ -54,6 +56,15 @@ class Base_TOFcam_Bridge():
         self.cam = cam
         self._update_cam(cam=cam) 
         self.gui.bridge = self
+
+    def _hist_levels_changed_handler(self):
+        histogram = self.gui.imageView.pc.histogram
+        histogram.item.blockSignals(True)
+        try:
+            self.capture()
+            self.gui.imageView.flush_pending()
+        finally:
+            histogram.item.blockSignals(False)
 
     def _update_cam(self, cam: TOFcam) -> None:
         self.fallback_cam = self.cam
@@ -212,7 +223,7 @@ class Base_TOFcam_Bridge():
         elif image_type == 'Amplitude':
             self.gui.imageView.setActiveView('image')
             self._get_image_cb = self.cam.get_amplitude_image
-            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
+            self.gui.imageView.setColorMap(self.gui.imageView.AMPLITUDE_CMAP)
             self.gui.imageView.setLevels(0, self.MAX_AMPLITUDE)
         elif image_type == 'Grayscale':
             self.gui.imageView.setActiveView('image')
@@ -224,6 +235,11 @@ class Base_TOFcam_Bridge():
             self._get_image_cb = self.get_combined_dcs
             self.gui.imageView.setColorMap(self.gui.imageView.GRAYSCALE_CMAP)
             self.gui.imageView.setLevels(self.MIN_DCS, self.MAX_DCS)
+        elif image_type == 'Point Cloud':
+            self.gui.imageView.setActiveView('pointcloud')
+            self._get_image_cb = self.cam.get_point_cloud
+            self.gui.imageView.setColorMap(self.gui.imageView.DISTANCE_CMAP)
+            self.gui.imageView.setLevels(0, self._distance_unambiguity*1000*self.unit_scaling_factor)
         else:
             raise ValueError(f"Image type '{image_type}' is not supported")
 

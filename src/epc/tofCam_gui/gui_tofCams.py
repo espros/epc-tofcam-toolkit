@@ -137,11 +137,12 @@ class Base_GUI_TOFcam(QMainWindow):
         if self.__filter_cb:
             image = self.__filter_cb(image)
 
+        histogram = self.imageView.getHistogramWidget()
         if self.topMenuBar.outOfRangeClipAction.isChecked() and isinstance(image, np.ndarray):
             pass  # do nothing, the image view widget clips by default
 
         if self.topMenuBar.outOfRangeMaskAction.isChecked() and isinstance(image, np.ndarray):
-            lower, upper = self.imageView.video.getLevels()
+            lower, upper = histogram.item.getLevels()
             image = np.where(image > lower, image, np.nan)
             image = np.where(image < upper, image, np.nan)
         

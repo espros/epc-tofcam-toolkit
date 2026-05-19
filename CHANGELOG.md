@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Unreleased]
+### General GUI
+- Added keyboard shortcut to trigger a single capture using the Return key
+- Added color scale histogram to the Point-Cloud visualization
+- Added dropdown to the Point-Cloud visualization to select point coloring by distance or amplitude
 
 ## [0.8.0] - 2026-05-13
 ### TOFcam670
