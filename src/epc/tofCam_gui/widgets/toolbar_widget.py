@@ -63,6 +63,7 @@ class ToolBar(QToolBar):
         self.addAction(self.importButton)
 
         self.playButton.setShortcut(QKeySequence(Qt.Key.Key_Space))
+        self.captureButton.setShortcut(QKeySequence(Qt.Key.Key_Return))
 
         self.addWidget(left_spacer)
         self.addWidget(self.versionInfo)

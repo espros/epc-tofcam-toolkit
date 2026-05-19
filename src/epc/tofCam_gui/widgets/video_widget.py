@@ -3,14 +3,14 @@ from typing import Optional
 import numpy as np
 from epc.tofCam_gui.icon_svg import svg2icon
 from epc.tofCam_lib.h5Cam import H5Cam
-from pyqtgraph import ImageView
+from pyqtgraph import ImageView, HistogramLUTWidget
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
 from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider,
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider, QComboBox,
                                QStackedWidget, QToolTip, QVBoxLayout, QWidget)
 
 CMAP_DISTANCE = [(0,   0,   0),
@@ -28,6 +28,7 @@ CMAP_GRAYSCALE = [(0, 0, 0),
                   (204, 204, 204),
                   (255, 255, 255)]
 
+MAX_AMPLITUDE = 2894
 
 class Gizmo(GLGraphicsItem):
     def __init__(self, arrow_length=0.5, parent=None):
@@ -54,6 +55,7 @@ class Camera(GLGraphicsItem):
         self._gizmo = Gizmo(parent=self)
         self._pcd = GLScatterPlotItem(parentItem=self, glOptions='opaque')
         QTimer.singleShot(0, self.safe_init)
+        self._color_map = 'amplitude'
 
     def safe_init(self) -> None:
         """Delay the initialization until the OpenGL context is ready"""
@@ -69,15 +71,15 @@ class Camera(GLGraphicsItem):
         self.rotate(rotation[2], 0, 0, 1)
         self.translate(*self.offset)
 
-    def update_point_cloud(self, points: np.ndarray, amplitudes: np.ndarray):
-        norm_amp = amplitudes / np.max(amplitudes)
-        cmap = getFromMatplotlib('turbo')
-        colors = cmap.map(norm_amp, 'float')
+    def set_color_map(self, color_map = 'amplitude'):
+        if color_map not in ['distance', 'amplitude']:
+            raise ValueError(f"Unsupported color map: {color_map}")
+        self._color_map = color_map
 
+    def update_point_cloud(self, points: np.ndarray, colors):
         points = np.astype(points, np.float64)
         points[0] *= -1  # Flip x axis since OpenGL uses right-handed coordinate system
         self._pcd.setData(pos=points.T, color=colors, size=3)
-        # print('latest step', points.shape)
         self.view().update()
 
 
@@ -92,20 +94,78 @@ class PointCloudWidget(GLViewWidget):
         self.grid.translate(0, -0.5, 0)
         self.addItem(self.grid)
 
+        self.histogram = HistogramLUTWidget(self)
+        self.histogram.setFixedWidth(150)
+        self.histogram.item.sigLookupTableChanged.connect(self._color_map_changed)
+
         self.reset_btn = QPushButton("Reset View", self)
         self.reset_btn.resize(100, 30)
         self.reset_btn.clicked.connect(self.reset_view)
+        self.reset_btn.setToolTip("Reset the camera view to default position")
 
+        self.color_map_selector = QComboBox(self)
+        self.color_map_selector.addItems(["Distance", "Amplitude"])
+        self.color_map_selector.setCurrentIndex(0)
+        self.color_map_selector.setToolTip("Select color map for point cloud")
+        self.color_map_selector.currentTextChanged.connect(self.setColorMap)
+        self.color_map_selector.currentTextChanged.emit(self.color_map_selector.currentText())
+
+        self.histogram.item.gradient.setColorMap(VideoWidget.AMPLITUDE_CMAP)
         self.reset_view()
         self.setMouseTracking(True)
+
+    def _color_map_changed(self, text):
+        self._cmap = self.histogram.item.gradient.colorMap()
+
+    def setColorMap(self, cmap):
+        if cmap == 'Distance':
+            self._cmap = VideoWidget.DISTANCE_CMAP
+        elif cmap == 'Amplitude':
+            self._cmap = VideoWidget.AMPLITUDE_CMAP
+            self.histogram.setLevels(0, MAX_AMPLITUDE)
+            self.histogram.item.setHistogramRange(0, MAX_AMPLITUDE)
+        self.histogram.item.gradient.setColorMap(self._cmap)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         margin = 10
         self.reset_btn.move(margin, self.height() - self.reset_btn.height() - margin)
+        
+        hist_w = self.histogram.width()
+        self.histogram.setFixedHeight(self.height())
+        self.histogram.move(self.width() - hist_w, 0)
 
-    def update_point_cloud(self, points: np.ndarray):
-        self.camera.update_point_cloud(points[0], points[1])
+        self.color_map_selector.move(self.width() - hist_w - self.color_map_selector.width() - margin, margin)
+    
+    def _get_scalar_values(self, points3d: np.ndarray, amplitudes: np.ndarray) -> np.ndarray:
+        """Return the scalar values used for histogram and coloring based on the selected mode."""
+        if self.color_map_selector.currentText() == 'Distance':
+            return np.linalg.norm(points3d * 1000, axis=0)
+        return amplitudes
+
+    def update_point_cloud(self, points: np.ndarray, autolevels=False):
+        points3d = points[0].copy().astype(float)
+        amplitudes = points[1].copy().astype(float)
+
+        scalars = self._get_scalar_values(points3d, amplitudes)
+        finite_mask = np.isfinite(scalars)
+
+        hist_range = (0, MAX_AMPLITUDE) if self.color_map_selector.currentText() == 'Amplitude' else None
+        y, x = np.histogram(scalars[finite_mask], bins=256, range=hist_range)
+        self.histogram.item.plot.setData(x, y, stepMode='center')
+
+        if autolevels and finite_mask.any():
+            self.histogram.item.region.setRegion([scalars[finite_mask].min(),
+                                                  scalars[finite_mask].max()])
+
+        roi_min, roi_max = self.histogram.item.region.getRegion()
+        roi_mask = finite_mask & (scalars >= roi_min) & (scalars <= roi_max)
+
+        points3d[:, ~roi_mask] = np.nan
+        norm = np.where(roi_mask, (scalars - roi_min) / max(roi_max - roi_min, 1e-9), np.nan)
+        colors = self._cmap.map(np.clip(norm, 0.0, 1.0), 'float')
+
+        self.camera.update_point_cloud(points3d, colors)
 
     def reset_view(self):
         self.setCameraPosition(distance=4, pos=QVector3D(
@@ -283,6 +343,7 @@ class VideoWidget(QWidget):
     GRAYSCALE_CMAP = ColorMap(pos=np.linspace(
         0.0, 1.0, 6), color=CMAP_GRAYSCALE)
     DISTANCE_CMAP = getFromMatplotlib('turbo')
+    AMPLITUDE_CMAP = getFromMatplotlib('turbo')
 
     def __init__(self, parent=None,  max_display_fps=30):
 
@@ -290,7 +351,7 @@ class VideoWidget(QWidget):
         self._pending: Optional[tuple] = None  
         self._render_timer = QTimer(self)
         self._render_timer.setInterval(max(1, int(1000 / max_display_fps)))
-        self._render_timer.timeout.connect(self._flush_pending)
+        self._render_timer.timeout.connect(self.flush_pending)
         self._render_timer.start()
 
         self.video = ImageView(self)
@@ -320,6 +381,12 @@ class VideoWidget(QWidget):
         _layout.addWidget(self.slider)
         self.setLayout(_layout)
 
+    def getHistogramWidget(self) -> HistogramLUTWidget:
+        if self.stacked.currentWidget() == self.pc:
+            return self.pc.histogram
+        else:
+            return self.video.getHistogramWidget()
+
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj == self.source_label and event.type() == QEvent.Type.Resize:
             self.update_label_position()
@@ -339,7 +406,7 @@ class VideoWidget(QWidget):
         elif view == 'pointcloud':
             self.stacked.setCurrentWidget(self.pc)
 
-    def _flush_pending(self) -> None:
+    def flush_pending(self) -> None:
         if self._pending is not None:
             args, kwargs = self._pending
             self._pending = None
@@ -353,13 +420,14 @@ class VideoWidget(QWidget):
         if self.stacked.currentWidget() == self.video and isinstance(data, np.ndarray):
             self.video.setImage(*args, **kwargs)
         elif self.stacked.currentWidget() == self.pc and isinstance(data, tuple):
-            self.pc.update_point_cloud(data)
+            autolevels = kwargs.get('autoLevels', False)
+            self.pc.update_point_cloud(data, autolevels)
 
     def setColorMap(self, cmap):
         self.video.setColorMap(cmap)
 
     def setLevels(self, min, max):
-        self.video.setLevels(min, max)
+        self.getHistogramWidget().setLevels(min, max)
 
     def reset(self) -> None:
         """Set the blank screen"""
