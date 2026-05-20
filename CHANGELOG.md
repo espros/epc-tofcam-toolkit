@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.9.0] - 2026-05-20
 ### General GUI
 - Added keyboard shortcut to trigger a single capture using the Return key
 - Added color scale histogram to the Point-Cloud visualization
