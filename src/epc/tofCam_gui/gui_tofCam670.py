@@ -47,9 +47,10 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
 
         self.medianFilter = SimpleFilter('Median Filter')
         self.averageFilter = SimpleFilter('Average Filter')
+        self.edgeFilter = EdgeFilter(range=(0, 5000), threshold=150)
         self.temporalFilter = TemporalFilter()
         self.kalmanFilter = KalmanFilter('Kalman Filter')
-        self.builtInFilter = SettingsGroup('Image Filters', [self.medianFilter, self.averageFilter, self.temporalFilter, self.kalmanFilter])
+        self.builtInFilter = SettingsGroup('Image Filters', [self.medianFilter, self.averageFilter, self.edgeFilter, self.temporalFilter, self.kalmanFilter])
 
         # Create Layout for settings
         self.settingsLayout.addWidget(self.imageTypeWidget)

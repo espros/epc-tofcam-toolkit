@@ -1,6 +1,6 @@
 from epc.tofCam_lib.tofCam import TOFcam, Dev_Infos_Controller, TOF_Settings_Controller
 from epc.tofCam_lib.projection_models import RadialCameraProjector
-from epc.tofCam_lib.filters import KalmanVideoDenoiser, TemporalFilter
+from epc.tofCam_lib.filters import KalmanVideoDenoiser, TemporalFilter, edgeFilter
 from epc_tofcam_native import TOFCam as libcam
 from epc_tofcam_native import TOFControl, TOFFrame, FrameType, AcquisitionMode
 import numpy as np
@@ -105,6 +105,8 @@ class TOFcam670(TOFcam):
         self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
         self.medianFilterOn = False
         self.averageFilterOn = False
+        self.edgeFilterOn = False
+        self.edgeFilterThreshold = 300
         self.temporalFilterOn = False
         self.temporalFilter = TemporalFilter()
         self.kalmanFilterOn = False
@@ -134,6 +136,8 @@ class TOFcam670(TOFcam):
             result = self.temporalFilter(result)
         if (self.kalmanFilterOn):
             result = self.kalmanFilter(result, amplitude)
+        if self.edgeFilterOn:
+            result = edgeFilter(result, threshold=self.edgeFilterThreshold)
         if (self.medianFilterOn):
             result = median_filter(result, size=3)
         if (self.averageFilterOn):
@@ -195,6 +199,8 @@ class TOFcam670(TOFcam):
             depth = self.temporalFilter(depth)
         if (self.kalmanFilterOn):
             depth = self.kalmanFilter(depth, amplitude)
+        if self.edgeFilterOn:
+            depth = edgeFilter(depth, threshold=self.edgeFilterThreshold)
         if (self.medianFilterOn):
             depth = vectorized_filter(depth, function=np.median, size=3)
         if (self.averageFilterOn):

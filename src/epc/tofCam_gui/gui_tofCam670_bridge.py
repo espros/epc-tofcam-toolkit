@@ -33,6 +33,7 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         gui.minAmplitude.signal_value_changed.connect(self._set_min_amplitudes)
         gui.medianFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.averageFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.edgeFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.temporalFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.kalmanFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
@@ -61,6 +62,8 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
             return
         self.cam.medianFilterOn = self.gui.medianFilter.isChecked()
         self.cam.averageFilterOn = self.gui.averageFilter.isChecked()
+        self.cam.edgeFilterOn = self.gui.edgeFilter.isChecked()
+        self.cam.edgeFilterThreshold = self.gui.edgeFilter.threshold.value()
         self.cam.temporalFilterOn = self.gui.temporalFilter.isChecked()
         self.cam.temporalFilter.alpha = self.gui.temporalFilter.factor.value()
         self.cam.temporalFilter.threshold = self.gui.temporalFilter.threshold.value()
