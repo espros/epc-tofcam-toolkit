@@ -64,6 +64,13 @@ class TOFcam670_Settings(TOF_Settings_Controller):
         log.info(f"Setting acquisition mode to: {mode.name}")
         self.cam.cam.setControl(TOFControl.ACQUISITION_MODE, mode)
 
+    def set_interference_filter(self, enabled = False, threshold = 150, latching=False):
+        if enabled:
+            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, int(threshold))
+            self.cam.cam.setControl(TOFControl.INTERFERENCE_ENABLE_LATCHING, int(latching))
+        else:
+            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, 0)
+
 class TOFcam670_Device(Dev_Infos_Controller):
     def __init__(self, cam: TOFcam) -> None:
         super().__init__()
