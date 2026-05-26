@@ -130,3 +130,9 @@ class EMAFilter:
         self.state = self.alpha * img + (1 - self.alpha) * self.state
         self.state = np.where(np.isnan(self.state), img, self.state)
         return self.state
+
+
+def edgeFilter(img: np.ndarray, threshold=300, mask_val=np.nan):
+    kernel = np.array([[-1, -1, -1], [-1, +8, -1], [-1, -1, -1]])
+    edges = convolve(input=img, weights=kernel, mode='reflect')
+    return np.where(np.abs(edges) < threshold, img, mask_val)

@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### TOFcam670
+- Added edge filter
 
 ## [0.9.0] - 2026-05-20
 ### General GUI
