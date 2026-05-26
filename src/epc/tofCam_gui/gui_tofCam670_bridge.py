@@ -36,6 +36,7 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         gui.edgeFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.temporalFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.kalmanFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
+        gui.interferenceFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
         gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
 
         gui.setDefaultValues()
@@ -69,6 +70,11 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         self.cam.temporalFilter.threshold = self.gui.temporalFilter.threshold.value()
         self.cam.kalmanFilterOn = self.gui.kalmanFilter.isChecked()
         self.cam.kalmanFilter.uncertainty_threshold = self.gui.kalmanFilter.slider.value()
+        self.cam.settings.set_interference_filter(
+            self.gui.interferenceFilter.checkBox.isChecked(), 
+            self.gui.interferenceFilter.limit.value(), 
+            self.gui.interferenceFilter.useLastValue.isChecked() 
+        )
 
     def __set_hdrTimesEnabled(self, enabled: bool):
         self.gui.integrationTimes.setTimeEnabled(1, enabled)
