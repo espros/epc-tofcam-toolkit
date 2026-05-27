@@ -5,11 +5,12 @@
 - Added interference filter
 - Added edge filter
 
-## [0.9.0] - 2026-05-20
 ### General GUI
 - Added keyboard shortcut to trigger a single capture using the Return key
 - Added color scale histogram to the Point-Cloud visualization
 - Added dropdown to the Point-Cloud visualization to select point coloring by distance or amplitude
+- Added tool tips for filters and settings
+- Removed Menu Button and stripped content menu for images
 
 ## [0.8.0] - 2026-05-13
 ### TOFcam670
