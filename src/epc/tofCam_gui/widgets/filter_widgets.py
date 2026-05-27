@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QCheckBox, QLabel, QSpinBox, QDoubleSpinBox, QGroupBox, QVBoxLayout, QSlider
 from PySide6.QtCore import Signal, Qt
 
+TOOL_TIP_WIDTH = '<div style="max-width: 200px;">'
+
 class SimpleFilter(QWidget):
     signal_filter_changed = Signal(bool)
     def __init__(self, name: str, default_on=False):
@@ -35,6 +37,16 @@ class TemporalFilter(SimpleFilter):
         self.factor.setSingleStep(0.1)
         self.factor.setDecimals(2)
         self.factor.setRange(*range_factor)
+
+        self.threshold.setToolTip(
+            TOOL_TIP_WIDTH + 'Set the distance threshold for the temporal filter. '
+            'If the distance of a pixel changes by more than this threshold compared to the '
+            'previous frame, the filter will be reset for this pixel.</div>')
+        self.factor.setToolTip(
+            TOOL_TIP_WIDTH + 'Set the blending factor for the temporal filter. '
+            'A value of 0 means that only the current frame is used, while a value of 1 means '
+            'that only the averaged frames are used. Values in between will blend the current '
+            'and averaged frames accordingly.</div>')
 
         layout = self.layout()
 
@@ -76,6 +88,9 @@ class EdgeFilter(SimpleFilter):
         self.threshold.setRange(*range)
         self.layout().addWidget(self.thresholdLabel)
         self.layout().addWidget(self.threshold)
+        self.threshold.setToolTip(
+            TOOL_TIP_WIDTH + 'Pixels whose distance differs from a neighboring pixel '
+            'by more than this threshold are considered edges and will be filtered out.</div>')
 
         self.threshold.valueChanged.connect(lambda: self.__emit_signal())
         self.checkBox.stateChanged.disconnect()
@@ -113,6 +128,13 @@ class InterferenceFilter(SimpleFilter):
         self.useLastValue = QCheckBox('Use Last Value', self)
         layout.addWidget(self.useLastValue)
 
+        self.limit.setToolTip(
+            TOOL_TIP_WIDTH + 'Set the interference amplitude threshold '
+            'for interference detection.</div>')
+        self.useLastValue.setToolTip(
+            TOOL_TIP_WIDTH + 'If enabled, the last valid value will be used for pixels '
+            'detected as interference. Otherwise, they will be marked as invalid.</div>')
+
         self.limit.valueChanged.connect(lambda: self.__emit_signal())
         self.useLastValue.stateChanged.connect(lambda: self.__emit_signal())
         self.checkBox.stateChanged.disconnect()
@@ -149,6 +171,11 @@ class KalmanFilter(SimpleFilter):
         self.sbox.setRange(10, 200)
         self.slider.setValue(self.slider_default)
         self.sbox.setValue(self.slider_default)
+
+        self.sbox.setToolTip(
+            TOOL_TIP_WIDTH + 'Set the maximum uncertainty for the Kalman filter. '
+            'Higher values will make the filter more responsive to changes but may also '
+            'let through more noise.</div>')
 
         layout = self.layout()
         layout.addWidget(self.label)

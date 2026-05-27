@@ -356,8 +356,17 @@ class VideoWidget(QWidget):
 
         self.video = ImageView(self)
         self.video.ui.roiBtn.setText("Scope")
+        self.video.ui.menuBtn.hide()
+        for action in self.video.getView().menu.actions():
+            if action.text() in ('X axis', 'Y axis'):
+                self.video.getView().menu.removeAction(action)
+        scope = self.video.getRoiPlot().getPlotItem()
+        scope.setMenuEnabled(False)
+        scope.setLabels(left='Mean Value', bottom='ROI Column')
+        
         self.pc = PointCloudWidget(self)
         self.slider = VideoSlider(parent=self)
+        self.video.getRoiPlot()
 
         # Stack
         self.stacked = QStackedWidget(self)
