@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.9.0] - 2026-06-03
 ### TOFcam670
 - Added interference filter
 - Added edge filter
