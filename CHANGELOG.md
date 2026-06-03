@@ -10,7 +10,7 @@
 - Added color scale histogram to the Point-Cloud visualization
 - Added dropdown to the Point-Cloud visualization to select point coloring by distance or amplitude
 - Added tool tips for filters and settings
-- Removed Menu Button and stripped content menu for images
+- Removed Menu button and stripped content menu for images
 
 ## [0.8.0] - 2026-05-13
 ### TOFcam670
