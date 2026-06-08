@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### General
+- improved README.md
+
 ## [0.9.0] - 2026-06-03
 ### TOFcam670
 - Added interference filter

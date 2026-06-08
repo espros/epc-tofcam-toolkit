@@ -17,7 +17,7 @@ Source code: https://github.com/espros/epc-tofcam-toolkit
 ## Quick-start
 To install the toolkit include all necessary dependencies for the graphical user interface, install the package using the [gui] extra:
 ```bash
-pip install epc-tofcam-toolkit[gui]
+pip install "epc-tofcam-toolkit[gui]"
 ```
 
 Connect and startup the camera. Then simply run the gui with: 
