@@ -6,33 +6,26 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+from importlib.metadata import version
 import sys
 sys.path.insert(0, '../../src')
-from epc._version import __version__
+from epc_docs.common_conf import apply_common_config
+from typing import cast
 
-project = 'EPC TOFcam Toolkit'
-copyright = 'ESPROS Photonics Corporation'
-author = 'ESPROS Photonics Corporation'
-release = __version__
+__version__ = version('epc-tofcam-toolkit')
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+apply_common_config(globals(), 'EPC TOFcam Toolkit', __version__)
 
-extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon']
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.txt': 'markdown',
-    '.md': 'markdown',
-}
+# Tell static analyzers these names are injected by apply_common_config.
+extensions = cast(list[str], globals().get("extensions", []))
+html_static_path = cast(list[str], globals().get("html_static_path", []))
+source_suffix = cast(dict[str, str], globals().get("source_suffix", {}))
+project = cast(str, globals().get("project", ""))
+epc_docs_url = cast(str, globals().get("epc_docs_url", ""))
+myst_substitutions = cast(dict[str, str], globals().get("myst_substitutions", {}))
+intersphinx_mapping = cast(dict[str, str], globals().get("intersphinx_mapping", {}))
+
+extensions += ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+
 autodoc_mock_imports = ["numpy", "matplotlib", "serial", "PIL"]
 
-templates_path = ['_templates']
-exclude_patterns = []
-
-
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']

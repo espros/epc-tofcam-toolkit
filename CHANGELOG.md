@@ -4,6 +4,7 @@
 
 ### General
 - improved README.md
+- changed docs to common espros look
 
 ## [0.9.0] - 2026-06-03
 ### TOFcam670

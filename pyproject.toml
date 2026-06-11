@@ -68,6 +68,8 @@ dev = [
 docs = [
     "sphinx",
     "sphinx-rtd-theme",
+    "myst-parser",
+    "epc-docs-builder"
 ]
 
 [project.urls]
