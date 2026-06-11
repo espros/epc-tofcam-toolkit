@@ -69,7 +69,7 @@ pip install -e .
 
 **Option B — Core API & Full development environment inlcuding the GUI**:
 ```bash
-pip install --editable ".[dev,gui,doc]"
+pip install --editable ".[dev,gui]"
 ```
 
 Installs the full development environment and all dependency groups:
@@ -78,4 +78,3 @@ Installs the full development environment and all dependency groups:
 |-------|---------|
 | `gui` | Required to run the GUI applications |
 | `dev` | Required for testing and type checking |
-| `doc` | Required for compiling documentation |

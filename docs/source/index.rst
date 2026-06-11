@@ -37,12 +37,21 @@ Datasheets
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: EPC TOFcam Toolkit:
+   :hidden:
    
    install_instructions.md
    gui_instructions.md
    tofCam_modules.rst
    api.rst
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Related Products:
+   
+   epctofcam-library <https://docs.espros.com/espros_processing_pipeline>
+   iToF Sensors <https://docs.espros.com/epc_user_guides/user_guides/itof_imaging_guide.html>
 
 Indices and tables
 ==================
