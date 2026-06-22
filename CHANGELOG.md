@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### TOFcam670 GUI
+- Disable inactive settings based on acquisition modes.
+
 ### General
 - improved README.md
 - changed docs to common espros look

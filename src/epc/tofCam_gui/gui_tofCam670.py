@@ -102,7 +102,43 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.minAmplitude)
         self.settingsLayout.addWidget(self.builtInFilter)
 
+        # connect gui signals
+        self.imageTypeWidget.signal_value_changed.connect(self._set_image_type_called)
+        self.hdrModeDropDown.signal_value_changed.connect(lambda: self._set_image_type_called(self.imageTypeWidget.getSelection()))
+
         self.complete_setup()
+
+        self.hdrModeDropDown.setEnabled(False)
+
+    def _set_image_type_called(self, image_type: str):
+        if image_type in ["Distance", "Amplitude", "Point Cloud", "DCS"]:
+            if self.hdrModeDropDown.getSelection() == "HDR Off":
+                self.integrationTimes.setTimeEnabled(1, False)
+                self.integrationTimes.setTimeEnabled(2, False)
+            else: 
+                self.integrationTimes.setTimeEnabled(1, True)
+                self.integrationTimes.setTimeEnabled(2, True)
+
+            self.integrationTimes.setTimeEnabled(0, True)
+            self.integrationTimes.setTimeEnabled(3, False)
+            self.hdrModeDropDown.setEnabled(True)
+            self.minAmplitude.setEnabled(True)
+            self.modulationFrequency.setEnabled(True)
+        
+        if "Amplitude" == image_type:
+            self.minAmplitude.setEnabled(False)
+        elif "Grayscale" == image_type:
+            self.integrationTimes.setTimeEnabled(0, False)
+            self.integrationTimes.setTimeEnabled(1, False)
+            self.integrationTimes.setTimeEnabled(2, False)
+            self.integrationTimes.setTimeEnabled(3, True)
+            self.hdrModeDropDown.setEnabled(False)
+            self.minAmplitude.setEnabled(False)
+            self.modulationFrequency.setEnabled(False)
+        
+        self.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
+        
+
 
     def _set_bridge(self, cam:"TOFcam") -> None:
         from epc.tofCam_gui.gui_tofCam670_bridge import TOFcam670_bridge
