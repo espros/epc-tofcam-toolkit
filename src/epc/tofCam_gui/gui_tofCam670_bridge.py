@@ -40,7 +40,6 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
 
         gui.setDefaultValues()
-        gui.hdrModeDropDown.setEnabled(False)
 
     def getImage(self):
         if self.image_type == 'Point Cloud':
@@ -75,10 +74,6 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
             self.gui.interferenceFilter.limit.value(), 
             self.gui.interferenceFilter.useLastValue.isChecked() 
         )
-
-    def __set_hdrTimesEnabled(self, enabled: bool):
-        self.gui.integrationTimes.setTimeEnabled(1, enabled)
-        self.gui.integrationTimes.setTimeEnabled(2, enabled)
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
@@ -141,7 +136,6 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
     @pause_streaming
     def _set_image_type(self, image_type: str):
         self.image_type = image_type
-        self.gui.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
 
         self._set_standard_image_type(image_type)
         
@@ -149,11 +143,9 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
             if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
                 self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP_HDR)
                 self.cam.settings.set_hdr(2)
-                self.__set_hdrTimesEnabled(True)
             else:
                 self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP)
                 self.cam.settings.set_hdr(0)
-                self.__set_hdrTimesEnabled(False)
             self._set_min_amplitudes(self.gui.minAmplitude.slider.value())
         elif image_type == 'DCS':
             self.cam.settings.set_acquisition_mode(AcquisitionMode.DCS4)
