@@ -7,6 +7,12 @@ All TOFcam subclasses implement a TOFcam_Settings and a TOFcam_Device_Info class
 .. image:: images/TOFcam-class-diagram.png
     :align: center
 
+TOFcam670 API
+-------------
+
+Checkout the `epc-tofcam-native <https://docs.espros.com/espros_processing_pipeline>`_ python package for native development on the raspberry pi.
+
+
 TOFcam660 API
 -------------
 

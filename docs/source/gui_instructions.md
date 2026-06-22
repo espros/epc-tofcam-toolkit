@@ -15,6 +15,21 @@ While each ESPROS TOFcam implements there own control settings, the gui is struc
 When you click on View/Console the following iPython console opens. You can use it to explore the TOFcam API and set additional parameters.
 ![GUI_Console](images/console_window.png)
 
+## GUI-TOFcam670
+The GUI for the epc670 Starter Kit and the epc670 ToF HAT+ currently runs only on a Raspberry Pi.
+Before launching it, install all required local dependencies by including the optional `native` extras when installing `epc-tofcam-toolkit`.
+
+```bash
+pip install "epc-tofcam-toolkit[gui,native]"
+```
+
+After installation, run the following command in your terminal:
+```bash
+tofcam670
+```
+
+![GUI_TOFcam670](images/gui670_pointcloud.png)
+
 ## GUI-TOFcam660
 1. Make sure the camera is running and has a stable ethernet connection.  
 2. Run the following command in your terminal. 
