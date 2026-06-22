@@ -8,7 +8,6 @@ scripts/plots/*
 scripts/logs/*
 dist
 tmp
-**.png
 **.log
 **/__pycache__
 .pytest_cache

@@ -25,6 +25,7 @@ Compatibility
 | This package is compatible with python 3.10 and above.
 | Currently supported camera modules are:  
 
+* `EPC670 Starter-Kit - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/EPC670-STARTER-KIT/29535441>`_
 * `TOFcam660 - purchase on digikey <https://www.digikey.com/en/products/filter/optical-sensors/camera-modules/1003?s=N4IgTCBcDaICoHsBmBjAhgWwAQDYcAYQBdAXyA>`_ 
 * `TOFcam635 - purchase on digikey <https://www.digikey.com/en/product-highlight/e/espros/tof-cam-635-miniaturized-3d-camera>`_
 * `TOFcam611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-FRAME-611/10516851>`_
