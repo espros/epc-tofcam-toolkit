@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-23
+
 ### TOFcam670 GUI
 - Disable inactive settings based on acquisition modes.
 
