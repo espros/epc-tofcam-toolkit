@@ -24,6 +24,7 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
 
         self.streamer.start_stream_cb = lambda: cam.cam.startStream()
         self.streamer.post_stop_cb = lambda: cam.cam.stopStream()
+        self.streamer.set_fps_smoothing_factor(0.5)
 
         # connect signals
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)

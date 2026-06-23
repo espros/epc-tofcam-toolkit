@@ -9,6 +9,7 @@
 - improved README.md
 - changed docs to common espros look
 - added tofcam670 to the documentation
+- Improve FPS indicator on all GUI's
 
 ## [0.9.0] - 2026-06-03
 ### TOFcam670

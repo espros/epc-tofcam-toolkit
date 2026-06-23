@@ -50,9 +50,15 @@ class Streamer(QThread):
         self._fps_timer = QTimer()
         self._fps_timer.setInterval(int(self._fps_interval_s * 1000))
         self._fps_timer.timeout.connect(self._update_fps)
+        self._fps_smoothing_factor = 0.2
 
     def getFPS(self):
         return self._fps
+    
+    def set_fps_smoothing_factor(self, factor = 0.2):
+        """update fps smoothing factor. (0 = full responsive, 1 = fully smoothed)"""
+        with self._frame_count_lock:
+            self._fps_smoothing_factor = factor
 
     def is_streaming(self):
         return self.__is_streaming
@@ -98,7 +104,8 @@ class Streamer(QThread):
         with self._frame_count_lock:
             count = self._frame_count
             self._frame_count = 0
-        self._fps = count / self._fps_interval_s
+        fps = count / self._fps_interval_s
+        self._fps = (1-self._fps_smoothing_factor) * fps + self._fps_smoothing_factor * self._fps
 
     def run(self):
         self.setPriority(QThread.Priority.LowestPriority)
