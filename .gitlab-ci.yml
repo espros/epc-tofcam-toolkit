@@ -168,6 +168,18 @@ trigger-release-job:
       when: manual
       allow_failure: true
 
+push-to-github:
+  stage: release
+  script:
+    - git push "https://epc-software-dev:${GITHUB_TOKEN_EPC_SOFTWARE_DEV}@github.com/espros/epc-tofcam-toolkit.git" HEAD:master --tags
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+    - if: '$CI_COMMIT_TAG'
+      when: always
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+
 pages:
   stage: release
   needs: []
