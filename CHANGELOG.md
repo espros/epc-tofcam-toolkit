@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### General
+- Fixed issues with API documentation
+
 ## [0.10.0] - 2026-06-23
 
 ### TOFcam670 GUI

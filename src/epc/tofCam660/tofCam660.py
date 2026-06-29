@@ -175,7 +175,7 @@ class TOFcam660(TOFcam):
         return (distance, amplitude, dcs)
 
     def get_grayscale_image(self) -> np.ndarray:
-        """ "Get a grayscale image from the camera as a 2d numpy array"""
+        """Get a grayscale image from the camera as a 2D numpy array"""
         parser = GrayscaleParser()
         get_gray_command = Command.create("getGrayscale", self.settings.captureMode)
         raw_data = self.__get_image_date(get_gray_command)
@@ -183,7 +183,7 @@ class TOFcam660(TOFcam):
         return self.frame.amplitude
 
     def get_distance_image(self) -> np.ndarray:
-        """Get a distance image from the camera as a 2d numpy array. The distance is in mm."""
+        """Get a distance image from the camera as a 2D numpy array. The distance is in mm."""
         if not self.settings.flexMod:
             parser = DistanceParser()
             get_dist_cmd = Command.create("getDistance", self.settings.captureMode)
@@ -195,7 +195,7 @@ class TOFcam660(TOFcam):
             return dist
 
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
-        """Get a distance and amplitude image from the camera as 2d numpy arrays. The distance is in mm."""
+        """Get a distance and amplitude image from the camera as 2D numpy arrays. The distance is in mm."""
         if not self.settings.flexMod:
             parser = DistanceAndAmplitudeParser()
             get_dist_amp_cmd = Command.create(
@@ -212,11 +212,11 @@ class TOFcam660(TOFcam):
             return dist, amplitude
 
     def get_amplitude_image(self) -> np.ndarray:
-        """Get an amplitude image from the camera as a 2d numpy array."""
+        """Get an amplitude image from the camera as a 2D numpy array."""
         return self.get_distance_and_amplitude()[1]
 
     def get_raw_dcs_images(self) -> np.ndarray:
-        """Get a DCS image from the camera as a 2d numpy array."""
+        """Get a DCS image from the camera as a 2D numpy array."""
         parser = DcsParser()
         get_dcs_cmd = Command.create("getDcs", self.settings.captureMode)
         raw_data = self.__get_image_date(get_dcs_cmd)
@@ -343,6 +343,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     def set_integration_hdr(self, int_times: list[int]) -> None:
         """Set integration times for the camera.
+
         Args:
             int_times is a list of 4 integers: [grayscale, low, mid, high]
         """
@@ -364,6 +365,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     def set_roi(self, roi: tuple[int, int, int, int]):
         """Set the region of interest.
+
         Args:
             roi (tuple[int, int, int, int]): (x1, y1, x2, y2) where (x1, y1) is the top-left corner and (x2, y2) is the bottom-right corner.
         """
@@ -392,6 +394,7 @@ class TOFcam660_Settings(TOF_Settings_Controller):
 
     def set_hdr(self, mode: int) -> None:
         """Set the HDR mode for the camera.
+
         Args:
             mode (int): The mode to set. 0: off, 1: spatial, 2: temporal
         """
@@ -590,8 +593,12 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     @requires_fw_version(min_version='3.48')
     def set_rolling_mode(self, mode: Literal["None", "1DCS", "2DCS"]):
         """Set camera to the rolling acquisition mode
+
         Args:
-            mode: "None" (disabled), "1DCS" (1DCS Rolling Mode), or "2DCS" (2DCS Rolling Mode)
+            mode: rolling mode.
+                "None" = (disabled), 
+                "1DCS" = (1DCS Rolling Mode), 
+                "2DCS" = (2DCS Rolling Mode)
         """
         mode_map = {"None": 0, "1DCS": 1, "2DCS": 2}
         mode_value = mode_map.get(mode)
@@ -603,8 +610,12 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     @requires_fw_version(min_version='3.57')
     def set_eye_safety_mode(self, mode: int, fps: int):
         """Set the camera into eye safety mode
+
         Args:
-            mode (int): 0: eye-safety mode disabled, 1: eye-safety mode enabled, 2: camera runs on given fps
+            mode (int): Eyes-safety mode. 
+                0 = eye-safety mode disabled,
+                1 = eye-safety mode enabled,
+                2 = camera runs on given fps
             fps (int): fps to run the camera(only used when mode=2)
         """
         if mode not in [0, 1, 2]:
@@ -615,8 +626,11 @@ class TOFcam660_Settings(TOF_Settings_Controller):
     @requires_fw_version(min_version='3.57')
     def set_modulation_clock_jitter(self, enable: bool):
         """Enable/disable modulation jitter fuctionality
+        
         Args:
-            enable (bool): True : enable mod clk jitter, False: disable mod clk jitter
+            enable (bool): Enable Setting
+                True = enable mod clk jitter, 
+                False = disable mod clk jitter
         """
         log.info(f"set modulation clock jitter: {enable}")
         self.cam.tcpInterface.transceive(Command.create("setModClkJitter", int(enable)))

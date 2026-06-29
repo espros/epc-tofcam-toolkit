@@ -1,4 +1,4 @@
-TOFcam modules examples
+TOFcam Modules Examples
 ========================
 
 You can use the TOFcam modules to run your own scripts. 
@@ -21,5 +21,3 @@ TOFcam611
 .. literalinclude:: ../../examples/TOFcam611_getImage.py
    :language: python
    :linenos:
-
-"""

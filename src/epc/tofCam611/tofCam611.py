@@ -286,13 +286,13 @@ class TOFcam611(TOFcam):
     def get_grayscale_image(self):
         """!!! ATTENTION !!!\n
             TOFcam611 doesn't implement capturing of grayscale images. Therefore the grayscale image is estimaged as the sum of 4 DCS images.
-            returns the grayscale image as 2d numpy array
+            returns the grayscale image as 2D numpy array
         """
         dcs = self.get_dcs_images()
         return dcs.sum(axis=0)
     
     def get_amplitude_image(self):
-        """returns the amplitude image as 2d numpy array"""
+        """returns the amplitude image as 2D numpy array"""
         data, length = self.interface.get_image_data(CommandList.COMMAND_GET_AMPLITUDE, ComType.DATA_AMPLITUDE)
         if length == 4:
             amplRaw =np.array((struct.unpack('<'+'I',data)))
@@ -302,7 +302,7 @@ class TOFcam611(TOFcam):
         return amplitude
 
     def get_distance_image(self):
-        """returns the distance image as 2d numpy array"""
+        """returns the distance image as 2D numpy array"""
         dist, amp =  self.get_distance_and_amplitude_image()
         dist[amp < self.settings._min_amplitude] = ERROR_MIN_AMPLITUDE
         return dist   
@@ -322,7 +322,7 @@ class TOFcam611(TOFcam):
         return dcs
 
     def get_distance_and_amplitude_image(self):
-        """returns a tuple of (distance, amplitude) images as 2d numpy arrays"""
+        """returns a tuple of (distance, amplitude) images as 2D numpy arrays"""
         data, lengt = self.interface.get_image_data(CommandList.COMMAND_GET_DISTANCE_AMPLITUDE, ComType.DATA_DISTANCE_AMPLITUDE)
         if lengt == 8:
             distRaw =np.array((struct.unpack('<'+'I',data[:-4])))

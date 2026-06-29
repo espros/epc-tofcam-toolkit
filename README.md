@@ -8,7 +8,7 @@ It provides python modules for most TOFcam modules and GUI applications for inte
 
 Website: https://www.espros.com  
 Products: https://www.digikey.com/en/supplier-centers/espros  
-Documentation: https://epc-tofcam-toolkit.readthedocs.io/en/latest/  
+Documentation: https://docs.esprso.com/epc_tofcam_toolkit
 Source code: https://github.com/espros/epc-tofcam-toolkit
 
 
