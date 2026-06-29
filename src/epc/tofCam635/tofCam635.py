@@ -220,7 +220,10 @@ class TOFcam635_Settings(TOF_Settings_Controller):
         """set the capture mode for next image aquisition
 
         Args:
-            mode (int): 0: single measurement, 1: pipelined measurement, 2: streaming mode
+            mode (int): Capture mode.
+                0 = single measurement, 
+                1 = pipelined measurement, 
+                2 = streaming mode
         """
         self._capture_mode = mode
 
@@ -293,8 +296,12 @@ class TOFcam635_Settings(TOF_Settings_Controller):
 
     def set_hdr(self, mode=0) -> None:
         """Set the HDR mode for the camera.
+
         Args:
-            mode (int): The mode to set. 0: off, 1: spatial, 2: temporal
+            mode (int): The mode to set. 
+                0 = off, 
+                1 = spatial, 
+                2 = temporal
         """
         if mode not in [0, 1, 2]:
             raise ValueError(f"Invalid HDR mode: {mode}. Must be 0, 1 or 2")
@@ -343,10 +350,10 @@ class TOFcam635_Settings(TOF_Settings_Controller):
 
         Args:
             illumination (int): Illumination mode.
-                0: Disabled
-                1: WF enabled
-                2: NF enabled
-                3: WF & NF enabled
+                0 = Disabled,
+                1 = WF enabled,
+                2 = NF enabled,
+                3 = WF & NF enabled
         """
         if illumination not in [0, 1, 2, 3]:
             raise ValueError(f"Invalid illumination value: {illumination}. Must be 0, 1, 2, or 3.")
@@ -468,7 +475,7 @@ class TOFcam635(TOFcam):
         self.settings.set_interference_detection(False, False, 500)
 
     def get_raw_dcs_images(self) -> np.ndarray:
-        """Get a DCS image from the camera as a 2d numpy array."""
+        """Get a DCS image from the camera as a 2D numpy array."""
         data, _ = self.interface.get_image_data(
             CommandList.COMMAND_GET_DCS, ComType.DATA_DCS, [
                 self.settings._capture_mode]
@@ -477,7 +484,7 @@ class TOFcam635(TOFcam):
         return dcs.reshape([4, *self.settings.resolution[::-1]]) - 2048
 
     def get_grayscale_image(self):
-        """returns a grayscale image as a 2d numpy array
+        """returns a grayscale image as a 2D numpy array
         """
         data, _ = self.interface.get_image_data(
             CommandList.COMMAND_GET_GRAYSCALE, ComType.DATA_GRAYSCALE, [self.settings._capture_mode])
@@ -487,7 +494,7 @@ class TOFcam635(TOFcam):
         return grayscale
 
     def get_distance_image(self):
-        """returns a distance image as a 2d numpy array"""
+        """returns a distance image as a 2D numpy array"""
         data, _ = self.interface.get_image_data(
             CommandList.COMMAND_GET_DISTANCE, ComType.DATA_DISTANCE, [self.settings._capture_mode])
         distance_and_confidence = np.frombuffer(data, dtype="h")
@@ -504,12 +511,12 @@ class TOFcam635(TOFcam):
         return distance
 
     def get_amplitude_image(self):
-        """returns an amplitude image as a 2d numpy array"""
+        """returns an amplitude image as a 2D numpy array"""
         _, amplitude = self.get_distance_and_amplitude_image()
         return amplitude
 
     def get_distance_and_amplitude_image(self):
-        """returns a tuple of 2d arrays (distance, amplitude)"""
+        """returns a tuple of 2D arrays (distance, amplitude)"""
         data, _ = self.interface.get_image_data(
             CommandList.COMMAND_GET_DISTANCE_AMPLITUDE, ComType.DATA_DISTANCE_AMPLITUDE, [self.settings._capture_mode])
         distance_and_confidence = np.frombuffer(data, dtype="h")

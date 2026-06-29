@@ -5,9 +5,15 @@
 
 ESPROS TOFcam Toolkit
 =====================================================
-| Website: https://www.espros.com/
-| Products: https://www.digikey.com/en/supplier-centers/espros  
-| Source: https://github.com/espros/epc-tofcam-toolkit
+
+
+.. toctree::
+   :maxdepth: 1
+   
+   install_instructions.md
+   gui_instructions.md
+   tofCam_modules.rst
+   api.rst
 
 Introduction
 ------------
@@ -31,20 +37,6 @@ Compatibility
 * `TOFcam611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-FRAME-611/10516851>`_
 * `TOFrange611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-RANGE-611/10516871>`_
 
-Datasheets
-----------
-| Additional information about the camera modules can be found in the datasheets:
-| https://www.espros.com/downloads/02_Cameras_and_Modules/
-
-.. toctree::
-   :maxdepth: 2
-   :caption: EPC TOFcam Toolkit:
-   :hidden:
-   
-   install_instructions.md
-   gui_instructions.md
-   tofCam_modules.rst
-   api.rst
 
 .. toctree::
    :maxdepth: 2
@@ -54,9 +46,11 @@ Datasheets
    epctofcam-library <https://docs.espros.com/espros_processing_pipeline>
    iToF Sensors <https://docs.espros.com/epc_user_guides/user_guides/itof_imaging_guide.html>
 
-Indices and tables
-==================
+Useful Links
+------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+* `DigiKey Shop <https://www.digikey.com/en/supplier-centers/espros>`_ – Overview and ordering for available ESPROS components.
+* `ESPROS Website <https://www.espros.com/>`_ – ESPROS official website with product information and company details.
+* `Documentation <https://docs.espros.com/>`_ – Central hub for technical documents and APIs.
+* `Datasheets <https://www.espros.com/downloads>`_ – Official downloads and data sheets.
+* `GitHub Toolkit <https://github.com/espros/epc-tofcam-toolkit>`_ – Open-source repository for the epc-tofcam-toolkit.

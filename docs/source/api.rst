@@ -34,7 +34,6 @@ TOFcam660_Device
     :noindex:
     :members:
 
-"""
 
 TOFcam635 API
 -------------
@@ -56,7 +55,6 @@ TOFcam635_Device
     :noindex:
     :members:
 
-"""
 
 TOFcam611 API
 -------------
@@ -78,4 +76,3 @@ TOFcam611_Device
     :noindex:
     :members:
 
-"""
