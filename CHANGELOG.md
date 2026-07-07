@@ -2,8 +2,10 @@
 
 ## [Unreleased]
 
+
 ### General
 - Fixed issues with API documentation
+- add new lens type utlra wide field v2 (P100 598)
 
 ## [0.10.0] - 2026-06-23
 

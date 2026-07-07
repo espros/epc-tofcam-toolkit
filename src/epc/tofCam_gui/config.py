@@ -13,6 +13,7 @@ STANDARD_FIELD   = DATA/"lens_calibration_standard_field_p100843.csv"
 WIDE_FIELD       = DATA/"lens_calibration_wide_field_p100506.csv"
 WIDE_WIDE_FIELD  = DATA/"lens_calibration_wide_wide_field_p101152.csv"
 ULTRA_WIDE_FIELD = DATA/"lens_calibration_ultra_wide_field_p101156.csv"
+ULTRA_WIDE_FIELD_2 = DATA/"lens_calibration_ultra_wide_field_p100598.csv"
 
 
 if __name__ == "__main__":
@@ -34,6 +35,10 @@ if __name__ == "__main__":
         print(x)
 
     with open(ULTRA_WIDE_FIELD, "r") as f:
+        x = f.read()
+        print(x)
+
+    with open(ULTRA_WIDE_FIELD_2, "r") as f:
         x = f.read()
         print(x)
 
