@@ -10,7 +10,8 @@ lens_type_map = {
     'Standard Field':  importlib.resources.files('epc.data').joinpath('lens_calibration_standard_field_p100843.csv'),
     'Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_wide_field_p100506.csv'),
     'Wide Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_wide_wide_field_p101152.csv'),
-    'Ultra Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_ultra_wide_field_p101156.csv')
+    'Ultra Wide Field': importlib.resources.files('epc.data').joinpath('lens_calibration_ultra_wide_field_p101156.csv'),
+    'Ultra Wide Field 2': importlib.resources.files('epc.data').joinpath('lens_calibration_ultra_wide_field_p100598.csv')
 }
 
 DEFAULT_PIXEL_SIZE_MM = 0.02
