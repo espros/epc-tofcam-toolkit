@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-07-10
+
 
 ### General
 - Fixed issues with API documentation
