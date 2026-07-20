@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
-## [0.10.1] - 2026-07-10
+### General
+- Added Hawkeye
+- Added docs for Hawkeye
 
+## [0.10.1] - 2026-07-10
 
 ### General
 - Fixed issues with API documentation
@@ -19,7 +22,6 @@
 - changed docs to common espros look
 - added TOFcam670 to the documentation
 - Improved FPS indicator on all GUIs
-- Added Hawkeye
 
 ## [0.9.0] - 2026-06-03
 ### TOFcam670
