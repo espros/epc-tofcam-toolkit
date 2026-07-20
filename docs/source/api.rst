@@ -76,3 +76,23 @@ TOFcam611_Device
     :noindex:
     :members:
 
+
+Hawkeye API
+-------------
+Hawkeye
+~~~~~~~~~
+.. autoclass:: epc.hawkeyeBt.hawkeyeBt.HawkeyeBt
+    :noindex:
+    :members:
+
+Hawkeye_Settings
+~~~~~~~~~~~~~~~~~~
+.. autoclass:: epc.hawkeyeBt.hawkeyeBt.Hawkeye_Settings
+    :noindex:
+    :members:
+
+Hawkeye_Device
+~~~~~~~~~~~~~~~~
+.. autoclass:: epc.hawkeyeBt.hawkeyeBt.Hawkeye_Device
+    :noindex:
+    :members:

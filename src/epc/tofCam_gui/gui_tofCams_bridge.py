@@ -95,6 +95,7 @@ class Base_TOFcam_Bridge():
             self.gui.imageView.slider.setVisible(True)
             self.gui.imageView.source_label.setText(f"{cam.source}")
             self.gui.imageView.source_label.adjustSize()
+            self.gui.imageView.source_label.setVisible(True)
             self.gui.imageView.slider.update_cam(cam)
             self.gui.imageView.slider.user_updated_slider.connect(
                 self._slider_handler)
@@ -103,6 +104,7 @@ class Base_TOFcam_Bridge():
         else:
             self.fallback_cam = None
             self.fallback_source = ""
+            self.gui.imageView.source_label.setVisible(False)
             self.gui.setSettingsEnabled(True)
             self.gui.imageView.slider.setVisible(False)
             self.streamer = Streamer(self.getImage)

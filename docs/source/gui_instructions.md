@@ -95,3 +95,23 @@ tofrange611 --port COM3
 # e.g. linux/mac connected on ACM0
 tofrange611 --port /dev/ttyACM0
 ```
+
+## GUI-Hawkeye
+The bluetooth connection is built upon [Bumble](https://google.github.io/bumble/). Whereas in Linux there is no extra step needed to communicate with the camera, Windows does need some steps. To use a Bluetooth USB dongle on Windows, you need a USB dongle that does not require a vendor Windows driver. In order to use the Bluetooth dongle, the driver needs to be exchanged in favor of WinUSB.
+1. Connect a Bluetooth dongle
+2. Prepare the system based on your [platform](https://google.github.io/bumble/platforms/index.html)
+1. Power up the Hakweye
+2. Run the following command in your terminal:
+```bash
+hawkeye
+```
+This will open the GUI application. By default the camera runs a scan to find the bluetooth devices nearby.
+
+![Scan_Dialog_Hawkeye](images/guihawkeye_discovering.png)
+
+In case the MAC address is already known, one can pass it as argument:
+```bash
+hawkeye --mac "xx:xx:xx:xx:xx:xx"
+```
+
+![GUI_Hawkeye](images/guihawkeye_amplitude.png)

@@ -35,6 +35,8 @@ tofcam670
 tofcam660
 # To run the GUI for TOFcam635
 tofcam635
-# TO run the GUI for TOFcam611
+# To run the GUI for TOFcam611
 tofcam611
+# To run the GUI for Hawkeye
+hawkeye
 ```
