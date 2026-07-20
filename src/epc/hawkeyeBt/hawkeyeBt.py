@@ -225,7 +225,7 @@ class HawkeyeBt(TOFcam):
     
     def __set_output_type(self, mask: Union[__ApplicationControlPointData.OutputType, bytes]):
         if mask != self.current_output_type:
-            self.current_output_type = cast(HawkeyeBt.__ApplicationControlPointData.OutputType, mask)
+            self.current_output_type = cast(bytes, mask)
             self.application_controlpoint_handler.set_control(self.AppCpData.SubCommands.OUTPUT_SELECTION_MASK, self.current_output_type)
 
     def get_device_information(self)-> tuple[int, int, int, int, str, str]:
