@@ -13,7 +13,7 @@ authors = [
     { name = "Silvio Honegger", email = "sho@espros.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { file = "LICENSE.txt" }
 keywords = [
     "TOF",
@@ -33,18 +33,17 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "numpy>=2.0.0",
-    "opencv-python>=4.10.0.84",
+    "opencv-python-headless>=4.10.0.84",
     "pyserial>=3.5",
-    "scipy>=1.14.1",
+    "scipy>=1.16.0",
     "h5py",
+    "bumble>=0.0.219"
 ]
 
 [project.optional-dependencies]
@@ -58,7 +57,7 @@ gui = [
     "matplotlib>=3.10.0",
 ]
 native = [
-    "epc-tofcam-native>=1.0.5.post2",
+    "epc-tofcam-native>=1.1.0"
 ]
 dev = [
     "pytest>=8",
@@ -83,6 +82,7 @@ tofcam660 = "epc.tofCam_gui.gui_tofCam660_bridge:main"
 tofcam635 = "epc.tofCam_gui.gui_tofCam635_bridge:main"
 tofcam611 = "epc.tofCam_gui.gui_tofCam611_bridge:main"
 tofrange611 = "epc.tofCam_gui.gui_tofCam611_bridge:main"
+hawkeye = "epc.tofCam_gui.gui_hawkeye_bridge:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -112,7 +112,7 @@ addopts = '-m "not (systemTest or manualTest)"'
 
 # MyPy configuration (optional - if you want to migrate from .mypy.ini)
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

@@ -27,5 +27,5 @@ intersphinx_mapping = cast(dict[str, str], globals().get("intersphinx_mapping", 
 
 extensions += ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon']
 
-autodoc_mock_imports = ["numpy", "matplotlib", "serial", "PIL"]
+autodoc_mock_imports = ["matplotlib", "serial", "PIL"]
 

@@ -78,6 +78,23 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_tofCam670.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Hawkeye_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_hawkeye_bridge.py",
+            "args": [
+                "--mac",
+                "10:51:DB:28:28:9C"
+            ],
+        },
+        {
+            "name": "Hawkeye_Standalone_GUI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epc/tofCam_gui/gui_hawkeye.py",
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -48,9 +48,11 @@ class Streamer(QThread):
         self._frame_count_lock = threading.Lock()
         self._fps_interval_s = 0.6
         self._fps_timer = QTimer()
+        self._fps_timer.setObjectName("FPS timer thread")
         self._fps_timer.setInterval(int(self._fps_interval_s * 1000))
         self._fps_timer.timeout.connect(self._update_fps)
         self._fps_smoothing_factor = 0.2
+        self.setObjectName("Streamer thread")
 
     def getFPS(self):
         return self._fps

@@ -2,7 +2,7 @@ TOFcam Modules Examples
 ========================
 
 You can use the TOFcam modules to run your own scripts. 
-Here are three examples for how you could start. 
+Here are some examples for how you could start. 
 
 TOFcam660
 ---------
@@ -19,5 +19,11 @@ TOFcam635
 TOFcam611
 ---------
 .. literalinclude:: ../../examples/TOFcam611_getImage.py
+   :language: python
+   :linenos:
+
+Hawkeye
+---------
+.. literalinclude:: ../../examples/Hawkeye_getImage.py
    :language: python
    :linenos:

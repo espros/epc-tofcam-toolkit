@@ -19,6 +19,7 @@
 - changed docs to common espros look
 - added TOFcam670 to the documentation
 - Improved FPS indicator on all GUIs
+- Added Hawkeye
 
 ## [0.9.0] - 2026-06-03
 ### TOFcam670

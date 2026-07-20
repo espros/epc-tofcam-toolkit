@@ -12,6 +12,7 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QQuaternion, QVector3D
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSlider, QComboBox,
                                QStackedWidget, QToolTip, QVBoxLayout, QWidget)
+import warnings
 
 CMAP_DISTANCE = [(0,   0,   0),
                  (255,   0,   0),
@@ -350,6 +351,7 @@ class VideoWidget(QWidget):
         super(VideoWidget, self).__init__(parent)
         self._pending: Optional[tuple] = None  
         self._render_timer = QTimer(self)
+        self._render_timer.setObjectName("render timer thread")
         self._render_timer.setInterval(max(1, int(1000 / max_display_fps)))
         self._render_timer.timeout.connect(self.flush_pending)
         self._render_timer.start()
@@ -381,6 +383,7 @@ class VideoWidget(QWidget):
             Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.stacked.currentChanged.connect(self.update_label_position)
         self.source_label.installEventFilter(self)
+        self.source_label.setVisible(False)
         self.update_label_position()
 
         # Layout
@@ -427,7 +430,9 @@ class VideoWidget(QWidget):
     def _updateView(self, *args, **kwargs):
         data = args[0]
         if self.stacked.currentWidget() == self.video and isinstance(data, np.ndarray):
-            self.video.setImage(*args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=RuntimeWarning, message="All-NaN slice encountered")
+                self.video.setImage(*args, **kwargs)
         elif self.stacked.currentWidget() == self.pc and isinstance(data, tuple):
             autolevels = kwargs.get('autoLevels', False)
             self.pc.update_point_cloud(data, autolevels)
