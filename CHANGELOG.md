@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-23
+
 ### General
 - Added Hawkeye
 - Added documenation for Hawkeye
