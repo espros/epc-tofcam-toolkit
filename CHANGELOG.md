@@ -4,7 +4,7 @@
 
 ### General
 - Added Hawkeye
-- Added docs for Hawkeye
+- Added documenation for Hawkeye
 
 ## [0.10.1] - 2026-07-10
 
