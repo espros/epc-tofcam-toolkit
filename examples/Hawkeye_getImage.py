@@ -18,7 +18,6 @@ with HawkeyeBt(mac_address=MAC_ADDRESS) as hawkeye:
     # change some settings
     hawkeye.settings.set_integration_time(int_time_us=200)
     hawkeye.settings.set_modulation(frequency_mhz=10)
-    hawkeye.settings.set_roi((50, 0, 109, 59))
 
     # get distance image
     image = hawkeye.get_distance_image()

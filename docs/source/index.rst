@@ -36,7 +36,7 @@ Compatibility
 * `TOFcam635 - purchase on digikey <https://www.digikey.com/en/product-highlight/e/espros/tof-cam-635-miniaturized-3d-camera>`_
 * `TOFcam611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-FRAME-611/10516851>`_
 * `TOFrange611 - purchase on digikey <https://www.digikey.com/en/products/detail/espros-photonics-ag/TOF-RANGE-611/10516871>`_
-* Hawkeye
+* `Hawkeye - product page <https://www.espros.com/customized-modules/HawkEye>`_
 
 
 .. toctree::
