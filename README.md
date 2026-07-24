@@ -8,7 +8,7 @@ It provides python modules for most TOFcam modules and GUI applications for inte
 
 Website: https://www.espros.com  
 Products: https://www.digikey.com/en/supplier-centers/espros  
-Documentation: https://docs.esprso.com/epc_tofcam_toolkit
+Documentation: https://docs.espros.com/epc_tofcam_toolkit
 Source code: https://github.com/espros/epc-tofcam-toolkit
 
 
@@ -26,10 +26,12 @@ tofcam660
 tofcam635
 tofcam611
 tofrange611
+hawkeye
 ```
 - TOFcam660 will try to connect to ip-address 10.10.31.180
 - TOFcam635 will try to find the com port automatically
 - TOFcam611 will try to find the com port automatically
+- Hakweye runs a scan to find the bluetooth devices nearby 
 
 You can also manually specify the communication port
 ```bash 
@@ -37,6 +39,7 @@ tofcam660 --ip 10.10.31.180
 tofcam635 --port COM3
 tofcam611 --port COM3
 tofrange611 --port COM3
+hawkeye --mac "xx:xx:xx:xx:xx:xx"
 ```
 
 ## Installation for development
