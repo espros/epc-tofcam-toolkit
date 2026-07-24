@@ -57,7 +57,7 @@ gui = [
     "matplotlib>=3.10.0",
 ]
 native = [
-    "epc-tofcam-native>=1.1.0"
+    "epc-tofcam-native>=1.2.0",
 ]
 dev = [
     "pytest>=8",

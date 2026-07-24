@@ -9,7 +9,7 @@ from PySide6.QtGui import QDoubleValidator
 class CameraSetting(QGroupBox):
     def __init__(self, label, settings, default, parent=None):
         super(CameraSetting, self).__init__(label, parent)
-        if default:
+        if default is not None:
             self.default = default
         else:
             self.default = settings[0]
@@ -52,6 +52,17 @@ class DropDownSetting(GroupBoxSelection):
         self.gridLayout.addWidget(QLabel(label, self), 0, 0)
         self.gridLayout.addWidget(self.comboBox, 0, 1)
 
+class CheckBoxSetting(CameraSetting):
+    signal_value_changed = Signal(bool)
+    def __init__(self, label: str, default: Optional[bool]=None, parent=None):
+        super(CheckBoxSetting, self).__init__('', [False, True], default, parent)
+        self.checkBox = QCheckBox(text=label, parent=self)
+        self.gridLayout.addWidget(self.checkBox)
+        self.checkBox.stateChanged.connect(lambda: self.signal_value_changed.emit(self.checkBox.isChecked()))
+
+    def setValue(self, setting: bool):
+        self.checkBox.setChecked(setting)
+        self.checkBox.stateChanged.emit(setting)
 
 class SpinBoxSetting(CameraSetting):
     signal_value_changed = Signal(int)

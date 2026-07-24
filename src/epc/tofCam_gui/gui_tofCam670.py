@@ -7,7 +7,7 @@ from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.widgets import (DropDownSetting, GroupBoxSelection,
                                     IntegrationTimes, RoiSettings,
                                     SettingsGroup, SpinBoxSetting,
-                                    VideoWidget, FloatInput, SliderSetting)
+                                    CheckBoxSetting, SliderSetting)
 from epc.tofCam_gui.widgets.filter_widgets import (EdgeFilter,
                                                    InterferenceFilter,
                                                    SimpleFilter,
@@ -44,6 +44,9 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
         self.integrationTimes = IntegrationTimes(['Low', 'Mid', 'High', 'Grayscale'], [40, 400, 4000, 400], [4000, 4000, 4000, 4000])
         self.integrationTimes.autoMode.setVisible(False)
         self.minAmplitude = SliderSetting('Minimal Amplitude (LSB)', 0, 300, default=100)
+        self.dcsRollingMode = CheckBoxSetting('DCS Rolling Mode', default=False)
+        self.hdrRollingMode = CheckBoxSetting('HDR Rolling Mode', default=False)
+        self.rollingModes = SettingsGroup("Rolling Mode", [self.dcsRollingMode, self.hdrRollingMode])
 
         # Filters        
         self.medianFilter = SimpleFilter('Median Filter')
@@ -100,6 +103,7 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
         self.settingsLayout.addWidget(self.pointCloudSettings)
         self.settingsLayout.addWidget(self.integrationTimes)
         self.settingsLayout.addWidget(self.minAmplitude)
+        self.settingsLayout.addWidget(self.rollingModes)
         self.settingsLayout.addWidget(self.builtInFilter)
 
         # connect gui signals
@@ -115,18 +119,24 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
             if self.hdrModeDropDown.getSelection() == "HDR Off":
                 self.integrationTimes.setTimeEnabled(1, False)
                 self.integrationTimes.setTimeEnabled(2, False)
+                self.dcsRollingMode.checkBox.setEnabled(True)
+                self.hdrRollingMode.checkBox.setEnabled(False)
             else: 
                 self.integrationTimes.setTimeEnabled(1, True)
                 self.integrationTimes.setTimeEnabled(2, True)
+                self.dcsRollingMode.checkBox.setEnabled(False)
+                self.hdrRollingMode.checkBox.setEnabled(True)
 
             self.integrationTimes.setTimeEnabled(0, True)
             self.integrationTimes.setTimeEnabled(3, False)
             self.hdrModeDropDown.setEnabled(True)
             self.minAmplitude.setEnabled(True)
+            self.builtInFilter.setEnabled(True)
             self.modulationFrequency.setEnabled(True)
         
         if "Amplitude" == image_type:
             self.minAmplitude.setEnabled(False)
+            self.builtInFilter.setEnabled(False)
         elif "Grayscale" == image_type:
             self.integrationTimes.setTimeEnabled(0, False)
             self.integrationTimes.setTimeEnabled(1, False)
@@ -134,8 +144,11 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
             self.integrationTimes.setTimeEnabled(3, True)
             self.hdrModeDropDown.setEnabled(False)
             self.minAmplitude.setEnabled(False)
+            self.dcsRollingMode.checkBox.setEnabled(False)
+            self.hdrRollingMode.checkBox.setEnabled(False)
+            self.builtInFilter.setEnabled(False)
             self.modulationFrequency.setEnabled(False)
-        
+
         self.pointCloudSettings.setEnabled(image_type == 'Point Cloud')
         
 

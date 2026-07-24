@@ -25,7 +25,7 @@ class SimpleFilter(QWidget):
 class TemporalFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int, float)
     def __init__(self, range_threshold=(0, 1000), range_factor=(0.0, 1.0), threshold=300, factor=0.3, default_on=False):
-        super(TemporalFilter, self).__init__('TemporalFilter', default_on)
+        super(TemporalFilter, self).__init__('Temporal Filter', default_on)
         self.defaultThreshold = threshold
         self.defaultFactor = factor
         self.thresholdLabel = QLabel('Threshold [mm]', self)
@@ -44,7 +44,7 @@ class TemporalFilter(SimpleFilter):
             'previous frame, the filter will be reset for this pixel.</div>')
         self.factor.setToolTip(
             TOOL_TIP_WIDTH + 'Set the blending factor for the temporal filter. '
-            'A value of 0 means that only the current frame is used, while a value of 1 means '
+            'A value of 1 means that only the current frame is used, while a value of 0 means '
             'that only the averaged frames are used. Values in between will blend the current '
             'and averaged frames accordingly.</div>')
 
@@ -81,7 +81,7 @@ class TemporalFilter(SimpleFilter):
 class EdgeFilter(SimpleFilter):
     signal_filter_changed = Signal(bool, int)
     def __init__(self, range= (0, 5000), threshold=300, default_on=False):
-        super(EdgeFilter, self).__init__('EdgeFilter', default_on)
+        super(EdgeFilter, self).__init__('Edge Filter', default_on)
         self.defaultThreshold = threshold
         self.thresholdLabel = QLabel('Threshold [mm]', self)
         self.threshold = QSpinBox(self)
