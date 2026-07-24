@@ -22,23 +22,25 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         self._distance_unambiguity = 6.25 # m 
         self.cam: TOFcam670
 
-        self.streamer.start_stream_cb = lambda: cam.cam.startStream()
-        self.streamer.post_stop_cb = lambda: cam.cam.stopStream()
+        self.streamer.start_stream_cb = cam.cam.startStream
+        self.streamer.post_stop_cb = cam.cam.stopStream
         self.streamer.set_fps_smoothing_factor(0.5)
 
         # connect signals
         gui.imageTypeWidget.signal_value_changed.connect(self._set_image_type)
-        gui.modulationFrequency.signal_value_changed.connect(lambda value: self._set_modulation_settings(value))
+        gui.modulationFrequency.signal_value_changed.connect(self._set_modulation_settings)
         gui.integrationTimes.signal_value_changed.connect(self._set_integration_times)
         gui.hdrModeDropDown.signal_value_changed.connect(self._set_hdr_mode)
         gui.minAmplitude.signal_value_changed.connect(self._set_min_amplitudes)
-        gui.medianFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.averageFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.edgeFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.temporalFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.kalmanFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.interferenceFilter.signal_filter_changed.connect(lambda: self._set_filter_settings())
-        gui.lensType.signal_value_changed.connect(lambda value: self.cam.settings.set_lense_type(value))
+        gui.dcsRollingMode.signal_value_changed.connect(self._set_dcs_rolling_mode)
+        gui.hdrRollingMode.signal_value_changed.connect(self._set_hdr_rolling_mode)
+        gui.medianFilter.signal_filter_changed.connect(self._set_median_filter)
+        gui.averageFilter.signal_filter_changed.connect(self._set_average_filter)
+        gui.edgeFilter.signal_filter_changed.connect(self._set_edge_filter)
+        gui.temporalFilter.signal_filter_changed.connect(self._set_temporal_filter)
+        gui.kalmanFilter.signal_filter_changed.connect(self._set_kalman_filter)
+        gui.interferenceFilter.signal_filter_changed.connect(self._set_interference_filter)
+        gui.lensType.signal_value_changed.connect(self.cam.settings.set_lense_type)
 
         gui.setDefaultValues()
 
@@ -58,23 +60,42 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
 
         super().storeImage(image)
 
-    def _set_filter_settings(self):
-        if not isinstance(self.cam, TOFcam670):
-            return
-        self.cam.medianFilterOn = self.gui.medianFilter.isChecked()
-        self.cam.averageFilterOn = self.gui.averageFilter.isChecked()
-        self.cam.edgeFilterOn = self.gui.edgeFilter.isChecked()
-        self.cam.edgeFilterThreshold = self.gui.edgeFilter.threshold.value()
-        self.cam.temporalFilterOn = self.gui.temporalFilter.isChecked()
-        self.cam.temporalFilter.alpha = self.gui.temporalFilter.factor.value()
-        self.cam.temporalFilter.threshold = self.gui.temporalFilter.threshold.value()
-        self.cam.kalmanFilterOn = self.gui.kalmanFilter.isChecked()
-        self.cam.kalmanFilter.uncertainty_threshold = self.gui.kalmanFilter.slider.value()
-        self.cam.settings.set_interference_filter(
-            self.gui.interferenceFilter.checkBox.isChecked(), 
-            self.gui.interferenceFilter.limit.value(), 
-            self.gui.interferenceFilter.useLastValue.isChecked() 
+    def _set_median_filter(self):
+        self.cam.settings.set_median_filter(self.gui.medianFilter.isChecked())
+        self.capture()
+
+    def _set_average_filter(self):
+        self.cam.settings.set_average_filter(self.gui.averageFilter.isChecked())
+        self.capture()
+
+    def _set_edge_filter(self):
+        self.cam.settings.set_edge_filter(
+            self.gui.edgeFilter.isChecked(),
+            self.gui.edgeFilter.threshold.value(),
         )
+        self.capture()
+
+    def _set_temporal_filter(self):
+        self.cam.settings.set_temporal_filter(
+            self.gui.temporalFilter.isChecked(),
+            self.gui.temporalFilter.factor.value(),
+        )
+        self.capture()
+
+    def _set_kalman_filter(self):
+        self.cam.settings.set_kalman_filter(
+            self.gui.kalmanFilter.isChecked(),
+            self.gui.kalmanFilter.slider.value(),
+        )
+        self.capture()
+
+    def _set_interference_filter(self):
+        self.cam.settings.set_interference_filter(
+            self.gui.interferenceFilter.checkBox.isChecked(),
+            self.gui.interferenceFilter.limit.value(),
+            self.gui.interferenceFilter.useLastValue.isChecked()
+        )
+        self.capture()
 
     @pause_streaming
     def _set_hdr_mode(self, mode: str):
@@ -87,6 +108,14 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
     def _set_min_amplitudes(self, minAmp: int):
         self.cam.settings.set_minimal_amplitude(minAmp)
         self.capture()
+
+    def _set_dcs_rolling_mode(self, enabled: bool):
+        if self.gui.hdrModeDropDown.getSelection() == 'HDR Off':
+            self.cam.settings.set_dcs_rolling_mode(enabled)
+
+    def _set_hdr_rolling_mode(self, enabled: bool):
+        if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
+            self.cam.settings.set_hdr_rolling_mode(enabled)
 
     def _set_integration_times(self, type="", value=0):
         if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
@@ -144,9 +173,16 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
             if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
                 self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP_HDR)
                 self.cam.settings.set_hdr(2)
+                self._set_hdr_rolling_mode(self.gui.hdrRollingMode.checkBox.isChecked())
             else:
                 self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP)
                 self.cam.settings.set_hdr(0)
+                self._set_dcs_rolling_mode(self.gui.dcsRollingMode.checkBox.isChecked())
+            self._set_average_filter()
+            self._set_median_filter()
+            self._set_temporal_filter()
+            self._set_kalman_filter()
+            self._set_interference_filter()
             self._set_min_amplitudes(self.gui.minAmplitude.slider.value())
         elif image_type == 'DCS':
             self.cam.settings.set_acquisition_mode(AcquisitionMode.DCS4)

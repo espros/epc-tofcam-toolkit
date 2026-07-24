@@ -6,6 +6,10 @@
 - Added Hawkeye
 - Added docs for Hawkeye
 
+### TOFcam670
+- TOFcam670 now uses the built-in filters from epc-tofcam-native (requires epc-tofcam-native>=1.2.0)
+- added controls for DCS rolling mode and HDR rolling mode
+
 ## [0.10.1] - 2026-07-10
 
 ### General

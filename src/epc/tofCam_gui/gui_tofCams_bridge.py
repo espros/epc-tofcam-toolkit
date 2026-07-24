@@ -157,29 +157,30 @@ class Base_TOFcam_Bridge():
         return self._get_image_cb()
 
     @staticmethod
-    def _combine_dcs(frame: np.ndarray) -> np.ndarray:
+    def _combine_dcs(frame: np.ndarray, spacing=10) -> np.ndarray:
         """Combine the dcs frames in one frame"""
         resolution = np.array(frame.shape[1:])
-        image = np.zeros(2*resolution)
+        image = np.empty(spacing + 2*resolution)
+        image.fill(np.nan)
 
         image[0:resolution[0], 0:resolution[1]] = frame[0]
-        image[0:resolution[0], resolution[1]:] = frame[1]
-        image[resolution[0]:, 0:resolution[1]] = frame[2]
-        image[resolution[0]:, resolution[1]:] = frame[3]
+        image[0:resolution[0], resolution[1]+spacing:] = frame[1]
+        image[resolution[0]+spacing:, 0:resolution[1]] = frame[2]
+        image[resolution[0]+spacing:, resolution[1]+spacing:] = frame[3]
 
         return image
 
     @staticmethod
-    def _unroll_combined_dcs(image: np.ndarray) -> np.ndarray:
+    def _unroll_combined_dcs(image: np.ndarray, spacing=10) -> np.ndarray:
         """Unroll the combined dcs frame to it's components"""
-        height = image.shape[0]//2
-        width = image.shape[1]//2
+        height = (image.shape[0] - spacing) // 2
+        width = (image.shape[1] - spacing) // 2
         frame = np.zeros((4, height, width), dtype=image.dtype)
 
         frame[0] = image[0:height, 0:width]
-        frame[1] = image[0:height, width:2*width]
-        frame[2] = image[height:2*height, 0:width]
-        frame[3] = image[height:2*height, width:2*width]
+        frame[1] = image[0:height, width+spacing:2*width+spacing]
+        frame[2] = image[height+spacing:2*height+spacing, 0:width]
+        frame[3] = image[height+spacing:2*height+spacing, width+spacing:2*width+spacing]
 
         return frame
 

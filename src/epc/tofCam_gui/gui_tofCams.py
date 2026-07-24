@@ -89,14 +89,21 @@ class Base_GUI_TOFcam(QMainWindow):
 
     def _save_raw(self):
         filePath, _ = QFileDialog.getSaveFileName(
-            self, 'Save raw', filter='*.raw')
-        test = self.imageView.video.getImageItem().image
-        np.savetxt(filePath + '.csv', test, delimiter=',')
+            self, 'Save raw', filter='*.csv')
+        if not filePath.endswith('.csv'):
+            filePath += '.csv'
+        image = self.imageView.video.getImageItem().image
+        if self.bridge is not None and self.bridge.image_type == 'DCS':
+            image = self.bridge._unroll_combined_dcs(image)
+            image = self.bridge._combine_dcs(image, spacing=0)
+        np.savetxt(filePath, image, delimiter=',')
 
     def _save_png(self):
         filePath, _ = QFileDialog.getSaveFileName(
             self, 'Save png', filter='*.png')
-        self.imageView.video.getImageItem().save(filePath + '.png')
+        if not filePath.endswith('.png'):
+            filePath += '.png'
+        self.imageView.video.getImageItem().save(filePath)
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():

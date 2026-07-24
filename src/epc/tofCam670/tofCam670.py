@@ -54,6 +54,12 @@ class TOFcam670_Settings(TOF_Settings_Controller):
     def set_minimal_amplitude(self, amplitude):
         self.cam.cam.setControl(TOFControl.MIN_AMPLITUDE, amplitude)
 
+    def set_dcs_rolling_mode(self, enabled = False):
+        self.cam.cam.setControl(TOFControl.ENABLE_DCS_ROLLING_MODE, int(enabled))
+
+    def set_hdr_rolling_mode(self, enabled = False):
+        self.cam.cam.setControl(TOFControl.ENABLE_HDR_ROLLING_MODE, int(enabled))
+
     def set_lense_type(self, lense_type: str):
         self.cam.projector = RadialCameraProjector.from_lens_calibration(lense_type, 320, 240)
 
@@ -64,12 +70,28 @@ class TOFcam670_Settings(TOF_Settings_Controller):
         log.info(f"Setting acquisition mode to: {mode.name}")
         self.cam.cam.setControl(TOFControl.ACQUISITION_MODE, mode)
 
-    def set_interference_filter(self, enabled = False, threshold = 150, latching=False):
-        if enabled:
+    def set_average_filter(self, enabled = False):
+        self.cam.cam.setControl(TOFControl.AVERAGE_FILTER_ENABLE, int(enabled))
+
+    def set_median_filter(self, enabled = False):
+        self.cam.cam.setControl(TOFControl.MEDIAN_FILTER_ENABLE, int(enabled))
+
+    def set_kalman_filter(self, enabled = False, threshold = 200):
+        self.cam.cam.setControl(TOFControl.KALMAN_FILTER_ENABLE, int(enabled))
+        self.cam.cam.setControl(TOFControl.KALMAN_FILTER_THRESHOLD, int(threshold))
+
+    def set_edge_filter(self, enabled = False, threshold = 150):
+        self.cam.cam.setControl(TOFControl.EDGE_FILTER_ENABLE, int(enabled))
+        self.cam.cam.setControl(TOFControl.EDGE_FILTER_THRESHOLD, int(threshold))
+
+    def set_temporal_filter(self, enabled = False, alpha = 0.3):
+        self.cam.cam.setControl(TOFControl.TEMPORAL_FILTER_ENABLE, int(enabled))
+        self.cam.cam.setControl(TOFControl.TEMPORAL_FILTER_ALPHA, int(alpha * 100))
+
+    def set_interference_filter(self, enabled = False, threshold = 300, latching=False):
+            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_ENABLE, int(enabled))
             self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, int(threshold))
             self.cam.cam.setControl(TOFControl.INTERFERENCE_ENABLE_LATCHING, int(latching))
-        else:
-            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, 0)
 
 class TOFcam670_Device(Dev_Infos_Controller):
     def __init__(self, cam: TOFcam) -> None:
@@ -110,14 +132,6 @@ class TOFcam670(TOFcam):
         self.device = TOFcam670_Device(self)
         super().__init__(self.settings, self.device)
         self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
-        self.medianFilterOn = False
-        self.averageFilterOn = False
-        self.edgeFilterOn = False
-        self.edgeFilterThreshold = 300
-        self.temporalFilterOn = False
-        self.temporalFilter = TemporalFilter()
-        self.kalmanFilterOn = False
-        self.kalmanFilter = KalmanVideoDenoiser()
         self.latestMetadata = None
 
     def __del__(self):
@@ -139,19 +153,6 @@ class TOFcam670(TOFcam):
         amplitude = frame.get(FrameType.AMPLITUDE).astype(float)
         result = distance
         result[distance > self.settings.maxDepth] = np.nan
-        if (self.temporalFilterOn):
-            result = self.temporalFilter(result)
-        if (self.kalmanFilterOn):
-            result = self.kalmanFilter(result, amplitude)
-        if self.edgeFilterOn:
-            result = edgeFilter(result, threshold=self.edgeFilterThreshold)
-        if (self.medianFilterOn):
-            result = median_filter(result, size=3)
-        if (self.averageFilterOn):
-            # use np.nanmean because scipy uniformfilter cannot handle NaN values
-            with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'Mean of empty slice')
-                result = vectorized_filter(result, function=np.nanmean, size=3)
 
         # images with only NaN values would crash
         if np.all(np.isnan(result)):
@@ -162,27 +163,11 @@ class TOFcam670(TOFcam):
     def get_amplitude_image(self):
         frame = self.__capture_frame()
         amplitude = frame.get(FrameType.AMPLITUDE)
-        if (self.temporalFilterOn):
-            amplitude = self.temporalFilter(amplitude)
-        if (self.kalmanFilterOn):
-            amplitude = self.kalmanFilter(amplitude, 1000)
-        if (self.medianFilterOn):
-            amplitude = median_filter(amplitude, size=3)
-        if (self.averageFilterOn):
-            amplitude = uniform_filter(amplitude, size=3)
         return amplitude
 
     def get_grayscale_image(self):
         frame = self.__capture_frame()
         grayscale = frame.get(FrameType.GRAYSCALE)
-        if (self.temporalFilterOn):
-            grayscale = self.temporalFilter(grayscale)
-        if (self.kalmanFilterOn):
-            grayscale = self.kalmanFilter(grayscale, 1000)
-        if (self.medianFilterOn):
-            grayscale = median_filter(grayscale, size=3)
-        if (self.averageFilterOn):
-            grayscale = uniform_filter(grayscale, size=3)
         return grayscale
 
     def get_raw_dcs_images(self):
@@ -201,17 +186,6 @@ class TOFcam670(TOFcam):
 
         depth[depth >= self.settings.maxDepth] = np.nan # remove error codes
         amplitude[amplitude>DEFAULT_MAX_AMP] = np.nan # remove error codes
-
-        if (self.temporalFilterOn):
-            depth = self.temporalFilter(depth)
-        if (self.kalmanFilterOn):
-            depth = self.kalmanFilter(depth, amplitude)
-        if self.edgeFilterOn:
-            depth = edgeFilter(depth, threshold=self.edgeFilterThreshold)
-        if (self.medianFilterOn):
-            depth = vectorized_filter(depth, function=np.median, size=3)
-        if (self.averageFilterOn):
-            depth = vectorized_filter(depth, function=np.mean, size=3)
 
         depth = np.flipud(depth)
         amplitude = np.flipud(amplitude)
