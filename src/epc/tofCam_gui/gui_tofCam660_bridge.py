@@ -63,7 +63,7 @@ class TOFcam660_bridge(Base_TOFcam_Bridge):
         
     def storeImage(self, image):
         # Restore the rotation before storage
-        if self.image_type == 'Point Cloud':
+        if type(image) != np.ndarray or image.ndim != 2:
             pass
         else:
             image = np.rot90(image, 1)

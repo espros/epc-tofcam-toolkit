@@ -43,7 +43,9 @@ dependencies = [
     "pyserial>=3.5",
     "scipy>=1.16.0",
     "h5py",
-    "bumble>=0.0.219"
+    "bumble>=0.0.219",
+    "http.client>=0.1.22",
+    "requests>=2.30.0",
 ]
 
 [project.optional-dependencies]
