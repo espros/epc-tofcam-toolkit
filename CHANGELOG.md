@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.12.0] - 2026-08-06
 ### TOFcam670
 - Implemented Network Interface
 - Improved GUI responsiveness
