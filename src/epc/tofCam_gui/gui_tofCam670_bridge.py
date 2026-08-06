@@ -1,29 +1,35 @@
 
 import getopt
+import logging
 import sys
+from contextlib import contextmanager
 
 import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from epc.tofCam670.tofCam670 import TOFcam670, AcquisitionMode
+from epc.tofCam670.tofCam670 import AcquisitionMode, TOFcam670
 from epc.tofCam_gui import Base_TOFcam_Bridge, GUI_TOFcam670
 from epc.tofCam_gui.streamer import pause_streaming
 
+log = logging.getLogger(__name__)
+
 
 class TOFcam670_bridge(Base_TOFcam_Bridge):
-    C = 299792458 # m/s
+    C = 299792458  # m/s
     MAX_AMPLITUDE = 2800
     MAX_GRAYSCALE = 2**10
     MIN_DCS = 0
     MAX_DCS = 4096
+
     def __init__(self, gui: GUI_TOFcam670, cam: TOFcam670):
         super(TOFcam670_bridge, self).__init__(cam, gui)
-        self._distance_unambiguity = 6.25 # m 
+        self._distance_unambiguity = 6.25  # m
+        self.__capture_disabled_count = 0
         self.cam: TOFcam670
 
-        self.streamer.start_stream_cb = cam.cam.startStream
-        self.streamer.post_stop_cb = cam.cam.stopStream
+        self.streamer.start_stream_cb = cam.interface.start_stream
+        self.streamer.post_stop_cb = cam.interface.stop_stream
         self.streamer.set_fps_smoothing_factor(0.5)
 
         # connect signals
@@ -42,7 +48,22 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
         gui.interferenceFilter.signal_filter_changed.connect(self._set_interference_filter)
         gui.lensType.signal_value_changed.connect(self.cam.settings.set_lense_type)
 
-        gui.setDefaultValues()
+        with self.disable_capture():
+            gui.setDefaultValues()
+        self.capture()
+
+    @contextmanager
+    def disable_capture(self):
+        """Context manager that safely handles nested disable_capture calls"""
+        self.__capture_disabled_count += 1
+        try:
+            yield
+        finally:
+            self.__capture_disabled_count -= 1
+
+    def capture(self, mode=None):
+        if self.__capture_disabled_count == 0 and not self.streamer.is_streaming():
+            super().capture(mode)
 
     def getImage(self):
         if self.image_type == 'Point Cloud':
@@ -53,10 +74,12 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
 
     def storeImage(self, image):
         # Restore the rotation before storage
-        if self.image_type == 'Point Cloud':
-            pass
-        else:
+        if type(image) != np.ndarray or image.ndim != 2:
+            return
+        try:
             image = np.rot90(image, 1)
+        except Exception as e:
+            log.error(f"Failed to rotate image for storage: {e}")
 
         super().storeImage(image)
 
@@ -123,7 +146,7 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
             mid = self.gui.integrationTimes.getTimeAtIndex(1)
             high = self.gui.integrationTimes.getTimeAtIndex(2)
             self.cam.settings.set_integration_hdr([low, mid, high])
-            
+
             gray = self.gui.integrationTimes.getTimeAtIndex(3)
             self.cam.settings.set_integration_time_grayscale(gray)
         elif self.image_type == 'Grayscale':
@@ -142,7 +165,6 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
 
     @pause_streaming
     def _set_modulation_settings(self, frequency=10):
-        print(f"Setting modulation frequency to {frequency} MHz")
         if self.gui.imageTypeWidget.getSelection() == 'Distance':
             self._distance_unambiguity = self.C / (2 * frequency * 1e6)
             histogram = self.gui.imageView.getHistogramWidget()
@@ -165,49 +187,50 @@ class TOFcam670_bridge(Base_TOFcam_Bridge):
 
     @pause_streaming
     def _set_image_type(self, image_type: str):
-        self.image_type = image_type
+        with self.disable_capture():
+            self.image_type = image_type
+            self._set_standard_image_type(image_type)
+            if image_type in ['Distance', 'Amplitude', 'Point Cloud']:
+                if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
+                    self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP_HDR)
+                    self.cam.settings.set_hdr(2)
+                    self._set_hdr_rolling_mode(self.gui.hdrRollingMode.checkBox.isChecked())
+                else:
+                    self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP)
+                    self.cam.settings.set_hdr(0)
+                    self._set_dcs_rolling_mode(self.gui.dcsRollingMode.checkBox.isChecked())
+                self._set_average_filter()
+                self._set_median_filter()
+                self._set_temporal_filter()
+                self._set_kalman_filter()
+                self._set_interference_filter()
+                self._set_min_amplitudes(self.gui.minAmplitude.slider.value())
+            elif image_type == 'DCS':
+                self.cam.settings.set_acquisition_mode(AcquisitionMode.DCS4)
+            elif image_type == 'Grayscale':
+                self.cam.settings.set_acquisition_mode(AcquisitionMode.GRAYSCALE)
 
-        self._set_standard_image_type(image_type)
-        
-        if image_type in ['Distance', 'Amplitude', 'Point Cloud']:
-            if self.gui.hdrModeDropDown.getSelection() == 'HDR Temporal':
-                self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP_HDR)
-                self.cam.settings.set_hdr(2)
-                self._set_hdr_rolling_mode(self.gui.hdrRollingMode.checkBox.isChecked())
-            else:
-                self.cam.settings.set_acquisition_mode(AcquisitionMode.DIST_AMP)
-                self.cam.settings.set_hdr(0)
-                self._set_dcs_rolling_mode(self.gui.dcsRollingMode.checkBox.isChecked())
-            self._set_average_filter()
-            self._set_median_filter()
-            self._set_temporal_filter()
-            self._set_kalman_filter()
-            self._set_interference_filter()
-            self._set_min_amplitudes(self.gui.minAmplitude.slider.value())
-        elif image_type == 'DCS':
-            self.cam.settings.set_acquisition_mode(AcquisitionMode.DCS4)
-        elif image_type == 'Grayscale':
-            self.cam.settings.set_acquisition_mode(AcquisitionMode.GRAYSCALE)
-
-        self._set_integration_times()
-        self._set_modulation_settings(self.gui.modulationFrequency.spinBox.value())
+            self._set_integration_times()
+            self._set_modulation_settings(self.gui.modulationFrequency.spinBox.value())
         if not self.streamer.is_streaming():
             self.capture()
 
+
 def main():
+    longopts = ["fullscreen", "maximized", "start-stream", "ip="]
+    opts, args = getopt.getopt(sys.argv[1:], "", longopts)
+    opts = dict(opts)
+
     app = QApplication([])
-    #qdarktheme.setup_theme('auto', default_theme='dark')
+    # qdarktheme.setup_theme('auto', default_theme='dark')
     gui = GUI_TOFcam670()
-    
-    # ip_address = get_ipAddress()
-    cam = TOFcam670()
+
+    ip_address = opts.get("--ip", None)
+    cam = TOFcam670(ip_addr=ip_address)
+
     cam.initialize()
 
     bridge = TOFcam670_bridge(gui, cam)
-
-    longopts = ["fullscreen", "maximized", "start-stream"]
-    opts, args = getopt.getopt(sys.argv[1:], "", longopts)
-    opts = dict(opts)
 
     if "--fullscreen" in opts:
         gui.showFullScreen()
@@ -218,8 +241,9 @@ def main():
 
     if "--start-stream" in opts:
         QTimer.singleShot(100, gui.toolBar.playButton.trigger)
-        
+
     app.exec()
+
 
 if __name__ == '__main__':
     main()

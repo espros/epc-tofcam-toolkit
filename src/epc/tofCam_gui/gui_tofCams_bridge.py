@@ -111,7 +111,6 @@ class Base_TOFcam_Bridge():
 
         self.streamer.signal_new_frame.connect(self.updateImage)
         self.streamer.signal_new_frame.connect(self.storeImage)
-        self.capture()
 
         # Fetch meta
         self._static_meta = {

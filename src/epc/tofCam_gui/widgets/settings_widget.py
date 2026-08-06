@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Optional, Any
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QLineEdit, QSlider
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QGridLayout, QDoubleSpinBox
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QTimer
 from PySide6.QtGui import QDoubleValidator
 
 
@@ -112,10 +112,23 @@ class SliderSetting(CameraSetting):
         # Keep slider and spinbox in sync
         self.slider.valueChanged.connect(self.spinBox.setValue)
         self.spinBox.valueChanged.connect(self.slider.setValue)
-        self.slider.valueChanged.connect(self.signal_value_changed)
+        # Debounce slider drag events
+        self.slider.sliderMoved.connect(self._on_slider_moved)
+        self._slider_timer = QTimer()
+        self._slider_timer.timeout.connect(self._emit_slider_value)
+        self._slider_timer.setSingleShot(True)
 
     def value(self) -> int:
         return self.slider.value()
+
+    def _on_slider_moved(self):
+        """Called when user drags slider - restart debounce timer"""
+        self._slider_timer.stop()
+        self._slider_timer.start(100)  # 100ms debounce delay
+
+    def _emit_slider_value(self):
+        """Emit signal after debounce timer expires"""
+        self.signal_value_changed.emit(self.slider.value())
 
     def setValue(self, setting: int):
         self.slider.setValue(setting)

@@ -1,158 +1,254 @@
-from epc.tofCam_lib.tofCam import TOFcam, Dev_Infos_Controller, TOF_Settings_Controller
-from epc.tofCam_lib.projection_models import RadialCameraProjector
-from epc.tofCam_lib.filters import KalmanVideoDenoiser, TemporalFilter, edgeFilter
-from epc_tofcam_native import TOFCam as libcam
-from epc_tofcam_native import TOFControl, TOFFrame, FrameType, AcquisitionMode
-import numpy as np
+import enum
 import logging
-import subprocess
-import warnings
-from scipy.ndimage import median_filter, uniform_filter, vectorized_filter
+from typing import Protocol, Tuple
+
+import numpy as np
+from bumble.colors import none
+
+from epc.tofCam_lib.projection_models import RadialCameraProjector
+from epc.tofCam_lib.tofCam import Dev_Infos_Controller, TOF_Settings_Controller, TOFcam
+
+
+class TOFControl(enum.Enum):
+    """
+    TOFCam Control ID's.
+    """
+    GAIN = 0
+    ACQUISITION_MODE = 1
+    MODULATION_FREQUENCY_HZ = 2
+    EXPOSURE_US = 4
+    HDR_INTEGRATION_TIME1_US = 5
+    HDR_INTEGRATION_TIME2_US = 6
+    HDR_INTEGRATION_TIME3_US = 7
+    ENABLE_HDR_ROLLING_MODE = 8
+    ENABLE_DCS_ROLLING_MODE = 9
+    ENABLE_PHASE_OFFSET_COMPENSATION = 10
+    ENABLE_PHASE_ERROR_COMPENSATION = 11
+    ENABLE_TEMPERATURE_COMPENSATION = 12
+    ENABLE_GRAYSCALE_DSNU_COMPENSATION = 13
+    LED_DELAY_STEP = 14
+    MIN_AMPLITUDE = 15
+    INTERFERENCE_DETECTION_ENABLE = 16
+    INTERFERENCE_DETECTION_THRESHOLD = 17
+    INTERFERENCE_ENABLE_LATCHING = 18
+    AVERAGE_FILTER_ENABLE = 19
+    MEDIAN_FILTER_ENABLE = 20
+    TEMPORAL_FILTER_ENABLE = 21
+    TEMPORAL_FILTER_ALPHA = 22
+    TEMPORAL_FILTER_THRESHOLD = 23
+    KALMAN_FILTER_ENABLE = 24
+    KALMAN_FILTER_THRESHOLD = 25
+    KALMAN_FILTER_PROCESS_NOISE = 26
+    EDGE_FILTER_ENABLE = 27
+    EDGE_FILTER_THRESHOLD = 28
+
+
+class FrameType(enum.Enum):
+    """
+    Frame data type selector for TOFFrame.get().
+    """
+    DCS = 0
+    AMPLITUDE = 1
+    DISTANCE = 2
+    PHASE = 3
+    GRAYSCALE = 4
+
+
+class AcquisitionMode(enum.IntEnum):
+    """
+    Supported acquisition modes.
+    """
+    DIST_AMP = 0
+    GRAYSCALE = 1
+    DIST_AMP_HDR = 2
+    DCS4 = 4
+
+
+class Interface(Protocol):
+    def set_control(self, control: TOFControl, value: int) -> None:
+        ...
+
+    def get_frame(self, frame_type: FrameType) -> np.ndarray[Tuple[int, int], float]:
+        ...
+
+    def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
+        ...
+
+    def startStream(self) -> None:
+        ...
+
+    def stopStream(self) -> None:
+        ...
+
+
+log = logging.getLogger(__name__)
 
 DEFAULT_MAX_AMP = 2894
-DEFAULT_MAX_DEPTH = 16000
-
-log = logging.getLogger('TOFcam670')
-libLogger = logging.getLogger('epc_tofcam_native').setLevel(logging.DEBUG)
+DEFAULT_MAX_DEPTH = 64000
 
 
-class TOFcam670_Settings(TOF_Settings_Controller):
+class TOFcam670Settings(TOF_Settings_Controller):
+    """
+    Shared TOFcam670 settings logic. Subclasses need to implement `_set_control`.
+    """
+
     def __init__(self, cam: "TOFcam670") -> None:
         super().__init__()
         self.cam = cam
-        self.maxDepth = DEFAULT_MAX_DEPTH
+        self.max_depth = DEFAULT_MAX_DEPTH
         self.roi = (0, 0, 320, 240)
         self._current_acquisition_mode = AcquisitionMode.DIST_AMP_HDR
 
+    def _set_control(self, control: TOFControl, value: int) -> None:
+        self.cam.interface.set_control(control, value)
+
     def get_roi(self):
+        """ Get the current region of interest (ROI) for the TOFcam670 device. """
         return self.roi
 
     def set_integration_time(self, int_time_us: int):
-        self.cam.cam.setControl(TOFControl.EXPOSURE_US, int_time_us)
-        log.info(f"Set integration time to: {int_time_us} us")
+        """ Set the integration time for the TOFcam670 device. Expects a single integration time in microseconds."""
+        self._set_control(TOFControl.EXPOSURE_US, int_time_us)
+        log.info("Set integration time to: %d us", int_time_us)
 
     def set_integration_hdr(self, int_times: list[int]) -> None:
-        self.cam.cam.setControl(TOFControl.HDR_INTEGRATION_TIME1_US, int_times[0])
-        self.cam.cam.setControl(TOFControl.HDR_INTEGRATION_TIME2_US, int_times[1])
-        self.cam.cam.setControl(TOFControl.HDR_INTEGRATION_TIME3_US, int_times[2])
-        log.info(f"Set hdr integration times to: {int_times} us")
+        """ Set the integration times for HDR mode. Expects a list of three integration times in microseconds."""
+        self._set_control(TOFControl.HDR_INTEGRATION_TIME1_US, int_times[0])
+        self._set_control(TOFControl.HDR_INTEGRATION_TIME2_US, int_times[1])
+        self._set_control(TOFControl.HDR_INTEGRATION_TIME3_US, int_times[2])
+        log.info("Set hdr integration times to: %s us", str(int_times))
 
     def set_integration_time_grayscale(self, int_time_us: int):
-        self.cam.cam.setControl(TOFControl.EXPOSURE_US, int_time_us)
-        log.info(f"Set grayscale integration time to: {int_time_us} us")
+        """ Set the integration time for grayscale mode."""
+        self._set_control(TOFControl.EXPOSURE_US, int_time_us)
+        log.info("Set grayscale integration time to: %d us", int_time_us)
 
     def set_hdr(self, mode):
+        """ Set the HDR mode of the TOFcam670 device. Mode 0: DIST_AMP, Mode 2: DIST_AMP_HDR. """
         if mode == 0:
             self._current_acquisition_mode = AcquisitionMode.DIST_AMP
         elif mode == 2:
             self._current_acquisition_mode = AcquisitionMode.DIST_AMP_HDR
         else:
             raise ValueError(f"Unsupported HDR mode: {mode}")
-        
+
         self.set_acquisition_mode(self._current_acquisition_mode)
-    
+
     def set_minimal_amplitude(self, amplitude):
-        self.cam.cam.setControl(TOFControl.MIN_AMPLITUDE, amplitude)
+        """Set the minimal amplitude for the TOFcam670 device."""
+        self._set_control(TOFControl.MIN_AMPLITUDE, amplitude)
 
-    def set_dcs_rolling_mode(self, enabled = False):
-        self.cam.cam.setControl(TOFControl.ENABLE_DCS_ROLLING_MODE, int(enabled))
+    def set_dcs_rolling_mode(self, enabled=False):
+        """Set DCS rolling mode."""
+        self._set_control(TOFControl.ENABLE_DCS_ROLLING_MODE, int(enabled))
 
-    def set_hdr_rolling_mode(self, enabled = False):
-        self.cam.cam.setControl(TOFControl.ENABLE_HDR_ROLLING_MODE, int(enabled))
+    def set_hdr_rolling_mode(self, enabled=False):
+        """Set HDR rolling mode."""
+        self._set_control(TOFControl.ENABLE_HDR_ROLLING_MODE, int(enabled))
 
     def set_lense_type(self, lense_type: str):
+        """Set the lens type for the TOFcam670 device."""
         self.cam.projector = RadialCameraProjector.from_lens_calibration(lense_type, 320, 240)
 
     def set_modulation(self, frequency_mhz: float):
-        self.cam.cam.setControl(TOFControl.MODULATION_FREQUENCY_HZ, int(frequency_mhz*1e6))
+        """Set the modulation frequency of the TOFcam670 device."""
+        self._set_control(TOFControl.MODULATION_FREQUENCY_HZ, int(frequency_mhz * 1e6))
 
     def set_acquisition_mode(self, mode: AcquisitionMode):
-        log.info(f"Setting acquisition mode to: {mode.name}")
-        self.cam.cam.setControl(TOFControl.ACQUISITION_MODE, mode)
+        """ Set the acquisition mode of the TOFcam670 device."""
+        log.info("Setting acquisition mode to: %s", mode.name)
+        self._set_control(TOFControl.ACQUISITION_MODE, mode)
 
-    def set_average_filter(self, enabled = False):
-        self.cam.cam.setControl(TOFControl.AVERAGE_FILTER_ENABLE, int(enabled))
+    def set_average_filter(self, enabled=False):
+        """Set average filter settings."""
+        self._set_control(TOFControl.AVERAGE_FILTER_ENABLE, int(enabled))
 
-    def set_median_filter(self, enabled = False):
-        self.cam.cam.setControl(TOFControl.MEDIAN_FILTER_ENABLE, int(enabled))
+    def set_median_filter(self, enabled=False):
+        """Set median filter settings."""
+        self._set_control(TOFControl.MEDIAN_FILTER_ENABLE, int(enabled))
 
-    def set_kalman_filter(self, enabled = False, threshold = 200):
-        self.cam.cam.setControl(TOFControl.KALMAN_FILTER_ENABLE, int(enabled))
-        self.cam.cam.setControl(TOFControl.KALMAN_FILTER_THRESHOLD, int(threshold))
+    def set_kalman_filter(self, enabled=False, threshold=200):
+        """Set Kalman filter settings."""
+        self._set_control(TOFControl.KALMAN_FILTER_ENABLE, int(enabled))
+        self._set_control(TOFControl.KALMAN_FILTER_THRESHOLD, int(threshold))
 
-    def set_edge_filter(self, enabled = False, threshold = 150):
-        self.cam.cam.setControl(TOFControl.EDGE_FILTER_ENABLE, int(enabled))
-        self.cam.cam.setControl(TOFControl.EDGE_FILTER_THRESHOLD, int(threshold))
+    def set_edge_filter(self, enabled=False, threshold=150):
+        """Set edge filter settings."""
+        self._set_control(TOFControl.EDGE_FILTER_ENABLE, int(enabled))
+        self._set_control(TOFControl.EDGE_FILTER_THRESHOLD, int(threshold))
 
-    def set_temporal_filter(self, enabled = False, alpha = 0.3):
-        self.cam.cam.setControl(TOFControl.TEMPORAL_FILTER_ENABLE, int(enabled))
-        self.cam.cam.setControl(TOFControl.TEMPORAL_FILTER_ALPHA, int(alpha * 100))
+    def set_temporal_filter(self, enabled=False, alpha=0.3):
+        """Set temporal filter settings."""
+        self._set_control(TOFControl.TEMPORAL_FILTER_ENABLE, int(enabled))
+        self._set_control(TOFControl.TEMPORAL_FILTER_ALPHA, int(alpha * 100))
 
-    def set_interference_filter(self, enabled = False, threshold = 300, latching=False):
-            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_ENABLE, int(enabled))
-            self.cam.cam.setControl(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, int(threshold))
-            self.cam.cam.setControl(TOFControl.INTERFERENCE_ENABLE_LATCHING, int(latching))
+    def set_interference_filter(self, enabled=False, threshold=300, latching=False):
+        """Set interference filter settings."""
+        self._set_control(TOFControl.INTERFERENCE_DETECTION_ENABLE, int(enabled))
+        self._set_control(TOFControl.INTERFERENCE_DETECTION_THRESHOLD, int(threshold))
+        self._set_control(TOFControl.INTERFERENCE_ENABLE_LATCHING, int(latching))
 
-class TOFcam670_Device(Dev_Infos_Controller):
-    def __init__(self, cam: TOFcam) -> None:
+
+class TOFcam670Device(Dev_Infos_Controller):
+    """
+    Shared TOFcam670 device info logic. Subclasses need to implement `_get_device_info`.
+    """
+
+    def __init__(self, cam: "TOFcam670") -> None:
         super().__init__()
         self.cam = cam
 
     def get_chip_infos(self):
-        try:
-            result = subprocess.run(
-                ["v4l2-ctl", "-d", "/dev/v4l-subdev2", "-C", "device_id"],
-                capture_output=True, text=True, timeout=5
-            )
-            device_id = result.stdout.strip()
-            # Format: "device_id: 'epc670-0x00-0x04-0x0F-0x00-00008-00105'"
-            parts = device_id.split('-')
-            wafer_id = int(parts[-2])
-            chip_id = int(parts[-1].rstrip("'"))
-            return chip_id, wafer_id
-        except Exception as e:
-            log.error(f"Failed to get chip infos: {e}")
-            return 0, 0
+        """ Get the wafer ID and chip ID of the TOFcam670 device."""
+        info = self.cam.interface.get_device_info()
+        return info["wafer_id"], info["chip_id"]
 
     def get_fw_version(self):
-        try:
-            with open("/sys/module/cam_epc670/version", "r") as f:
-                return f.read().strip()
-        except OSError:
-            return "0.0.0"
+        """ Get the firmware version of the TOFcam670 device."""
+        info = self.cam.interface.get_device_info()
+        return info["fw_version"]
 
 
 class TOFcam670(TOFcam):
-    def __init__(self) -> None:
-        self.cam = libcam()
-        self.cam.open()
-        self.__acquisition_mode = AcquisitionMode.DIST_AMP_HDR
-        self.cam.setControl(TOFControl.ACQUISITION_MODE, self.__acquisition_mode)
-        self.settings = TOFcam670_Settings(self)
-        self.device = TOFcam670_Device(self)
-        super().__init__(self.settings, self.device)
+
+    def __init__(self, ip_addr=None, port=8000) -> None:
+        if ip_addr is not None and port is not None:
+            log.info("Using WebInterface for IP: %s, Port: %d", ip_addr, port)
+            from epc.tofCam670.webInterface import WebInterface
+            self.interface = WebInterface(ip_addr, port)
+        else:
+            log.info("Using NativeTOFcam670Interface")
+            try:
+                from epc.tofCam670.nativeInterface import NativeInterface
+            except ImportError as e:
+                e.add_note("Failed to import the native implementation of TOFcam670.")
+                e.add_note("The Native implementation is meant to run directly on the"
+                           "TOFcam670 device and requires the 'epc_tofcam_native' library.")
+                e.add_note("If you meant to connect to a remote camera instead, "
+                           "use the '--ip' option to specify a remote ip address.")
+                raise e
+
+            self.interface = NativeInterface()
+
+        settings = TOFcam670Settings(self)
+        device = TOFcam670Device(self)
+        super().__init__(settings, device)
         self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
-        self.latestMetadata = None
 
     def __del__(self):
-        # self.cam.stopStream()
-        self.cam.close()
+        try:
+            self.interface.stop_stream()
+        except Exception as e:
+            log.warning(f"Failed to stop stream during cleanup: {e}")
 
     def initialize(self):
-        self.settings.set_modulation(10)
         pass
 
-    def __capture_frame(self):
-        frame = self.cam.captureFrame()
-        self.latestMetadata = frame.getMetadata()
-        return frame
-
     def get_distance_image(self):
-        frame = self.__capture_frame()
-        distance = frame.get(FrameType.DISTANCE).astype(float)
-        amplitude = frame.get(FrameType.AMPLITUDE).astype(float)
+        """ get distance image in mm, with error codes removed (set to NaN) """
+        distance = self.interface.get_frame(FrameType.DISTANCE).astype(float)
         result = distance
-        result[distance > self.settings.maxDepth] = np.nan
+        result[distance > self.settings.max_depth] = np.nan
 
         # images with only NaN values would crash
         if np.all(np.isnan(result)):
@@ -161,51 +257,34 @@ class TOFcam670(TOFcam):
         return result
 
     def get_amplitude_image(self):
-        frame = self.__capture_frame()
-        amplitude = frame.get(FrameType.AMPLITUDE)
-        return amplitude
+        """ get amplitude image, with error codes removed (set to NaN) """
+        return self.interface.get_frame(FrameType.AMPLITUDE)
 
     def get_grayscale_image(self):
-        frame = self.__capture_frame()
-        grayscale = frame.get(FrameType.GRAYSCALE)
-        return grayscale
+        """ get grayscale image """
+        return self.interface.get_frame(FrameType.GRAYSCALE)
 
     def get_raw_dcs_images(self):
-        frame = self.__capture_frame()
-        dcs0 = frame.get(FrameType.DCS, 0)
-        dcs1 = frame.get(FrameType.DCS, 1)
-        dcs2 = frame.get(FrameType.DCS, 2)
-        dcs3 = frame.get(FrameType.DCS, 3)
-
-        return np.array([dcs0, dcs1, dcs2, dcs3])
+        """ get raw DCS images """
+        return self.interface.get_frame(FrameType.DCS)
 
     def get_point_cloud(self):
-        frame = self.__capture_frame()
-        depth = frame.get(FrameType.DISTANCE).astype(float)
-        amplitude = frame.get(FrameType.AMPLITUDE).astype(float)
+        """ get point cloud in meters, with error codes removed (set to NaN) """
+        depth, amplitude = self.interface.get_distance_and_amplitude()
+        depth = depth.astype(float)
+        amplitude = amplitude.astype(float)
 
-        depth[depth >= self.settings.maxDepth] = np.nan # remove error codes
-        amplitude[amplitude>DEFAULT_MAX_AMP] = np.nan # remove error codes
+        depth[depth >= self.settings.max_depth] = np.nan  # remove error codes
+        amplitude[amplitude > DEFAULT_MAX_AMP] = np.nan  # remove error codes
 
         depth = np.flipud(depth)
         amplitude = np.flipud(amplitude)
 
         # calculate point cloud from the depth image
-        points = 1E-3 * self.projector.project(depth, roi_x=self.settings.roi[0], roi_y=self.settings.roi[1])
+        points = 1E-3 * self.projector.project(
+            depth=depth,
+            roi_x=self.settings.roi[0],
+            roi_y=self.settings.roi[1],
+        )
         points = points.reshape(3, -1)
         return points, amplitude.flatten()
-
-if __name__ == "__main__":
-    cam = TOFcam670()
-    cam.initialize()
-    distance_image = cam.get_distance_image()
-    amplitude_image = cam.get_amplitude_image()
-    grayscale_image = cam.get_grayscale_image()
-    raw_dcs_images = cam.get_raw_dcs_images()
-    point_cloud = cam.get_point_cloud()
-
-    print("Distance Image shape:", distance_image.shape)
-    print("Amplitude Image shape:", amplitude_image.shape)
-    print("Grayscale Image shape:", grayscale_image.shape)
-    print("Raw DCS Images shape:", raw_dcs_images.shape)
-    print("Point Cloud shape:", point_cloud.shape if point_cloud is not None else None)
