@@ -6,6 +6,11 @@
 ### TOFcam670
 - Implemented Network Interface
 - Improved GUI responsiveness
+- Improved scope ROI controls
+- Re-introduced axis settings via right click menu
+- Fix bug where min amplitude spinbox input was ignored
+- Change modulation frequency step size to 100kHz increments
+- Added option to load lens projection file from epc670 calibration
 
 ## [0.11.0] - 2026-07-23
 

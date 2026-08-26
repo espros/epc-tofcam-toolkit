@@ -1,10 +1,12 @@
 import logging
 import subprocess
+import json
 
 import epc_tofcam_native as native
 import numpy as np
 from epc_tofcam_native import TOFCam as libcam
 
+from epc.tofCam_lib.projection_models import lens_type_map
 from epc.tofCam670.tofCam670 import (
     FrameType,
     TOFControl,
@@ -21,7 +23,7 @@ class NativeInterface:
         self.cam.open()
 
     def set_control(self, control: TOFControl, value: int) -> None:
-        self.cam.setControl(native.TOFControl(control.value), value)
+        self.cam.setControl(native.TOFControl[control.name], value)
 
     def _get_chip_infos(self):
         try:
@@ -65,6 +67,25 @@ class NativeInterface:
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         frame = self.cam.captureFrame()
         return frame.get(native.FrameType.DISTANCE), frame.get(native.FrameType.AMPLITUDE)
+
+    def get_lens_calibration(self) -> tuple[list[float], list[float]]:
+        try:
+            config_file = "/usr/local/share/epctofcam/production_config.json"
+            with open(config_file, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            lens_pn = str(config["product"]["components"]["lens"]["part_number"]).replace(" ", "").lower()
+
+            for _, filename in lens_type_map.items():
+                if lens_pn in str(filename):
+                    angle, rp = np.loadtxt(filename, dtype=float, delimiter=",", skiprows=1, usecols=(0,1)).T
+                    return rp, angle
+            raise KeyError(lens_pn)
+        
+        except (FileNotFoundError, KeyError):
+            # fallback to default (wide field)
+            filename = lens_type_map["Wide Field"]
+            angle, rp = np.loadtxt(filename, dtype=float, delimiter=",", skiprows=1, usecols=(0,1)).T
+            return rp, angle
 
     def start_stream(self):
         self.cam.startStream()

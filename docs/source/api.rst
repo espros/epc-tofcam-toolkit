@@ -9,8 +9,27 @@ All TOFcam subclasses implement a TOFcam_Settings and a TOFcam_Device_Info class
 
 TOFcam670 API
 -------------
+.. note::
+    The native TOFcam670 API is merely a wrapper for the `epc-tofcam-native <https://docs.espros.com/espros_processing_pipeline>`_ python package.
+    When developing native applications for the Raspberry Pi, consider using the `epc-tofcam-native` library directly.
 
-Checkout the `epc-tofcam-native <https://docs.espros.com/espros_processing_pipeline>`_ python package for native development on the raspberry pi.
+TOFcam670
+~~~~~~~~~
+.. autoclass:: epc.tofCam670.tofCam670.TOFcam670
+    :noindex:
+    :members:
+
+TOFcam670_Settings
+~~~~~~~~~~~~~~~~~~
+.. autoclass:: epc.tofCam670.tofCam670.TOFcam670Settings
+    :noindex:
+    :members:
+
+TOFcam670_Device
+~~~~~~~~~~~~~~~~
+.. autoclass:: epc.tofCam670.tofCam670.TOFcam670Device
+    :noindex:
+    :members:
 
 
 TOFcam660 API

@@ -3,7 +3,6 @@ import logging
 from typing import Protocol, Tuple
 
 import numpy as np
-from bumble.colors import none
 
 from epc.tofCam_lib.projection_models import RadialCameraProjector
 from epc.tofCam_lib.tofCam import Dev_Infos_Controller, TOF_Settings_Controller, TOFcam
@@ -74,6 +73,9 @@ class Interface(Protocol):
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         ...
 
+    def get_lens_calibration(self) -> tuple[list[float], list[float]]:
+        ...
+
     def startStream(self) -> None:
         ...
 
@@ -89,7 +91,7 @@ DEFAULT_MAX_DEPTH = 64000
 
 class TOFcam670Settings(TOF_Settings_Controller):
     """
-    Shared TOFcam670 settings logic. Subclasses need to implement `_set_control`.
+    Class used to change settings on the TOFcam670.
     """
 
     def __init__(self, cam: "TOFcam670") -> None:
@@ -148,7 +150,16 @@ class TOFcam670Settings(TOF_Settings_Controller):
 
     def set_lense_type(self, lense_type: str):
         """Set the lens type for the TOFcam670 device."""
-        self.cam.projector = RadialCameraProjector.from_lens_calibration(lense_type, 320, 240)
+        try:
+            if lense_type.lower() == 'auto':
+                rp, angle = self.cam.interface.get_lens_calibration()
+                self.cam.projector = RadialCameraProjector(rp, angle, 320, 240)
+            else:
+                self.cam.projector = RadialCameraProjector.from_lens_calibration(lense_type, 320, 240)
+        except:
+            log.warning("Failed to set lens type '%s'. Falling back to 'Wide Field'.", lense_type)
+            self.cam.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
+            raise
 
     def set_modulation(self, frequency_mhz: float):
         """Set the modulation frequency of the TOFcam670 device."""
@@ -191,7 +202,7 @@ class TOFcam670Settings(TOF_Settings_Controller):
 
 class TOFcam670Device(Dev_Infos_Controller):
     """
-    Shared TOFcam670 device info logic. Subclasses need to implement `_get_device_info`.
+    Class used to get information about the TOFcam670.
     """
 
     def __init__(self, cam: "TOFcam670") -> None:
@@ -210,6 +221,20 @@ class TOFcam670Device(Dev_Infos_Controller):
 
 
 class TOFcam670(TOFcam):
+    """
+    Creates a new TOFcam670 object.
+
+    If no ip address is specified, this will assume the epc670 camera is
+    available locally on this system (native interface).
+
+    If you provide an ip address, this will attempt to connect remotly over
+    the network (web interface).
+
+    The TOFcam670 object holds two attributes:
+
+    - settings: allows to control the settings of the camera.
+    - device: allows to get device information from the camera.
+    """
 
     def __init__(self, ip_addr=None, port=8000) -> None:
         if ip_addr is not None and port is not None:
@@ -233,7 +258,7 @@ class TOFcam670(TOFcam):
         settings = TOFcam670Settings(self)
         device = TOFcam670Device(self)
         super().__init__(settings, device)
-        self.projector = RadialCameraProjector.from_lens_calibration('Wide Field', 320, 240)
+        settings.set_lense_type("Auto")
 
     def __del__(self):
         try:
@@ -245,7 +270,7 @@ class TOFcam670(TOFcam):
         pass
 
     def get_distance_image(self):
-        """ get distance image in mm, with error codes removed (set to NaN) """
+        """ Get distance image in mm, with error codes removed (set to NaN) """
         distance = self.interface.get_frame(FrameType.DISTANCE).astype(float)
         result = distance
         result[distance > self.settings.max_depth] = np.nan
@@ -257,19 +282,19 @@ class TOFcam670(TOFcam):
         return result
 
     def get_amplitude_image(self):
-        """ get amplitude image, with error codes removed (set to NaN) """
+        """ Get amplitude image, with error codes removed (set to NaN) """
         return self.interface.get_frame(FrameType.AMPLITUDE)
 
     def get_grayscale_image(self):
-        """ get grayscale image """
+        """ Get grayscale image """
         return self.interface.get_frame(FrameType.GRAYSCALE)
 
     def get_raw_dcs_images(self):
-        """ get raw DCS images """
+        """ Get raw DCS images """
         return self.interface.get_frame(FrameType.DCS)
 
     def get_point_cloud(self):
-        """ get point cloud in meters, with error codes removed (set to NaN) """
+        """ Get point cloud in meters, with error codes removed (set to NaN) """
         depth, amplitude = self.interface.get_distance_and_amplitude()
         depth = depth.astype(float)
         amplitude = amplitude.astype(float)

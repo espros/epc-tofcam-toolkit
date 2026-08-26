@@ -79,6 +79,24 @@ class SpinBoxSetting(CameraSetting):
         self.spinBox.setValue(setting)
         self.spinBox.valueChanged.emit(setting)
 
+class DoubleSpinBoxSetting(CameraSetting):
+    signal_value_changed = Signal(float)
+    def __init__(self, label: str, minvalue: float, maxValue: float, default: Optional[float]=None,
+                 parent=None, step: float = 0.1, decimals: int = 1):
+        super(DoubleSpinBoxSetting, self).__init__('', [minvalue, maxValue], default, parent)
+        self.spinBox = QDoubleSpinBox(parent)
+        self.spinBox.setRange(minvalue, maxValue)
+        self.spinBox.setSingleStep(step)
+        self.spinBox.setDecimals(decimals)
+        self.label = QLabel(label, self)
+        self.gridLayout.addWidget(self.label, 0, 0)
+        self.gridLayout.addWidget(self.spinBox, 0, 1)
+        self.spinBox.valueChanged.connect(lambda: self.signal_value_changed.emit(self.spinBox.value()))
+
+    def setValue(self, setting: float):
+        self.spinBox.setValue(setting)
+        self.spinBox.valueChanged.emit(setting)
+
 class FloatInput(CameraSetting):
     signal_value_changed = Signal(float)
     def __init__(self, label: str, minvalue: float, maxValue: float, default: Optional[float]=None, parent=None):
@@ -114,6 +132,7 @@ class SliderSetting(CameraSetting):
         self.spinBox.valueChanged.connect(self.slider.setValue)
         # Debounce slider drag events
         self.slider.sliderMoved.connect(self._on_slider_moved)
+        self.spinBox.valueChanged.connect(self.signal_value_changed.emit)
         self._slider_timer = QTimer()
         self._slider_timer.timeout.connect(self._emit_slider_value)
         self._slider_timer.setSingleShot(True)
