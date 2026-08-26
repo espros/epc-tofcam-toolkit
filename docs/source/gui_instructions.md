@@ -16,7 +16,9 @@ When you click on View/Console the following iPython console opens. You can use 
 ![GUI_Console](images/console_window.png)
 
 ## GUI-TOFcam670
-The GUI for the epc670 Starter Kit and the epc670 ToF HAT+ currently runs only on a Raspberry Pi.
+The GUI for the epc670 Starter Kit and the epc670 ToF HAT+ can be run either on the camera itself (e.g. the Raspberry Pi), or on separate machine within the same network. Depending on which method you choose, the installation requirements will differ.
+
+### Running GUI-TOFcam670 locally
 Before launching it, install all required local dependencies by including the optional `native` extras when installing `epc-tofcam-toolkit`.
 
 ```bash
@@ -26,6 +28,14 @@ pip install "epc-tofcam-toolkit[gui,native]"
 After installation, run the following command in your terminal:
 ```bash
 tofcam670
+```
+
+### Running GUI-TOFcam670 remotely
+Before you can connect to your epc670 Starter Kit or your epc670 ToF HAT+ remotely, you will need to make sure the server-side software is installed and running on your camera. On newer versions of the epc670 Starter Kit, the server will run automatically on startup. Otherwise, you will need to install the `epc-tof-studio` python package on your camera and follow the instructions there to start the server.
+
+Once the server is running, you can connect to it from any machine in the same network by providing the cameras ip address using the `--ip` option (replace `10.10.31.180` with the ip address of your camera):
+```bash 
+tofcam670 --ip 10.10.31.180
 ```
 
 ![GUI_TOFcam670](images/gui670_pointcloud.png)

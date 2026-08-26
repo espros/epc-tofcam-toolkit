@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 from epc.tofCam_gui.icon_svg import svg2icon
 from epc.tofCam_lib.h5Cam import H5Cam
-from pyqtgraph import ImageView, HistogramLUTWidget
+from pyqtgraph import ImageView, HistogramLUTWidget, RectROI, LineROI
 from pyqtgraph.colormap import ColorMap, getFromMatplotlib
 from pyqtgraph.opengl import (GLGridItem, GLLinePlotItem, GLScatterPlotItem,
                               GLViewWidget)
@@ -356,12 +356,11 @@ class VideoWidget(QWidget):
         self._render_timer.timeout.connect(self.flush_pending)
         self._render_timer.start()
 
-        self.video = ImageView(self)
+        self.roi = LineROI(pos1=(120, 120), pos2=(200, 120), width=10)
+        self.video = ImageView(self, roi=self.roi)
+        self.video.imageItem.sigImageChanged.connect(self._center_roi)
         self.video.ui.roiBtn.setText("Scope")
         self.video.ui.menuBtn.hide()
-        for action in self.video.getView().menu.actions():
-            if action.text() in ('X axis', 'Y axis'):
-                self.video.getView().menu.removeAction(action)
         scope = self.video.getRoiPlot().getPlotItem()
         scope.setMenuEnabled(False)
         scope.setLabels(left='Mean Value', bottom='ROI Column')
@@ -436,6 +435,19 @@ class VideoWidget(QWidget):
         elif self.stacked.currentWidget() == self.pc and isinstance(data, tuple):
             autolevels = kwargs.get('autoLevels', False)
             self.pc.update_point_cloud(data, autolevels)
+
+    def _center_roi(self):
+        """Center the scope ROI on the image once, then stop listening."""
+        image = self.video.imageItem.image
+        if not isinstance(image, np.ndarray) or image.ndim < 2:
+            return
+        self.video.imageItem.sigImageChanged.disconnect(self._center_roi)
+        img_w, img_h = image.shape
+        roi_w, roi_h = self.roi.size()
+        roi_w = min(roi_w, img_w)
+        cx, cy = img_w / 2, img_h / 2
+        self.roi.setSize((roi_w, roi_h))
+        self.roi.setPos((cx - roi_w / 2, cy - roi_h / 2))
 
     def setColorMap(self, cmap):
         self.video.setColorMap(cmap)

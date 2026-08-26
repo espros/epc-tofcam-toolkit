@@ -6,7 +6,7 @@ from PySide6 import QtWidgets
 from epc.tofCam_gui import Base_GUI_TOFcam
 from epc.tofCam_gui.widgets import (DropDownSetting, GroupBoxSelection,
                                     IntegrationTimes, RoiSettings,
-                                    SettingsGroup, SpinBoxSetting,
+                                    SettingsGroup, DoubleSpinBoxSetting,
                                     CheckBoxSetting, SliderSetting)
 from epc.tofCam_gui.widgets.filter_widgets import (EdgeFilter,
                                                    InterferenceFilter,
@@ -36,9 +36,9 @@ class GUI_TOFcam670(Base_GUI_TOFcam):
         # Create the video widget
         self.imageTypeWidget = GroupBoxSelection('Image Type', ['Distance', 'Amplitude', 'Grayscale', 'DCS', 'Point Cloud'])
         self.hdrModeDropDown = DropDownSetting('HDR Mode', ['HDR Off', 'HDR Temporal'], default='HDR Temporal')
-        self.modulationFrequency = SpinBoxSetting('Modulation Frequency (MHz)', 1, 24, default=20)
+        self.modulationFrequency = DoubleSpinBoxSetting('Modulation Frequency (MHz)', 1, 24, default=20, step=1.0, decimals=1)
         self.modeSettings = SettingsGroup('Camera Modes', [self.modulationFrequency, self.hdrModeDropDown])
-        self.lensType = DropDownSetting('Lens Type', ['Narrow Field', 'Standard Field', 'Wide Field', 'Wide Wide Field', 'Ultra Wide Field'], default='Wide Field')
+        self.lensType = DropDownSetting('Lens Type', ['Auto', 'Narrow Field', 'Standard Field', 'Wide Field', 'Wide Wide Field', 'Ultra Wide Field'], default='Auto')
         self.pointCloudSettings = SettingsGroup('Point Cloud Settings', [self.lensType])
         self.pointCloudSettings.setEnabled(False)
         self.integrationTimes = IntegrationTimes(['Low', 'Mid', 'High', 'Grayscale'], [40, 400, 4000, 400], [4000, 4000, 4000, 4000])

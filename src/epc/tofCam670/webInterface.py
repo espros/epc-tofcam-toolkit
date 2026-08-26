@@ -80,6 +80,20 @@ class WebInterface:
     def get_distance_and_amplitude(self) -> tuple[np.ndarray, np.ndarray]:
         return self.get_frame(FrameType.DISTANCE), self.get_frame(FrameType.AMPLITUDE)
 
+    def get_lens_calibration(self) -> tuple[list[float], list[float]]:
+        url = f"http://{self.host}:{self.port}/lens_calibration.csv"
+        response = self.session.get(url)
+        if response.status_code != 200:
+            raise ConnectionError(f"Error {response.status_code}: {url}")
+
+        rp, angle = [], []
+        for line in response.content.splitlines()[1:]:
+            a, r = line.split(b",")
+            rp.append(float(r))
+            angle.append(float(a))
+
+        return rp, angle
+
     def start_stream(self):
         self._is_streaming = True
         # we do not setup any streams here, they will be lazily
