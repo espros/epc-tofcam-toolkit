@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-31
+
 ### TOFcam670
 - Improved scope ROI controls
 - Re-introduced axis settings via right click menu
