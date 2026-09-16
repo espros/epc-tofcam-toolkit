@@ -3,7 +3,7 @@ from typing import List, Optional, Any
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox, QLineEdit, QSlider
 from PySide6.QtWidgets import QSpinBox, QLabel, QComboBox, QCheckBox,  QGroupBox, QGridLayout, QDoubleSpinBox
 from PySide6.QtCore import Signal, Qt, QTimer
-from PySide6.QtGui import QDoubleValidator
+from PySide6.QtGui import QDoubleValidator, QMouseEvent
 
 
 class CameraSetting(QGroupBox):
@@ -112,12 +112,58 @@ class FloatInput(CameraSetting):
         self.input.setText(str(setting))
         # self.spinBox.valueChanged.emit(setting)
 
+class _TouchSlider(QSlider):
+    """
+    Horizontal QSlider that is easier to use on touch screens.
+
+    When a click misses the handle, the handle jumps to that position instead.
+    This way, the handle can be dragged by clicking anywhere on the widget,
+    instead of having to hit the handle precisely.
+
+    To get the best effect, use self.setMinimumHeight(50) or similar
+    to increase the size of the clickable area.
+    """
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setSliderDown(True)
+            self._set_value_from_position(event.position().x())
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self.isSliderDown():
+            self._set_value_from_position(event.position().x())
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setSliderDown(False)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+    def _set_value_from_position(self, x):
+        ratio = x / self.width()
+        ratio = max(0.0, min(1.0, ratio))
+
+        value = self.minimum() + ratio * (
+            self.maximum() - self.minimum()
+        )
+
+        self.setValue(round(value))
+
+
 class SliderSetting(CameraSetting):
     signal_value_changed = Signal(int)
     def __init__(self, label: str, minvalue: int, maxValue: int, default: Optional[int]=None, parent=None, valueFormat="{:<4d}"):
         super(SliderSetting, self).__init__('', [minvalue, maxValue], default, parent)
-        self.slider = QSlider(Qt.Horizontal, parent)
+        self.slider = _TouchSlider(Qt.Horizontal, parent)
         self.slider.setRange(minvalue, maxValue)
+        self.slider.setMinimumHeight(50)
         self.label = QLabel(label, self)
         self.valueFormat = valueFormat
         self.spinBox = QSpinBox(self)
@@ -128,30 +174,18 @@ class SliderSetting(CameraSetting):
         self.gridLayout.addWidget(self.slider, 0, 1)
         self.gridLayout.addWidget(self.spinBox, 0, 2)
         # Keep slider and spinbox in sync
-        self.slider.valueChanged.connect(self.spinBox.setValue)
         self.spinBox.valueChanged.connect(self.slider.setValue)
-        # Debounce slider drag events
-        self.slider.sliderMoved.connect(self._on_slider_moved)
+        self.slider.sliderReleased.connect(lambda: self.spinBox.setValue(self.slider.value()))
+        # Emit signal when value changed
         self.spinBox.valueChanged.connect(self.signal_value_changed.emit)
-        self._slider_timer = QTimer()
-        self._slider_timer.timeout.connect(self._emit_slider_value)
-        self._slider_timer.setSingleShot(True)
 
     def value(self) -> int:
         return self.slider.value()
 
-    def _on_slider_moved(self):
-        """Called when user drags slider - restart debounce timer"""
-        self._slider_timer.stop()
-        self._slider_timer.start(100)  # 100ms debounce delay
-
-    def _emit_slider_value(self):
-        """Emit signal after debounce timer expires"""
-        self.signal_value_changed.emit(self.slider.value())
-
     def setValue(self, setting: int):
         self.slider.setValue(setting)
-        self.slider.valueChanged.emit(setting)
+        self.spinBox.setValue(setting)
+        self.signal_value_changed.emit(setting)
 
 class IntegrationTimes(CameraSetting):
     signal_value_changed = Signal(str, int)
