@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### General
+- Fixed dependencies to support python3.14.
+
 ## [0.13.0] - 2026-08-31
 
 ### TOFcam670
