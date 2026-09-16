@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-16
+
 ### General
 - Fixed dependencies to support python3.14.
 
